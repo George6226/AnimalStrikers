@@ -5,7 +5,8 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 UNITY_VERSION="${UNITY_VERSION:-6000.2.7f2}"
 IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${UNITY_VERSION}-base-3}"
 LOG_DIR="${PROJECT_ROOT}/Logs"
-UNITY_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-3300}"
+UNITY_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-2400}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "${LOG_DIR}"
 
 if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
@@ -59,6 +60,17 @@ set -e
 
 if [[ -f "${LOG_DIR}/goap-batch-result.txt" ]]; then
   cat "${LOG_DIR}/goap-batch-result.txt"
+fi
+
+# shellcheck source=resolve-batch-verify-result.sh
+source "${SCRIPT_DIR}/resolve-batch-verify-result.sh"
+if resolve_batch_verify_success "${PROJECT_ROOT}"; then
+  if [[ "${exit_code}" -ne 0 ]]; then
+    echo "[goap-ci] batch verify passed by result artifacts (unity exit=${exit_code})"
+  else
+    echo "[goap-ci] docker batch verify passed"
+  fi
+  exit 0
 fi
 
 if [[ "${exit_code}" -ne 0 ]]; then

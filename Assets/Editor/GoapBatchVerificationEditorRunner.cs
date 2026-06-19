@@ -104,7 +104,41 @@ public static class GoapBatchVerificationEditorRunner
             _playEnteredAt = EditorApplication.timeSinceStartup;
             _sawBatchStart = false;
             Debug.Log("[GOAP_BATCH_RUNNER] entered play mode");
+            return;
         }
+
+        if (state == PlayModeStateChange.EnteredEditMode)
+        {
+            TryExitAfterPlayModeEnded();
+        }
+    }
+
+    private static void TryExitAfterPlayModeEnded()
+    {
+        EnsurePaths();
+
+        if (TryConsumePendingExit(out int exitCode))
+        {
+            Debug.Log($"[GOAP_BATCH_RUNNER] exiting after play mode ended (code={exitCode})");
+            EditorApplication.delayCall += () => EditorApplication.Exit(exitCode);
+            return;
+        }
+
+        if (!File.Exists(StartedMarkerPath()) || !File.Exists(_diagPath))
+        {
+            return;
+        }
+
+        string text = File.ReadAllText(_diagPath);
+        if (!text.Contains("BATCH_COMPLETE", StringComparison.Ordinal)
+            && !text.Contains("BATCH_ABORT", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        GoapBatchVerificationLogParser.Result result = EvaluateBatchResult(text);
+        Debug.Log($"[GOAP_BATCH_RUNNER] batch finished after play mode ended: {result.Summary}");
+        CompleteRun(result.Succeeded, result.Summary);
     }
 
     private static void OnUpdate()
