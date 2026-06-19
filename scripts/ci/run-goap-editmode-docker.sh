@@ -21,11 +21,12 @@ fi
 echo "[goap-ci] docker editmode tests image=${IMAGE} timeout=${UNITY_TIMEOUT}s"
 
 docker_env=( -e UNITY_EMAIL -e UNITY_PASSWORD )
-if [[ -n "${UNITY_LICENSE:-}" ]]; then
-  docker_env+=( -e UNITY_LICENSE )
-fi
 if [[ -n "${UNITY_SERIAL:-}" ]]; then
   docker_env+=( -e UNITY_SERIAL )
+  echo "[goap-ci] license mode: UNITY_SERIAL (UNITY_LICENSE is not passed to Docker)"
+elif [[ -n "${UNITY_LICENSE:-}" ]]; then
+  docker_env+=( -e UNITY_LICENSE )
+  echo "[goap-ci] license mode: UNITY_LICENSE"
 fi
 
 set +e

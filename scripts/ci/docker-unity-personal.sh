@@ -6,6 +6,10 @@ unity_license_file_path() {
   echo "/root/.local/share/unity3d/Unity/Unity_lic.ulf"
 }
 
+unity_docker_remove_license_file() {
+  rm -f "$(unity_license_file_path)"
+}
+
 unity_docker_write_license_file() {
   if [[ -z "${UNITY_LICENSE:-}" ]]; then
     return 1
@@ -27,7 +31,11 @@ unity_docker_activate_personal() {
   local -a cmd=(unity-editor -batchmode -nographics -quit -logFile "${log_file}")
   local wrote_license="false"
 
-  if unity_docker_write_license_file >/dev/null 2>&1; then
+  # SERIAL 方式では古い UNITY_LICENSE (.ulf) を書かない（Mac 用 ulf があると再活性化が拒否される）
+  if [[ -n "${UNITY_SERIAL:-}" ]]; then
+    unity_docker_remove_license_file
+    echo "[goap-ci] using UNITY_SERIAL for activation (UNITY_LICENSE ignored)"
+  elif unity_docker_write_license_file >/dev/null 2>&1; then
     wrote_license="true"
     echo "[goap-ci] wrote UNITY_LICENSE to $(unity_license_file_path)"
   fi
@@ -38,7 +46,6 @@ unity_docker_activate_personal() {
 
   if [[ -n "${UNITY_SERIAL:-}" ]]; then
     cmd+=(-serial "${UNITY_SERIAL}")
-    echo "[goap-ci] using UNITY_SERIAL for activation"
   fi
 
   if [[ "${wrote_license}" != "true" && -z "${UNITY_EMAIL:-}" ]]; then
@@ -49,15 +56,15 @@ unity_docker_activate_personal() {
   echo "[goap-ci] activating Unity Personal (timeout 180s)"
   timeout 180 "${cmd[@]}"
 
-  if grep -q "license is already valid\|License activated successfully\|Successfully activated the entitlement license" "${log_file}" 2>/dev/null; then
-    echo "[goap-ci] license activation looks OK"
-    return 0
-  fi
-
-  if grep -q "serial invalid\|License activation has failed\|No valid Unity Editor license" "${log_file}" 2>/dev/null; then
+  if grep -q "aborting activation\|License activation has failed\|serial invalid\|No valid Unity Editor license" "${log_file}" 2>/dev/null; then
     echo "[goap-ci] license activation failed; see ${log_file}" >&2
     tail -30 "${log_file}" >&2 || true
     return 1
+  fi
+
+  if grep -q "license is already valid\|License activated successfully\|Successfully activated the entitlement license" "${log_file}" 2>/dev/null; then
+    echo "[goap-ci] license activation looks OK"
+    return 0
   fi
 
   echo "[goap-ci] activation finished (check ${log_file} if tests fail)"

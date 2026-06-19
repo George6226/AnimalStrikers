@@ -21,11 +21,13 @@ cat <<EOF
    | UNITY_EMAIL | Unity ID のメール |
    | UNITY_PASSWORD | Unity ID のパスワード |
 
-   ライセンス（どちらか一方）:
+   ライセンス（どちらか一方。両方登録時は UNITY_SERIAL を優先し UNITY_LICENSE は無視）:
    | Secret | 内容 |
    |--------|------|
-   | UNITY_LICENSE | CI 用 .ulf の XML 全文（Request Unity CI license ALF 手順で取得） |
-   | UNITY_SERIAL | Hub の本物シリアル（末尾 XXXX のマスク版は不可） |
+   | UNITY_SERIAL | Hub の本物シリアル（方法 A・推奨） |
+   | UNITY_LICENSE | CI 用 .ulf の XML 全文（方法 B） |
+
+   方法 A 利用時は UNITY_LICENSE Secret を削除するか空にすること（古い Mac 用 ulf があると失敗）
 
    シリアル確認: ./scripts/ci/extract-unity-personal-serial.sh
 
