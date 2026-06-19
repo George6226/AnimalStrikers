@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# GitHub Actions 用 UNITY_LICENSE の取得手順を表示する。
+# GitHub Actions 用 Unity ライセンスのセットアップ手順を表示する。
 # 実行: ./scripts/ci/setup-github-ci.sh
 set -euo pipefail
 
 UNITY_VERSION="${UNITY_VERSION:-6000.2.7f2}"
-IMAGE="unityci/editor:${UNITY_VERSION}-linux-1"
+IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-base-3"
 
 cat <<EOF
 === GitHub CI セットアップ ===
 
-1) GitHub リポジトリを作成し push する
+1) リポジトリを push する
    git remote add origin https://github.com/<user>/<repo>.git
    git push -u origin main
 
@@ -17,44 +17,63 @@ cat <<EOF
 
    | Secret 名 | 内容 |
    |-----------|------|
-   | UNITY_LICENSE | .ulf の base64 文字列 |
-   | UNITY_EMAIL | Unity Hub ログイン用メール |
-   | UNITY_PASSWORD | Unity Hub ログイン用パスワード（特殊文字は避けると安定） |
+   | UNITY_LICENSE | .ulf の XML 全文（<?xml で始まる。base64 不可） |
+   | UNITY_EMAIL | Unity ID のメールアドレス |
+   | UNITY_PASSWORD | Unity ID のパスワード（特殊文字は避けると安定） |
 
-   UNITY_LICENSE の取得:
-   - 方法 A: base64 -i "/Library/Application Support/Unity/Unity_lic.ulf" | pbcopy
-   - 方法 B: https://license.unity3d.com/manual で CI 用 .ulf を取得して base64 化
+   ⚠️ 作らないこと: UNITY_SERIAL（Personal では不要。あると serial invalid になる）
 
-   方法 B (game-ci Docker で取得 — 要 Unity アカウント):
-   docker run --rm -it \\
-     -e UNITY_EMAIL \\
-     -e UNITY_PASSWORD \\
-     -e UNITY_SERIAL \\
-     ${IMAGE} \\
-     unity-editor -batchmode -nographics -quit \\
-       -username "\$UNITY_EMAIL" \\
-       -password "\$UNITY_PASSWORD" \\
-       -serial "\$UNITY_SERIAL"
+3) UNITY_LICENSE の正しい取得手順（CI 専用）
 
-   生成されたライセンスを base64 化して UNITY_LICENSE に登録。
-   詳細: https://game.ci/docs/github/activation
+   Mac の Unity_lic.ulf は CI では使えません。unityci Docker 用の .ulf が必要です。
 
-3) Actions を手動実行 (workflow_dispatch) または push で確認
+   方法 A（おすすめ・ローカル Docker 不要）:
+   a) このリポジトリを push 済みであること
+   b) GitHub → Actions → "Request Unity CI license ALF" → Run workflow
+   c) 完了後 Artifacts から .alf をダウンロード
+
+   方法 B（ローカル Docker がある場合）:
+   a) Docker Desktop を起動（macOS 13 の場合は下記「Docker について」参照）
+   b) ./scripts/ci/generate-ci-unity-license.sh
+
+   共通の続き:
+   c) 生成された .alf を https://license.unity3d.com/manual にアップロード
+   d) Personal を選び .ulf をダウンロード
+      ※ Personal が見えない場合: Inspect で display:none を削除（game.ci 公式回避策）
+   e) .ulf をテキストエディタで開き、XML 全文を UNITY_LICENSE Secret に貼り付け
+
+   参考: https://game.ci/docs/github/activation
+
+4) Actions を手動実行 (workflow_dispatch) または push で確認
    - editmode-geometry: 13 tests
    - combined-batch-verify: SELECTION_TOTAL 11/11
 
-4) 失敗時は Artifacts から Logs/ をダウンロード
+5) 失敗時は Artifacts から Logs/ をダウンロード
+
+   よくある失敗:
+   - serial invalid (20110) → UNITY_LICENSE が base64 / Mac 用 ulf / UNITY_SERIAL が混在
+   - activation failed → UNITY_EMAIL / UNITY_PASSWORD の誤り、またはパスワードの特殊文字
+
+Docker image (batch): ${IMAGE}
+
+Docker について:
+- 最新版 Docker Desktop は macOS 14 以降が必要（Ventura 13.7 では更新できない）
+- ローカル Docker が使えない場合は上記「方法 A」（GitHub Actions）を使う
 
 EOF
 
 if command -v docker >/dev/null 2>&1; then
-  echo "Docker: available"
+  if docker info >/dev/null 2>&1; then
+    echo "Docker: running"
+  else
+    echo "Docker: installed but daemon not running"
+  fi
 else
-  echo "Docker: not found (GitHub Actions 上では game-ci が Docker を使用)"
+  echo "Docker: not found (generate-ci-unity-license.sh には Docker が必要)"
 fi
 
 if command -v gh >/dev/null 2>&1; then
-  echo "gh CLI: available (gh secret set UNITY_LICENSE で登録可能)"
+  echo "gh CLI: available"
 else
-  echo "gh CLI: not found (brew install gh 推奨)"
+  echo "gh CLI: not found (Web UI から Secret 登録で可)"
 fi
