@@ -13,14 +13,17 @@ cat <<EOF
    git remote add origin https://github.com/<user>/<repo>.git
    git push -u origin main
 
-2) UNITY_LICENSE を GitHub Secrets に登録する
+2) GitHub Secrets に Unity 認証情報を登録する（Personal は3つすべて必須）
 
-   方法 A (Personal / Plus / Pro ライセンス):
-   - Unity Hub で手動アクティベーションした .ulf を base64 化
-     base64 -i Unity_v6000.x.ulf | pbcopy
-   - GitHub → Settings → Secrets → Actions → New secret
-     Name: UNITY_LICENSE
-     Value: (base64 文字列)
+   | Secret 名 | 内容 |
+   |-----------|------|
+   | UNITY_LICENSE | .ulf の base64 文字列 |
+   | UNITY_EMAIL | Unity Hub ログイン用メール |
+   | UNITY_PASSWORD | Unity Hub ログイン用パスワード（特殊文字は避けると安定） |
+
+   UNITY_LICENSE の取得:
+   - 方法 A: base64 -i "/Library/Application Support/Unity/Unity_lic.ulf" | pbcopy
+   - 方法 B: https://license.unity3d.com/manual で CI 用 .ulf を取得して base64 化
 
    方法 B (game-ci Docker で取得 — 要 Unity アカウント):
    docker run --rm -it \\
