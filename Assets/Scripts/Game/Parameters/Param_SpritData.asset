@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dc059a369a994c58814e85bd24496f7, type: 3}
+  m_Name: Param_SpritData
+  m_EditorClassIdentifier: Assembly-CSharp::Param_SpritData
+  spritTypeInfoList:
+  - name: "\u30B9\u30BF\u30DF\u30CA"
+    type: 1
+    sprite: {fileID: 21300000, guid: 9d9da1439a8624d7aa9f5f6b2e14bc55, type: 3}
+    baseParameterValue: 50
+    increaseParameterValue: 100
+  - name: "\u30B9\u30D4\u30FC\u30C9"
+    type: 2
+    sprite: {fileID: 21300000, guid: 3b299046ee9d8471f8af53ac9f2323c4, type: 3}
+    baseParameterValue: 0.5
+    increaseParameterValue: 1
+  - name: "\u30B7\u30E5\u30FC\u30C8"
+    type: 3
+    sprite: {fileID: 21300000, guid: 311a19bca53544afebef87a527dd1a44, type: 3}
+    baseParameterValue: 1.2
+    increaseParameterValue: -0.8
+  - name: "\u30D1\u30B9"
+    type: 4
+    sprite: {fileID: 21300000, guid: 54e9cebc763cb477da422a45a3b8ecb5, type: 3}
+    baseParameterValue: 1.2
+    increaseParameterValue: -0.8
+  - name: "\u30A2\u30BF\u30C3\u30AF"
+    type: 5
+    sprite: {fileID: 21300000, guid: e7dadb720251346dda295fb3aaa774bd, type: 3}
+    baseParameterValue: 0
+    increaseParameterValue: 0
+  - name: "\u30C7\u30A3\u30D5\u30A7\u30F3\u30B9"
+    type: 6
+    sprite: {fileID: 21300000, guid: a42a8aa08b29f4667a87ae3825a4a652, type: 3}
+    baseParameterValue: 0
+    increaseParameterValue: 0
+  - name: "\u306A\u3057"
+    type: 0
+    sprite: {fileID: 21300000, guid: 8a1d8986ace7e458f9c399361edd42b5, type: 3}
+    baseParameterValue: 0
+    increaseParameterValue: 0

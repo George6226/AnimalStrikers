@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 95043f5eace534fbe8f289b4ff9cfdc5
+labels:
+- Data
+- ScriptableObject
+- WallPassActionSO
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

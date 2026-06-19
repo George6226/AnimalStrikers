@@ -1,0 +1,34 @@
+root = true
+
+# すべてのファイルのデフォルト設定
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# ファイルの設定
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# Unity のメタファイル
+[*.meta]
+indent_style = space
+indent_size = 2
+
+# YAML ファイル（Unity のシーンやプレハブなど）
+[*.{unity,prefab,asset,controller,overrideController}]
+indent_style = space
+indent_size = 2
+
+# JSON ファイル
+[*.json]
+indent_style = space
+indent_size = 2
+
+# XML ファイル
+[*.xml]
+indent_style = space
+indent_size = 2
+

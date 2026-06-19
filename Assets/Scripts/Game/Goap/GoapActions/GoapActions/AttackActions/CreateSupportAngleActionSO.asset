@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6e81ba9253bb4485994ede408239181, type: 3}
+  m_Name: CreateSupportAngleActionSO
+  m_EditorClassIdentifier: 
+  _actionName: CreateSupportAngle
+  _baseCost: 0
+  _optimalDistanceRatio: 0.2
+  _minDistanceRatio: 0.125
+  _maxDistanceRatio: 0.3
+  _angleTolerance: 30
+  _movementSpeed: 4
+  _executionTime: 4
+  _forwardLeadRatio: 0.08
+  _wingLaneRatio: 0.3
+  _retargetInterval: 0.25

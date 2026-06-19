@@ -1,0 +1,70 @@
+name: GOAP CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  editmode-geometry:
+    name: EditMode geometry tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          unityVersion: 6000.2.7f2
+          projectPath: .
+          testMode: editmode
+          customParameters: -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests"
+
+      - name: Upload EditMode logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goap-editmode-logs
+          path: |
+            Logs/goap-editmode-tests.log
+            Logs/goap-editmode-results.xml
+
+  combined-batch-verify:
+    name: Combined support batch verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: GOAP batch verify
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          chmod +x scripts/ci/run-goap-batch-verify-docker.sh
+          scripts/ci/run-goap-batch-verify-docker.sh
+
+      - name: Upload batch logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goap-batch-logs
+          path: |
+            Logs/goap-batch-verify.log
+            Logs/goap-batch-result.txt
+            Logs/GoapDiag_latest.txt
+            Logs/GoapSummary_latest.txt
+            Assets/DebugLog/GoapDiag_latest.txt
+            Assets/DebugLog/GoapSummary_latest.txt

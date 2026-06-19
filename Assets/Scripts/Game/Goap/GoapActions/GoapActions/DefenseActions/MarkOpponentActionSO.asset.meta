@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: b7ad3b4f8e38446958f6f507a0ba1aed
+labels:
+- Data
+- MarkOpponentActionSO
+- ScriptableObject
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

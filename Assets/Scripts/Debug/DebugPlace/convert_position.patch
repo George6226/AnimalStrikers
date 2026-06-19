@@ -1,0 +1,59 @@
+--- DebugPlace_GameStarter.cs.orig	2024-01-01 00:00:00.000000000 +0900
++++ DebugPlace_GameStarter.cs	2024-01-01 00:00:01.000000000 +0900
+@@ -163,7 +163,8 @@
+                 if (marker != null)
+                 {
+                     // 位置を取得
+-                    Vector3 position = marker.transform.localPosition;
+-                    characterData.positions.Add(position);
++                    Vector3 localPosition = marker.transform.localPosition;
++                    Vector3 convertedPosition = ConvertPosition(localPosition);
++                    characterData.positions.Add(convertedPosition);
+                     
+                     // キャラクタIndexをタイプとして使用
+                     int charaIndex = marker.GetCharaIndex();
+@@ -173,7 +174,7 @@
+                     if (marker.HasBall())
+                     {
+                         characterData.ballOwnerIndex = characterIndex;
+-                        Debug.Log($"ボール所持者発見: {marker.Name}, インデックス{characterIndex}, 位置({position.x:F1}, {position.y:F1}, {position.z:F1})");
++                        Debug.Log($"ボール所持者発見: {marker.Name}, インデックス{characterIndex}, 位置({convertedPosition.x:F1}, {convertedPosition.y:F1}, {convertedPosition.z:F1})");
+                     }
+                     else if (marker.Name.Contains("Ball"))
+                     {
+-                        characterData.ballPosition = position;
+-                        Debug.Log($"ボールの位置を設定: 位置({position.x:F1}, {position.y:F1}, {position.z:F1})");
++                        characterData.ballPosition = convertedPosition;
++                        Debug.Log($"ボールの位置を設定: 位置({convertedPosition.x:F1}, {convertedPosition.y:F1}, {convertedPosition.z:F1})");
+                     }
+                     
+-                    Debug.Log($"キャラクタ情報取得: {marker.Name}, 位置({position.x:F1}, {position.y:F1}, {position.z:F1}), 種類{charaIndex}, ボール所持{marker.HasBall()}");
++                    Debug.Log($"キャラクタ情報取得: {marker.Name}, 位置({convertedPosition.x:F1}, {convertedPosition.y:F1}, {convertedPosition.z:F1}), 種類{charaIndex}, ボール所持{marker.HasBall()}");
+                     characterIndex++;
+                 }
+             }
+@@ -207,6 +208,20 @@
+     public void SetTargetSceneName(string sceneName)
+     {
+         _targetSceneName = sceneName;
+     }
++    
++    /// <summary>
++    /// 位置を変換する（X軸800.0f→Z軸20.0f、Y軸300.0f→X軸7.0f）
++    /// </summary>
++    private Vector3 ConvertPosition(Vector3 localPosition)
++    {
++        // X軸800.0fをZ軸20.0fに変換
++        float convertedZ = (localPosition.x / 800.0f) * 20.0f;
++        
++        // Y軸300.0fをX軸7.0fに変換
++        float convertedX = (localPosition.y / 300.0f) * 7.0f;
++        
++        // Z軸はそのまま
++        float convertedY = localPosition.z;
++        
++        return new Vector3(convertedX, convertedY, convertedZ);
++    }
+ }
+ 
+ // キャラクタデータの構造体

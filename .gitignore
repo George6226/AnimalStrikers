@@ -1,0 +1,48 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Uu]nityGenerated/
+
+# IDE
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local build / export artifacts (do not commit)
+*.app/
+/ios/
+photonWinTest.app/
+photonWinTest2.app/
+
+# Debug logs (large, regenerated locally / by CI)
+Assets/DebugLog/*.txt
+
+# Generated SDF exceeds GitHub 100MB limit; regenerate in Unity from .otf
+Assets/Fonts/NotoSerifJP-Medium SDF.asset
+
+# CI transient (re-generated each run)
+Logs/goap-batch-pending-exit.txt
+Logs/goap-batch-started.marker

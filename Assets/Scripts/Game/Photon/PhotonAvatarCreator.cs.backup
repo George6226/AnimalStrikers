@@ -1,0 +1,243 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Photon.Pun;
+using Photon.Realtime;
+using System.Linq;
+
+
+// Photonのアバター生成
+public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
+{
+    // 動物リスト/キーパー/味方の位置更新
+    [SerializeField] private List<PhotonAvatarContainerChild> _masterAnimals;
+    [SerializeField] private List<PhotonAvatarContainerChild> _subAnimals;
+    [SerializeField] private DebugPlace_CharaList _charaList;// 全動物リスト
+    [SerializeField] private PhotonAvatarContainerChild _keeper;
+    //[SerializeField] private TeamsPositionUpdator_Allys _allysPosUpdator;
+
+    [SerializeField] private GameObject _roomMatching;
+
+    // 生成完了
+    private int _created = 0;
+    public int Created
+    {
+        get { return _created; }
+    }
+
+    // プレイヤータイプの定義
+    private enum PlayerType
+    {
+        Master,
+        Sub,
+        NPC
+    }
+
+    void Start()
+    {   
+        // ルームに入っているか確認
+        if (!PhotonNetwork.InRoom){
+            // ルームマッチングを行う
+            _roomMatching.SetActive(true);
+        }
+        else{
+            // ルームに入っている場合は通常の処理を開始
+            StartCoroutine(WaitForPoolAndSpawn());
+        }
+    }
+
+    // アバターの生成(ルームマッチングから)
+    public void executeAvatarCreator()
+    {
+        StartCoroutine(WaitForPoolAndSpawn());
+    }
+
+    // マッチング後プールからキャラクタを生成
+    private IEnumerator WaitForPoolAndSpawn()
+    {
+        // ネットワークメッセージ処理の有効
+        PhotonNetwork.IsMessageQueueRunning = true;
+        // プールが設定されるまで待機
+        while (PhotonNetwork.PrefabPool == null)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // NPC対戦
+        if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC)
+        {
+            // マスター = Player
+            if (PhotonPlayerInfo.Instance.IsMasterClient)
+            {
+                // NPC対戦の場合はプレイヤーがNPCも生成
+                updateNickName(PlayerType.Master);
+                SpawnCharacters(PlayerType.Master);
+                updateNickName(PlayerType.NPC);
+                SpawnCharacters(PlayerType.NPC);
+            }
+        }
+        // 対人戦
+        else
+        {
+            // 通常対戦の場合は全プレイヤーの準備を待つ
+            while (!PhotonNetwork.CurrentRoom.Players.Values.All(p => p.getIsSceneLoaded())){
+                yield return new WaitForSeconds(0.1f);
+            }
+
+            // 自分のキャラクターを生成
+            if (PhotonPlayerInfo.Instance.IsMasterClient)
+            {
+                updateNickName(PlayerType.Master);
+                SpawnCharacters(PlayerType.Master);
+            }
+            else{
+                // 方向を逆に
+                //_allysPosUpdator.AllyDir = false;
+                updateNickName(PlayerType.Sub);
+                SpawnCharacters(PlayerType.Sub);
+            }
+        }
+    }
+
+    // キャラクタの生成
+    private void SpawnCharacters(PlayerType playerType)
+    {
+        // キャラクタの位置を取得
+        var characterPositions = ES3.Load<List<Vector3>>(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_VECTOR3_CHARACTER_POSITION);
+        var characterTypes = ES3.Load<List<int>>(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_INT_CHARACTER_TYPE);
+
+        // マスターか?
+        bool isMaster = playerType == PlayerType.Master;
+        var animals = characterTypes != null && characterTypes.Count > 0 ? 
+            null : 
+            (isMaster ? _masterAnimals : _subAnimals);
+
+        // ユニフォームの数を取得
+        int uniformNum = (animals != null ? animals[0] : _charaList.GetCharaAvatar(0)).GetComponent<UniformList>().getUniformNum(isMaster);
+        // ランダムな番号を生成
+        System.Random rnd = new System.Random();
+        int numberIndex = rnd.Next(0, uniformNum);
+
+        // 4つ生成
+        for(int i=0; i<4; i++)
+        {
+            // 4人目はキーパー
+            string animalName;
+            if (i == 3) {
+                animalName = _keeper.name;
+                Debug.Log("キーパー生成 animalName:" + animalName+ " i:" + i +" playerType:" + playerType);
+            } else {
+                // characterTypesがある場合はそこから種類を取得、ない場合はanimalsまたは_charaListから取得
+                int index = isMaster ? i : i + 4;
+                int animalType = (characterTypes != null && characterTypes.Count > index) ? characterTypes[index] : i;
+                var prefab = (animals != null) ? animals[animalType] : _charaList.GetCharaAvatar(animalType);
+                Debug.Log("アニマル生成 animalType:" + animalType + " animals:" + animals+" prefab:"+prefab + " i:" + i + " playerType:" + playerType);
+                animalName = prefab.name;
+            }
+
+            // 向いている方向を設定
+            Quaternion rotation = isMaster ? Quaternion.identity : Quaternion.Euler(0, 180, 0);
+            // 生成
+            Vector3 position;
+            if (i == 3) {
+                // キーパーは基本位置を使用
+                position = getCharacterPosition(i, isMaster);
+            }
+            else if (characterPositions != null && characterPositions.Count > 0)
+            {
+                int index = isMaster ? i : i + 4;
+                position = (index < characterPositions.Count) ? characterPositions[index] : getCharacterPosition(i, isMaster);
+            }
+            else
+            {
+                position = getCharacterPosition(i, isMaster);
+            }
+            GameObject animal = PhotonNetwork.Instantiate(animalName, position, rotation, 0);
+
+            // 名前を設定
+            string nameSuffix = (playerType == PlayerType.Master) ? " (Master)" : 
+                               (playerType == PlayerType.NPC) ? " (NPC)" : " (Sub)";
+            animal.name = animal.name + nameSuffix;
+
+            // PhotonAvatarContainerChildを取得
+            var containerChild = animal.GetComponent<PhotonAvatarContainerChild>();
+            if (containerChild != null)
+            {
+                // 自分の生成ならば
+                if(animal.GetComponent<PhotonView>().IsMine)
+                {
+                    // NPCならNPCタグ、PlayerならPLAYERタグをつける
+                    string tag = (playerType == PlayerType.NPC) ? ConstData.NPC_TAG : ConstData.PLAYER_TAG;
+                    containerChild.SetTag(tag);
+
+                    // ユニフォームを設定する
+                    AnimalComponentManager comp = animal.GetComponent<AnimalComponentManager>();
+                    if(comp != null){
+                        comp.UniformChanger.setUniformType(numberIndex);
+                    }
+                }
+            }
+        }
+
+        // マスターのみボール生成
+        if(isMaster)
+        {
+            PhotonNetwork.InstantiateRoomObject("Ball_Test", Vector3.zero, Quaternion.identity, 0);
+        }
+
+        // キャラクター生成完了をプロパティで通知
+        PhotonNetwork.LocalPlayer.setIsCharacterSpawned(true);
+        // 生成数を追加
+        _created++;
+    }
+
+    // スコアのニックネームの更新
+    private void updateNickName(PlayerType playerType)
+    {
+        // NPCの場合
+        if (playerType == PlayerType.NPC){
+            ScoreManager.Instance.SetPlayerName("NPC");
+        }
+        // プレイヤーを表示
+        else{
+            ScoreManager.Instance.SetPlayerName(PhotonPlayerInfo.Instance.PlayerName);
+        }
+    }
+
+    // キャラクターの位置を取得
+    private Vector3 getCharacterPosition(int number, bool isMaster)
+    {
+        float x = 0.0f;
+        float z = 0.0f;
+
+        switch(number)
+        {
+            case 0:
+                z = -3.0f;
+                break;
+            case 1:
+                z = -8.5f;
+                x = 4.0f;
+                break;
+            case 2:
+                z = -8.5f;
+                x = -4.0f;
+                break;
+            case 3:
+                z = -16.5f;
+                break;
+        }
+
+        z = (isMaster) ? z : -z;
+
+        return new Vector3(x, 0.0f, z);
+    }
+
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        // シーンロード完了をプロパティで通知
+        PhotonNetwork.LocalPlayer.setIsSceneLoaded(true);
+    }
+}
+

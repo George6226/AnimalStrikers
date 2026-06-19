@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd49ff20777f4491493d6c39db8e3a1b, type: 3}
+  m_Name: ParamAnimalInfo_Rhinoceros
+  m_EditorClassIdentifier: Assembly-CSharp::Param_AnimalInfo
+  _animalInfoParam:
+    _animalName: "\u30B5\u30A4"
+    animalType: 5
+    _hasCombatParam: 1
+    _combatParam:
+      stamina: 60
+      speed: 50
+      shoot: 40
+      pass: 40
+      attack: 70
+      defense: 50
+      specialAbility: 2
+      specialTiming: 3
+    icon: {fileID: 21300000, guid: 6d2f7ad2a2a2e4a089b422e9eb442550, type: 3}

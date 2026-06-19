@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1745f173a51994ea087f2fad3e048668, type: 3}
+  m_Name: ParamList_AnimalInfo
+  m_EditorClassIdentifier: Assembly-CSharp::ParamList_AnimalInfo
+  _animalInfoList:
+  - _animalName: "\u30E9\u30A4\u30AA\u30F3"
+    _paramAnimalInfo: {fileID: 11400000, guid: cb2e280cc7c154dd9aeb1ec9d5ff8c58, type: 2}
+  - _animalName: "\u30B4\u30EA\u30E9"
+    _paramAnimalInfo: {fileID: 11400000, guid: d80ae7a8cf9b647d395e2e1cf81a0737, type: 2}
+  - _animalName: "\u30A4\u30CE\u30B7\u30B7"
+    _paramAnimalInfo: {fileID: 11400000, guid: 2ca2e420b3c384ae6af4327a1d775bec, type: 2}
+  - _animalName: "\u30C8\u30E9"
+    _paramAnimalInfo: {fileID: 11400000, guid: 8b07d389ac70e49bcbd2900ab47bd365, type: 2}
+  - _animalName: "\u30B5\u30A4"
+    _paramAnimalInfo: {fileID: 11400000, guid: a3f95ba21bbe34d659a7e0fd7a5ae14f, type: 2}
+  - _animalName: "\u30BE\u30A6"
+    _paramAnimalInfo: {fileID: 11400000, guid: 63092e2ab331d493b927d83bd17eb0ba, type: 2}
+  - _animalName: "\u30EF\u30CB"
+    _paramAnimalInfo: {fileID: 11400000, guid: 4d3dc36b427814152acb550d4730dfd1, type: 2}
+  - _animalName: "\u30B5\u30E1"
+    _paramAnimalInfo: {fileID: 11400000, guid: 1f3b1b13542ab46d69fe0523ec4d1d3f, type: 2}
+  - _animalName: "\u30AF\u30DE"
+    _paramAnimalInfo: {fileID: 11400000, guid: 4e3298b3f21b343b6935db269df5418b, type: 2}
+  - _animalName: "\u30DC\u30FC\u30EB"
+    _paramAnimalInfo: {fileID: 11400000, guid: 15387ce71745147ad88236f889c080ef, type: 2}

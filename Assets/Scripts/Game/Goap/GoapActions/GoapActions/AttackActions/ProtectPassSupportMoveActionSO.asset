@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e8ee836f9f8e47f7ac3487ceac37179, type: 3}
+  m_Name: ProtectPassSupportMoveActionSO
+  m_EditorClassIdentifier: 
+  _actionName: ProtectPassSupportMove
+  _baseCost: 1
+  _baseCost: 2
+  _executionTime: 2.5
+  _moveSpeed: 3.5
+  _supportDistanceRatio: 0.18
+  _lateralAdjustRatio: 0.1
+  _pressureThreshold: 0.5

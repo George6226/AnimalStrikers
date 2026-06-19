@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd49ff20777f4491493d6c39db8e3a1b, type: 3}
+  m_Name: ParamAnimalInfo_Tiger
+  m_EditorClassIdentifier: Assembly-CSharp::Param_AnimalInfo
+  _animalInfoParam:
+    _animalName: "\u30C8\u30E9"
+    animalType: 4
+    _hasCombatParam: 1
+    _combatParam:
+      stamina: 50
+      speed: 50
+      shoot: 50
+      pass: 60
+      attack: 40
+      defense: 50
+      specialAbility: 4
+      specialTiming: 3
+    icon: {fileID: 21300000, guid: 3e46557f8fd904aaab4df897f2d17579, type: 3}

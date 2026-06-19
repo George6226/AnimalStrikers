@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 0580905de755c404c8e8977df7e7534b
+labels:
+- BlockShotLaneActionSO
+- Data
+- ScriptableObject
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

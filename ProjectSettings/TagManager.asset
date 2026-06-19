@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 3
+  tags:
+  - Ball
+  - Body
+  - AttackArea
+  - Wall
+  - PlayerGoal
+  - EnemyGoal
+  - PlayerAgent
+  - EnemyAgent
+  - GoalGuard
+  - Ally
+  - NPC
+  - BlackEdge
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - PostProcess
+  - Water
+  - UI
+  - Ball
+  - Animal
+  - Goal
+  - Wall
+  - Ground
+  - Animal_Receive
+  - Animal_Attack
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: UI
+    uniqueID: 4229504293
+    locked: 0
+  - name: BlackEdge
+    uniqueID: 312584635
+    locked: 0
+  m_RenderingLayers:
+  - Default

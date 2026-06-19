@@ -1,0 +1,221 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.SceneManagement;
+
+// デバッグ用のゲームスタート管理クラス
+public class DebugPlace_GameStarter : MonoBehaviour
+{
+    [Header("UI Elements")]
+    [SerializeField] private Button _startGameButton; // ゲームスタートボタン
+    
+    [Header("Scene Settings")]
+    [SerializeField] private SceneFader _sceneFader; // シーンフェーダー
+    [SerializeField] private string _targetSceneName = "GameScene"; // 遷移先シーン名
+    
+    [Header("Debug Data")]
+    [SerializeField] private DebugPlace_GameInfoDisplay _gameInfoDisplay; // ゲーム情報表示クラス
+    [SerializeField] private DebugPlace_CharaMarkerCreator _charaMarkerCreator; // キャラマーカークリエーター
+    
+    void Start()
+    {
+        // ボタンの初期設定
+        SetupButtons();
+    }
+    
+    /// <summary>
+    /// ボタンの初期設定
+    /// </summary>
+    private void SetupButtons()
+    {
+        // スタートボタン
+        if (_startGameButton != null)
+        {
+            _startGameButton.onClick.RemoveAllListeners();
+            _startGameButton.onClick.AddListener(OnStartGameClicked);
+        }
+    }
+    
+    /// <summary>
+    /// スタートボタンクリック時の処理
+    /// </summary>
+    private void OnStartGameClicked()
+    {
+        TransitionToGameScene();
+    }
+    
+    /// <summary>
+    /// GameSceneに遷移
+    /// </summary>
+    private void TransitionToGameScene()
+    {
+        // デバッグデータを保存
+        SaveDebugData();
+        
+        if (_sceneFader != null)
+        {
+            // SceneFaderを使用してシーン遷移
+            _sceneFader.changeScene(_targetSceneName);
+        }
+        else
+        {
+            Debug.LogWarning("SceneFaderが見つかりません。直接シーン遷移します。");
+            SceneManager.LoadScene(_targetSceneName);
+        }
+        
+        Debug.Log($"GameSceneに遷移します: {_targetSceneName}");
+    }
+    
+    /// <summary>
+    /// デバッグデータをEasySaveで保存
+    /// </summary>
+    private void SaveDebugData()
+    {
+        try
+        {
+            // ゲーム情報表示からデータを取得
+            if (_gameInfoDisplay != null)
+            {
+                // 残り試合時間を保存
+                float gameTime = _gameInfoDisplay.GetCurrentTime();
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_REMAINING_GAME_TIME, gameTime);
+                Debug.Log($"残り試合時間を保存: {gameTime}秒");
+                
+                // プレイヤースコアを保存
+                int playerScore = _gameInfoDisplay.GetPlayerScore();
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_TEAM_SCORE, playerScore);
+                Debug.Log($"プレイヤースコアを保存: {playerScore}");
+                
+                // 敵スコアを保存
+                int enemyScore = _gameInfoDisplay.GetEnemyScore();
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_ENEMY_SCORE, enemyScore);
+                Debug.Log($"敵スコアを保存: {enemyScore}");
+                
+                // キャラクタ情報を取得・保存
+                var characterData = GetCharacterData();
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.LIST_VECTOR3_CHARACTER_POSITION, characterData.positions);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.LIST_INT_CHARACTER_TYPE, characterData.types);
+                Debug.Log($"キャラクタ配置リストを保存: {characterData.positions.Count}個");
+                Debug.Log($"キャラクタの種類リストを保存: {characterData.types.Count}個");
+                // キャラクタ配置リストの中身を表示
+                for (int i = 0; i < characterData.positions.Count; i++)
+                {
+                    var pos = characterData.positions[i];
+                    Debug.Log($"キャラクタ{i}の位置: ({pos.x:F1}, {pos.y:F1}, {pos.z:F1})");
+                }
+
+                // キャラクタ種類リストの中身を表示 
+                for (int i = 0; i < characterData.types.Count; i++)
+                {
+                    Debug.Log($"キャラクタ{i}の種類: {characterData.types[i]}");
+                }
+                
+                // ボールの位置と所持者を保存
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.VECTOR3_BALL_POSITION, characterData.ballPosition);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_BALL_OWNER, characterData.ballOwnerIndex);
+                Debug.Log($"ボールの位置を保存: ({characterData.ballPosition.x:F1}, {characterData.ballPosition.y:F1}, {characterData.ballPosition.z:F1})");
+                Debug.Log($"ボールの所持者を保存: インデックス{characterData.ballOwnerIndex}");
+            }
+            else
+            {
+                Debug.LogWarning("GameInfoDisplayが見つかりません。デフォルト値を保存します。");
+                
+                // デフォルト値を保存
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_REMAINING_GAME_TIME, -1);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_TEAM_SCORE, 0);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_ENEMY_SCORE, 0);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.LIST_VECTOR3_CHARACTER_POSITION, new List<Vector3>());
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.LIST_INT_CHARACTER_TYPE, new List<int>());
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.VECTOR3_BALL_POSITION, Vector3.zero);
+                ES3.Save(DataKey.DATAKEY_GAME_INFO+DataKey.INT_BALL_OWNER, -1);
+            }
+            
+            Debug.Log("デバッグデータを保存しました: " + System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("デバッグデータの保存に失敗しました: " + e.Message);
+        }
+    }
+    
+    /// <summary>
+    /// キャラクタデータを取得
+    /// </summary>
+    private CharacterData GetCharacterData()
+    {
+        var characterData = new CharacterData
+        {
+            positions = new List<Vector3>(),
+            types = new List<int>(),
+            ballPosition = Vector3.zero,
+            ballOwnerIndex = -1
+        };
+        
+        if (_charaMarkerCreator != null)
+        {
+            var markers = _charaMarkerCreator.GetCreatedMarkers();
+            int characterIndex = 0;
+            
+            foreach (var marker in markers)
+            {
+                if (marker != null)
+                {
+                    // 位置を取得
+                    Vector3 position = marker.transform.localPosition;
+                    characterData.positions.Add(position);
+                    
+                    // キャラクタIndexをタイプとして使用
+                    int charaIndex = marker.GetCharaIndex();
+                    characterData.types.Add(charaIndex);
+                    
+                    // ボール所持状態をチェック
+                    if (marker.HasBall())
+                    {
+                        characterData.ballOwnerIndex = characterIndex;
+                        Debug.Log($"ボール所持者発見: {marker.Name}, インデックス{characterIndex}, 位置({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    }
+                    else if (marker.Name.Contains("Ball"))
+                    {
+                        characterData.ballPosition = position;
+                        Debug.Log($"ボールの位置を設定: 位置({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    }
+                    
+                    Debug.Log($"キャラクタ情報取得: {marker.Name}, 位置({position.x:F1}, {position.y:F1}, {position.z:F1}), 種類{charaIndex}, ボール所持{marker.HasBall()}");
+                    characterIndex++;
+                }
+            }
+            
+            // ボール所持者が見つからない場合
+            if (characterData.ballOwnerIndex == -1)
+            {
+                Debug.Log("ボール所持者が見つかりませんでした。");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("CharaMarkerCreatorが見つかりません。空のリストを保存します。");
+        }
+        
+        return characterData;
+    }
+    
+    /// <summary>
+    /// 遷移先シーン名を設定
+    /// </summary>
+    public void SetTargetSceneName(string sceneName)
+    {
+        _targetSceneName = sceneName;
+    }
+}
+
+// キャラクタデータの構造体
+[System.Serializable]
+public class CharacterData
+{
+    public List<Vector3> positions;
+    public List<int> types;
+    public Vector3 ballPosition;
+    public int ballOwnerIndex;
+}

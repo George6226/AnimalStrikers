@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b342b34a7154989984fe2bf48513e5, type: 3}
+  m_Name: DebugPlace_CharaList
+  m_EditorClassIdentifier: 
+  _charaInfos:
+  - _name: Boar
+    _image: {fileID: 21300000, guid: 6e9e5385e4f3c4893b0c66121d84c8c7, type: 3}
+    _avatar: {fileID: 6506911887799586373, guid: 17a7a755859131f48bae64ad642baab5, type: 3}
+  - _name: Crocodile
+    _image: {fileID: 21300000, guid: 42de5f30aa57f4cd3b32939eb263398c, type: 3}
+    _avatar: {fileID: 1688811096388894744, guid: a34d630f5bab1a14b9b5b43378757b78, type: 3}
+  - _name: Elephant
+    _image: {fileID: 21300000, guid: 39e31813ea7a044f4b60636f1216e99a, type: 3}
+    _avatar: {fileID: 738871791960792147, guid: 9e0735dbcb29fd14fb9f8013ac6c6792, type: 3}
+  - _name: Gorilla
+    _image: {fileID: 21300000, guid: 8890409f02e9e441dbd898c0dd474834, type: 3}
+    _avatar: {fileID: 1200334724392467143, guid: 762311b235064054594c708f8e985cae, type: 3}
+  - _name: Lion
+    _image: {fileID: 21300000, guid: 3320a9959ef9d4c818cb7777511134d9, type: 3}
+    _avatar: {fileID: 8422764563663838976, guid: 04ca65598578e424f85f46c678ae0378, type: 3}
+  - _name: Rhinoceros
+    _image: {fileID: 21300000, guid: 6d2f7ad2a2a2e4a089b422e9eb442550, type: 3}
+    _avatar: {fileID: 5297014927834301347, guid: 75a08b38c8941494086a21ff550cefae, type: 3}
+  - _name: Shark
+    _image: {fileID: 21300000, guid: 60a71d91a3b0f4394afe09bea77d639a, type: 3}
+    _avatar: {fileID: 8084269099180747109, guid: 5e3658886b792c8468bba22c11d0da59, type: 3}
+  - _name: Tiger
+    _image: {fileID: 21300000, guid: 3e46557f8fd904aaab4df897f2d17579, type: 3}
+    _avatar: {fileID: 1913282663455143569, guid: 6a1ee1a6337e229469c4a7192e29ab6c, type: 3}
+  - _name: Bear
+    _image: {fileID: 21300000, guid: bb9a5b73683034671b6a1e5b903197a0, type: 3}
+    _avatar: {fileID: 2017327174241705831, guid: 04e98f5ba275bc54b8cbfbc497b644a3, type: 3}
+  - _name: Ball
+    _image: {fileID: 21300000, guid: 62021f07f813c4dd3a1840451310e36a, type: 3}
+    _avatar: {fileID: -4341909361163486923, guid: b3ac11c2b7d1847e8aeefef13e75e3f8, type: 3}

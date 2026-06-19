@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c16f0a639a914a3984d99244ec70942, type: 3}
+  m_Name: Test2ActionSO
+  m_EditorClassIdentifier: 
+  _actionName: Test2
+  _baseCost: 2
+  _testDuration: 2.5
+  _testMessage: "Test2\u5B9F\u884C\u4E2D"

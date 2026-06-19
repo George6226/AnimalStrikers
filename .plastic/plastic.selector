@@ -1,0 +1,4 @@
+repository "AnimalStrikers@baibai@cloud"
+  path "/"
+    br "/main"
+    co "/main"

@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 529ffbbd194d046eda3fe4e9cea7aac7
+labels:
+- Data
+- ScriptableObject
+- Test1ActionSO
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
