@@ -16,10 +16,10 @@ env:
   UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
 
 jobs:
-  editmode-geometry:
-    name: EditMode geometry tests
+  goap-ci:
+    name: GOAP CI (EditMode + Batch)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,55 +35,30 @@ jobs:
             scripts/ci/normalize-unity-license-env.sh
           fi
 
-      - name: EditMode tests
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        id: unity-library-cache
+        with:
+          path: Library
+          key: Library-v1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-v1-
+
+      - name: GOAP CI
         env:
           UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
         run: |
-          chmod +x scripts/ci/run-goap-editmode-docker.sh
-          scripts/ci/run-goap-editmode-docker.sh
+          chmod +x scripts/ci/run-goap-docker.sh
+          scripts/ci/run-goap-docker.sh all
 
-      - name: Upload EditMode logs
+      - name: Upload GOAP CI logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: goap-editmode-logs
+          name: goap-ci-logs
           path: |
             Logs/goap-editmode-tests.log
             Logs/goap-editmode-results.xml
-            Logs/ci-unity-activate.log
-
-  combined-batch-verify:
-    name: Combined support batch verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Normalize UNITY_LICENSE
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        run: |
-          chmod +x scripts/ci/normalize-unity-license-env.sh
-          if [[ -n "${UNITY_LICENSE}" ]]; then
-            scripts/ci/normalize-unity-license-env.sh
-          fi
-
-      - name: GOAP batch verify
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
-        run: |
-          chmod +x scripts/ci/run-goap-batch-verify-docker.sh
-          scripts/ci/run-goap-batch-verify-docker.sh
-
-      - name: Upload batch logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: goap-batch-logs
-          path: |
             Logs/goap-batch-verify.log
             Logs/goap-batch-result.txt
             Logs/ci-unity-activate.log

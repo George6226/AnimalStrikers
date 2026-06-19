@@ -44,6 +44,12 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
             PhotonNetwork.LocalPlayer.resetMatchProperties();
         }
 
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            BeginBatchVerifyOfflineSession();
+            return;
+        }
+
         if (PhotonNetwork.IsConnectedAndReady)
         {
             if (PhotonNetwork.InRoom)
@@ -58,6 +64,13 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
             return;
         }
 
+        PhotonNetwork.ConnectUsingSettings();
+    }
+
+    private void BeginBatchVerifyOfflineSession()
+    {
+        Debug.Log("[PhotonRoomMatching] batch verify: starting Photon OfflineMode session");
+        PhotonNetwork.OfflineMode = true;
         PhotonNetwork.ConnectUsingSettings();
     }
 
@@ -92,6 +105,24 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
     // Masterに接続
     public override void OnConnectedToMaster()
     {
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            if (PhotonNetwork.InRoom)
+            {
+                return;
+            }
+
+            PhotonNetwork.CreateRoom(
+                "GoapBatchVerify",
+                new RoomOptions
+                {
+                    MaxPlayers = MAX_PLAYERS,
+                    IsVisible = false,
+                    IsOpen = false,
+                });
+            return;
+        }
+
         TryJoinRandomRoom();
     }
 
@@ -132,6 +163,12 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
         }
 
         // ゲームの開始のチェック
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            CheckAndStartGame(ConstData.BATTLE_MODE.NPC);
+            return;
+        }
+
         CheckAndStartGame(ConstData.BATTLE_MODE.NORMAL);
     }
 
