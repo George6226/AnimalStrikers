@@ -13,15 +13,21 @@ cat <<EOF
    git remote add origin https://github.com/<user>/<repo>.git
    git push -u origin main
 
-2) GitHub Secrets に Unity 認証情報を登録する（Personal・Unity 6）
+2) GitHub Secrets（いずれかのライセンス方式 + 認証情報）
 
-   | Secret 名 | 必須 | 内容 |
-   |-----------|------|------|
-   | UNITY_EMAIL | ✅ | Unity ID のメールアドレス |
-   | UNITY_PASSWORD | ✅ | Unity ID のパスワード（特殊文字は避けると安定） |
-   | UNITY_LICENSE | 不要 | 本 CI はメール/パスワード活性化を使用 |
+   必須:
+   | Secret | 内容 |
+   |--------|------|
+   | UNITY_EMAIL | Unity ID のメール |
+   | UNITY_PASSWORD | Unity ID のパスワード |
 
-   ⚠️ 作らないこと: UNITY_SERIAL（あると serial invalid になる）
+   ライセンス（どちらか一方）:
+   | Secret | 内容 |
+   |--------|------|
+   | UNITY_LICENSE | CI 用 .ulf の XML 全文（Request Unity CI license ALF 手順で取得） |
+   | UNITY_SERIAL | Hub の本物シリアル（末尾 XXXX のマスク版は不可） |
+
+   シリアル確認: ./scripts/ci/extract-unity-personal-serial.sh
 
 3) （参考・通常不要）旧 game-ci 用 .ulf 手順
 

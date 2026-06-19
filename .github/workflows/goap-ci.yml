@@ -12,6 +12,7 @@ on:
 env:
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
 
 jobs:
@@ -25,7 +26,18 @@ jobs:
         with:
           lfs: true
 
+      - name: Normalize UNITY_LICENSE
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          chmod +x scripts/ci/normalize-unity-license-env.sh
+          if [[ -n "${UNITY_LICENSE}" ]]; then
+            scripts/ci/normalize-unity-license-env.sh
+          fi
+
       - name: EditMode tests
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
         run: |
           chmod +x scripts/ci/run-goap-editmode-docker.sh
           scripts/ci/run-goap-editmode-docker.sh
@@ -50,7 +62,18 @@ jobs:
         with:
           lfs: true
 
+      - name: Normalize UNITY_LICENSE
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          chmod +x scripts/ci/normalize-unity-license-env.sh
+          if [[ -n "${UNITY_LICENSE}" ]]; then
+            scripts/ci/normalize-unity-license-env.sh
+          fi
+
       - name: GOAP batch verify
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
         run: |
           chmod +x scripts/ci/run-goap-batch-verify-docker.sh
           scripts/ci/run-goap-batch-verify-docker.sh
