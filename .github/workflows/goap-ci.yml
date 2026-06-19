@@ -10,7 +10,6 @@ on:
   workflow_dispatch:
 
 env:
-  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
@@ -26,16 +25,9 @@ jobs:
           lfs: true
 
       - name: EditMode tests
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          unityVersion: 6000.2.7f2
-          projectPath: .
-          testMode: editmode
-          customParameters: -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests"
+        run: |
+          chmod +x scripts/ci/run-goap-editmode-docker.sh
+          scripts/ci/run-goap-editmode-docker.sh
 
       - name: Upload EditMode logs
         if: always()
@@ -45,6 +37,7 @@ jobs:
           path: |
             Logs/goap-editmode-tests.log
             Logs/goap-editmode-results.xml
+            Logs/ci-unity-activate.log
 
   combined-batch-verify:
     name: Combined support batch verify
@@ -57,10 +50,6 @@ jobs:
           lfs: true
 
       - name: GOAP batch verify
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
           chmod +x scripts/ci/run-goap-batch-verify-docker.sh
           scripts/ci/run-goap-batch-verify-docker.sh
@@ -73,6 +62,7 @@ jobs:
           path: |
             Logs/goap-batch-verify.log
             Logs/goap-batch-result.txt
+            Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
             Logs/GoapSummary_latest.txt
             Assets/DebugLog/GoapDiag_latest.txt

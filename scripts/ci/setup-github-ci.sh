@@ -13,17 +13,17 @@ cat <<EOF
    git remote add origin https://github.com/<user>/<repo>.git
    git push -u origin main
 
-2) GitHub Secrets に Unity 認証情報を登録する（Personal は3つすべて必須）
+2) GitHub Secrets に Unity 認証情報を登録する（Personal・Unity 6）
 
-   | Secret 名 | 内容 |
-   |-----------|------|
-   | UNITY_LICENSE | .ulf の XML 全文（<?xml で始まる。base64 不可） |
-   | UNITY_EMAIL | Unity ID のメールアドレス |
-   | UNITY_PASSWORD | Unity ID のパスワード（特殊文字は避けると安定） |
+   | Secret 名 | 必須 | 内容 |
+   |-----------|------|------|
+   | UNITY_EMAIL | ✅ | Unity ID のメールアドレス |
+   | UNITY_PASSWORD | ✅ | Unity ID のパスワード（特殊文字は避けると安定） |
+   | UNITY_LICENSE | 不要 | 本 CI はメール/パスワード活性化を使用 |
 
-   ⚠️ 作らないこと: UNITY_SERIAL（Personal では不要。あると serial invalid になる）
+   ⚠️ 作らないこと: UNITY_SERIAL（あると serial invalid になる）
 
-3) UNITY_LICENSE の正しい取得手順（CI 専用）
+3) （参考・通常不要）旧 game-ci 用 .ulf 手順
 
    Mac の Unity_lic.ulf は CI では使えません。unityci Docker 用の .ulf が必要です。
 
@@ -51,7 +51,7 @@ cat <<EOF
 5) 失敗時は Artifacts から Logs/ をダウンロード
 
    よくある失敗:
-   - serial invalid (20110) → UNITY_LICENSE が base64 / Mac 用 ulf / UNITY_SERIAL が混在
+   - serial invalid (20110) → game-ci を使っている / UNITY_SERIAL が混在（本 CI では game-ci 不使用）
    - activation failed → UNITY_EMAIL / UNITY_PASSWORD の誤り、またはパスワードの特殊文字
 
 Docker image (batch): ${IMAGE}

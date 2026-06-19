@@ -12,12 +12,7 @@ if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
   exit 2
 fi
 
-echo "[goap-ci] docker batch verify image=${IMAGE}"
-
-rm -f \
-  "${LOG_DIR}/goap-batch-result.txt" \
-  "${LOG_DIR}/goap-batch-pending-exit.txt" \
-  "${LOG_DIR}/goap-batch-started.marker"
+echo "[goap-ci] docker editmode tests image=${IMAGE}"
 
 set +e
 docker run --rm \
@@ -36,20 +31,23 @@ xvfb-run --auto-servernum --server-args='-screen 0 640x480x24' \
     -batchmode \
     -nographics \
     -projectPath /project \
-    -goapBatchVerify \
-    -logFile /project/Logs/goap-batch-verify.log
+    -runTests \
+    -testPlatform EditMode \
+    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests" \
+    -testResults /project/Logs/goap-editmode-results.xml \
+    -logFile /project/Logs/goap-editmode-tests.log
 INNER
 )"
 exit_code=$?
 set -e
 
-if [[ -f "${LOG_DIR}/goap-batch-result.txt" ]]; then
-  cat "${LOG_DIR}/goap-batch-result.txt"
+if [[ -f "${LOG_DIR}/goap-editmode-results.xml" ]]; then
+  grep -E 'test-run.*(passed|failed)' "${LOG_DIR}/goap-editmode-results.xml" | head -1 || true
 fi
 
 if [[ "${exit_code}" -ne 0 ]]; then
-  echo "[goap-ci] docker batch verify failed (exit=${exit_code})" >&2
+  echo "[goap-ci] docker editmode tests failed (exit=${exit_code})" >&2
   exit "${exit_code}"
 fi
 
-echo "[goap-ci] docker batch verify passed"
+echo "[goap-ci] docker editmode tests passed"
