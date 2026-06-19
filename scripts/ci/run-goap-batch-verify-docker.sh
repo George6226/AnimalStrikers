@@ -77,6 +77,14 @@ if [[ "${exit_code}" -ne 0 ]]; then
   if [[ -f "${LOG_DIR}/goap-batch-verify.log" ]]; then
     tail -40 "${LOG_DIR}/goap-batch-verify.log" >&2 || true
   fi
+  for diag in \
+    "${LOG_DIR}/GoapDiag_latest.txt" \
+    "${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"; do
+    if [[ -f "${diag}" ]]; then
+      echo "[goap-ci] --- ${diag} (BATCH markers) ---" >&2
+      grep -E 'BATCH_|SELECTION_|RUNTIME_|GOAP_BATCH_RUNNER' "${diag}" | tail -20 >&2 || true
+    fi
+  done
   if [[ -f "${LOG_DIR}/ci-unity-activate.log" ]]; then
     tail -40 "${LOG_DIR}/ci-unity-activate.log" >&2 || true
   fi

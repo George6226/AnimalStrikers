@@ -25,7 +25,7 @@ public sealed class GoapBatchVerificationLogParserTests
         GoapBatchVerificationLogParser.Result result = GoapBatchVerificationLogParser.Evaluate(diag);
 
         Assert.IsFalse(result.Succeeded);
-        Assert.That(result.Summary, Does.Contain("BATCH_ABORT"));
+        Assert.That(result.Summary, Does.Contain("BATCH_ABORT GAME_TIMEOUT"));
     }
 
     [Test]

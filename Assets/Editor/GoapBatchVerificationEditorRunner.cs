@@ -130,8 +130,15 @@ public static class GoapBatchVerificationEditorRunner
         }
 
         string text = File.ReadAllText(_diagPath);
-        if (!text.Contains("BATCH_COMPLETE", StringComparison.Ordinal)
-            && !text.Contains("BATCH_ABORT", StringComparison.Ordinal))
+        bool batchFinished = text.Contains("BATCH_COMPLETE", StringComparison.Ordinal)
+            || text.Contains("BATCH_ABORT", StringComparison.Ordinal);
+        if (!batchFinished)
+        {
+            return;
+        }
+
+        if (text.Contains("BATCH_COMPLETE", StringComparison.Ordinal)
+            && !text.Contains("BATCH_START", StringComparison.Ordinal))
         {
             return;
         }

@@ -11,7 +11,8 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
     // 部屋マッチングの終了時実行
     [SerializeField] private PhotonRoomMatchingExecutor_Base _execute;
     // マッチング制限時間
-    [SerializeField] private float MATCHING_TIMEOUT = 60f;         
+    [SerializeField] private float MATCHING_TIMEOUT = 60f;
+    private const float BatchVerifyMatchingTimeoutSeconds = 2f;
 
     // 最大プレイヤー数
     private const byte MAX_PLAYERS = 2;
@@ -78,7 +79,7 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
             _matchingTimer += Time.deltaTime;
 
             // タイムアウト => NPCの生成
-            if (_matchingTimer >= MATCHING_TIMEOUT)
+            if (_matchingTimer >= GetEffectiveMatchingTimeout())
             {
                 // タイムアウト状態
                 _isMatchingTimedOut = true;
@@ -189,4 +190,9 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
         // マッチング終了時の実行
         _execute.executeRoomMatching();
     }
+
+    private float GetEffectiveMatchingTimeout() =>
+        GoapBatchVerifyEnvironment.IsActive
+            ? BatchVerifyMatchingTimeoutSeconds
+            : MATCHING_TIMEOUT;
 }

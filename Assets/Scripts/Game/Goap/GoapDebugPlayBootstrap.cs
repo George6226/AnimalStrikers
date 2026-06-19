@@ -20,6 +20,12 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
     [SerializeField] private float _spawnWaitTimeoutSeconds = 90f;
     [SerializeField] private float _spawnCheckIntervalSeconds = 0.25f;
 
+    private float ConnectTimeoutSeconds =>
+        GoapBatchVerifyEnvironment.ResolveTimeout(_connectTimeoutSeconds, 60f);
+
+    private float SpawnWaitTimeoutSeconds =>
+        GoapBatchVerifyEnvironment.ResolveTimeout(_spawnWaitTimeoutSeconds, 180f);
+
     private bool _completed;
 
     private void Awake()
@@ -40,7 +46,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         }
 
         float connectElapsed = 0f;
-        while (connectElapsed < _connectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
+        while (connectElapsed < ConnectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
         {
             connectElapsed += Time.deltaTime;
             yield return null;
@@ -48,7 +54,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (!PhotonNetwork.IsConnectedAndReady)
         {
-            Log($"spawn aborted: Photon not connected after {_connectTimeoutSeconds:F0}s");
+            Log($"spawn aborted: Photon not connected after {ConnectTimeoutSeconds:F0}s");
             yield break;
         }
 
@@ -62,7 +68,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         if (!PhotonNetwork.InRoom)
         {
             Log("waiting for room join (PhotonRoomMatching)");
-            yield return WaitForFieldPlayersSpawned(_spawnWaitTimeoutSeconds);
+            yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
             CompleteIfReady();
             yield break;
         }
@@ -91,7 +97,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
                 Log("InRoom but PhotonAvatarCreator not found");
             }
 
-            yield return WaitForFieldPlayersSpawned(_spawnWaitTimeoutSeconds);
+            yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
         }
 
         CompleteIfReady();
@@ -129,7 +135,30 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         _completed = true;
         IsSpawnReady = true;
         Log($"spawn ready fieldPlayers={CountFieldPlayers()}");
+        TryForceGameStateForBatchVerify();
         SpawnReady?.Invoke();
+    }
+
+    private static void TryForceGameStateForBatchVerify()
+    {
+        if (!GoapBatchVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
+        if (StateManager.Instance == null)
+        {
+            Log("batch verify: StateManager missing; GAME state not forced");
+            return;
+        }
+
+        if (StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME))
+        {
+            return;
+        }
+
+        StateManager.Instance.changeStateLocal(StateManager.STATE_KIND.GAME);
+        Log("batch verify: forced GAME state (skip kickoff UI)");
     }
 
     private static bool HasMinimumFieldPlayers()

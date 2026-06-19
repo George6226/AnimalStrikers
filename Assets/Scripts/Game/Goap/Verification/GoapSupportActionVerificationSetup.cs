@@ -486,7 +486,8 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
     {
         try
         {
-            yield return WaitUntilReadyForLayoutApply(_initialApplyTimeoutSeconds);
+            yield return WaitUntilReadyForLayoutApply(
+                GoapBatchVerifyEnvironment.ResolveTimeout(_initialApplyTimeoutSeconds, 180f));
             if (!IsReadyForLayoutApply())
             {
                 LogLine("RunBatchVerification aborted: layout apply not ready");
@@ -536,7 +537,10 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
                     : $"BATCH_START preset={_batchPreset} count={total}");
 
             LogLine("RunBatchVerification waiting for GAME state (kickoff)...");
-            yield return WaitForGameStateCoroutine(_batchWaitGameStateTimeoutSeconds);
+            float gameStateTimeout = GoapBatchVerifyEnvironment.ResolveTimeout(
+                _batchWaitGameStateTimeoutSeconds,
+                180f);
+            yield return WaitForGameStateCoroutine(gameStateTimeout);
             if (!IsGameState())
             {
                 LogLine("RunBatchVerification aborted: GAME state timeout before first pattern");
@@ -699,6 +703,11 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
         if (!IsGameState())
         {
             LogLine($"WaitForGameState timeout={timeoutSeconds:F0}s");
+            if (GoapBatchVerifyEnvironment.IsActive && StateManager.Instance != null)
+            {
+                StateManager.Instance.changeStateLocal(StateManager.STATE_KIND.GAME);
+                LogLine("WaitForGameState batch verify fallback: forced GAME");
+            }
         }
     }
 

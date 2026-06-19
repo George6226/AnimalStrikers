@@ -36,7 +36,7 @@ public static class GoapBatchVerificationLogParser
 
         if (diagText.Contains("BATCH_ABORT", StringComparison.Ordinal))
         {
-            return new Result(false, "BATCH_ABORT detected");
+            return new Result(false, DescribeBatchAbort(diagText));
         }
 
         if (ContainsFailureBanner(diagText))
@@ -95,6 +95,29 @@ public static class GoapBatchVerificationLogParser
         }
 
         return false;
+    }
+
+    private static string DescribeBatchAbort(string diagText)
+    {
+        foreach (string line in diagText.Split('\n'))
+        {
+            if (!line.Contains("BATCH_ABORT", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int index = line.IndexOf("BATCH_ABORT", StringComparison.Ordinal);
+            string detail = line.Substring(index).Trim();
+            int bannerEnd = detail.IndexOf(" ==========", StringComparison.Ordinal);
+            if (bannerEnd > 0)
+            {
+                detail = detail.Substring(0, bannerEnd).Trim();
+            }
+
+            return detail;
+        }
+
+        return "BATCH_ABORT detected";
     }
 }
 #endif
