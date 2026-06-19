@@ -5,6 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 UNITY_VERSION="${UNITY_VERSION:-6000.2.7f2}"
 IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${UNITY_VERSION}-base-3}"
 LOG_DIR="${PROJECT_ROOT}/Logs"
+UNITY_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-2700}"
 mkdir -p "${LOG_DIR}"
 
 if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
@@ -12,24 +13,30 @@ if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
   exit 2
 fi
 
-echo "[goap-ci] docker editmode tests image=${IMAGE}"
+echo "[goap-ci] docker editmode tests image=${IMAGE} timeout=${UNITY_TIMEOUT}s"
+
+docker_env=( -e UNITY_EMAIL -e UNITY_PASSWORD )
+if [[ -n "${UNITY_SERIAL:-}" ]]; then
+  docker_env+=( -e UNITY_SERIAL )
+fi
 
 set +e
 docker run --rm \
-  -e UNITY_EMAIL \
-  -e UNITY_PASSWORD \
+  "${docker_env[@]}" \
   -v "${PROJECT_ROOT}:/project" \
   -w /project \
   --entrypoint bash \
   "${IMAGE}" \
-  -ec "$(cat <<'INNER'
+  -ec "$(cat <<INNER
 set -euo pipefail
 source /project/scripts/ci/docker-unity-personal.sh
-unity_docker_activate_personal /project/Logs/ci-unity-activate.log
-xvfb-run --auto-servernum --server-args='-screen 0 640x480x24' \
+mapfile -t auth_args < <(unity_auth_cli_args)
+echo "[goap-ci] starting EditMode tests at \$(date -u +%H:%M:%S)"
+timeout ${UNITY_TIMEOUT} xvfb-run --auto-servernum --server-args='-screen 0 640x480x24' \
   unity-editor \
     -batchmode \
     -nographics \
+    "\${auth_args[@]}" \
     -projectPath /project \
     -runTests \
     -testPlatform EditMode \
@@ -43,6 +50,11 @@ set -e
 
 if [[ -f "${LOG_DIR}/goap-editmode-results.xml" ]]; then
   grep -E 'test-run.*(passed|failed)' "${LOG_DIR}/goap-editmode-results.xml" | head -1 || true
+fi
+
+if [[ "${exit_code}" -eq 124 ]]; then
+  echo "[goap-ci] docker editmode tests timed out after ${UNITY_TIMEOUT}s" >&2
+  exit 124
 fi
 
 if [[ "${exit_code}" -ne 0 ]]; then

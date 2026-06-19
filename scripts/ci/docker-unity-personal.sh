@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
-# unityci Docker 内で Unity Personal をメール/パスワードのみで活性化する共通処理。
-# game-ci の UNITY_LICENSE + シリアル抽出は Unity 6 で壊れるため使わない。
+# unityci Docker 内で Unity Personal 認証用の CLI 引数を組み立てる。
 set -euo pipefail
 
-unity_docker_activate_personal() {
-  local log_file="${1:-/project/Logs/ci-unity-activate.log}"
-  echo "[goap-ci] activating Unity Personal (email/password only)"
-  xvfb-run --auto-servernum --server-args='-screen 0 640x480x24' \
-    unity-editor \
-      -batchmode \
-      -nographics \
-      -quit \
-      -username "${UNITY_EMAIL}" \
-      -password "${UNITY_PASSWORD}" \
-      -logFile "${log_file}"
+unity_auth_cli_args() {
+  echo -username
+  echo "${UNITY_EMAIL}"
+  echo -password
+  echo "${UNITY_PASSWORD}"
+  if [[ -n "${UNITY_SERIAL:-}" ]]; then
+    echo -serial
+    echo "${UNITY_SERIAL}"
+  fi
 }
