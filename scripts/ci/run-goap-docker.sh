@@ -95,6 +95,10 @@ if [[ "${MODE}" == "batch" || "${MODE}" == "all" ]]; then
     -logFile /project/Logs/goap-batch-verify.log
   batch_exit=\$?
   set -e
+  if [[ "\${batch_exit}" -ne 0 ]]; then
+    echo "[goap-ci] batch verify unity failed (exit=\${batch_exit})" >&2
+    exit "\${batch_exit}"
+  fi
 fi
 INNER
 )"
@@ -121,7 +125,8 @@ if [[ "${MODE}" == "batch" || "${MODE}" == "all" ]]; then
       echo "[goap-ci] docker batch verify passed"
     fi
     docker_exit=0
-  elif [[ "${docker_exit}" -ne 0 ]]; then
+  else
+    docker_exit=1
     if [[ -f "${LOG_DIR}/goap-batch-verify.log" ]]; then
       tail -40 "${LOG_DIR}/goap-batch-verify.log" >&2 || true
     fi
@@ -136,7 +141,7 @@ if [[ "${MODE}" == "batch" || "${MODE}" == "all" ]]; then
     if [[ "${docker_exit}" -eq 124 ]]; then
       echo "[goap-ci] docker batch verify timed out after ${BATCH_TIMEOUT}s" >&2
     else
-      echo "[goap-ci] docker batch verify failed (exit=${docker_exit})" >&2
+      echo "[goap-ci] docker batch verify failed" >&2
     fi
   fi
 fi

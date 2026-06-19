@@ -45,6 +45,12 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             _avatarCreator = FindFirstObjectByType<PhotonAvatarCreator>();
         }
 
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            yield return EnsureBatchVerifySpawnCoroutine();
+            yield break;
+        }
+
         float connectElapsed = 0f;
         while (connectElapsed < ConnectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
         {
@@ -97,6 +103,86 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
                 Log("InRoom but PhotonAvatarCreator not found");
             }
 
+            yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
+        }
+
+        CompleteIfReady();
+    }
+
+    private IEnumerator EnsureBatchVerifySpawnCoroutine()
+    {
+        Log("batch verify: starting offline Photon session");
+
+        PhotonNetwork.OfflineMode = true;
+        PhotonNetwork.IsMessageQueueRunning = true;
+        PhotonNetwork.ConnectUsingSettings();
+
+        float connectElapsed = 0f;
+        while (connectElapsed < ConnectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
+        {
+            connectElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            Log($"batch verify spawn aborted: Photon offline connect failed after {ConnectTimeoutSeconds:F0}s");
+            yield break;
+        }
+
+        if (!PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.CreateRoom(
+                "GoapBatchVerify",
+                new RoomOptions
+                {
+                    MaxPlayers = 2,
+                    IsVisible = false,
+                    IsOpen = false,
+                });
+
+            float joinElapsed = 0f;
+            while (joinElapsed < SpawnWaitTimeoutSeconds && !PhotonNetwork.InRoom)
+            {
+                joinElapsed += _spawnCheckIntervalSeconds;
+                yield return new WaitForSeconds(_spawnCheckIntervalSeconds);
+            }
+        }
+
+        if (!PhotonNetwork.InRoom)
+        {
+            Log("batch verify spawn aborted: offline room join failed");
+            yield break;
+        }
+
+        Player local = PhotonNetwork.LocalPlayer;
+        if (local == null)
+        {
+            Log("batch verify spawn aborted: LocalPlayer is null");
+            yield break;
+        }
+
+        if (local.getBattleMode() != ConstData.BATTLE_MODE.NPC)
+        {
+            local.setBattleMode(ConstData.BATTLE_MODE.NPC);
+            Log("batch verify: forced BattleMode=NPC");
+        }
+
+        if (PhotonPlayerInfo.Instance != null)
+        {
+            PhotonPlayerInfo.Instance.Initialize(local);
+        }
+
+        if (_avatarCreator == null)
+        {
+            Log("batch verify spawn aborted: PhotonAvatarCreator not found");
+            yield break;
+        }
+
+        if (!HasMinimumFieldPlayers())
+        {
+            Log("batch verify: executeAvatarCreator");
+            _avatarCreator.executeAvatarCreator();
             yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
         }
 
