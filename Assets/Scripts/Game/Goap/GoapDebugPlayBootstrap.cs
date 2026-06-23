@@ -111,6 +111,13 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
     private IEnumerator EnsureBatchVerifySpawnCoroutine()
     {
+        Log("batch verify: preparing match session data");
+        GameDataInitializer.EnsureMatchSessionData(forceDefaultFormation: true);
+        EnsureTeamBlackboardFieldReady();
+
+        yield return null;
+        yield return WaitForPrefabPoolReady();
+
         Log("batch verify: starting offline Photon session");
 
         PhotonNetwork.OfflineMode = true;
@@ -172,6 +179,10 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         {
             PhotonPlayerInfo.Instance.Initialize(local);
         }
+        else
+        {
+            Log("batch verify: PhotonPlayerInfo.Instance is null");
+        }
 
         if (_avatarCreator == null)
         {
@@ -183,10 +194,62 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         {
             Log("batch verify: executeAvatarCreator");
             _avatarCreator.executeAvatarCreator();
-            yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
+            yield return WaitForLayoutApplyReady(SpawnWaitTimeoutSeconds);
+        }
+        else
+        {
+            yield return WaitForLayoutApplyReady(5f);
+        }
+
+        if (!GoapBatchVerifyLayoutReadiness.IsReady(new GoapSupportLayoutTuning()))
+        {
+            Log($"batch verify spawn incomplete: {GoapBatchVerifyLayoutReadiness.DescribeBlocked(new GoapSupportLayoutTuning())} " +
+                $"prefabPool={(PhotonNetwork.PrefabPool != null ? PhotonNetwork.PrefabPool.GetType().Name : "null")}");
         }
 
         CompleteIfReady();
+    }
+
+    private IEnumerator WaitForPrefabPoolReady()
+    {
+        float elapsed = 0f;
+        while (elapsed < 10f && PhotonNetwork.PrefabPool == null)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (PhotonNetwork.PrefabPool == null)
+        {
+            Log("batch verify: Photon PrefabPool still null after 10s");
+        }
+    }
+
+    private IEnumerator WaitForLayoutApplyReady(float timeoutSeconds)
+    {
+        var tuning = new GoapSupportLayoutTuning();
+        float elapsed = 0f;
+        while (elapsed < timeoutSeconds && !GoapBatchVerifyLayoutReadiness.IsReady(tuning))
+        {
+            elapsed += _spawnCheckIntervalSeconds;
+            yield return new WaitForSeconds(_spawnCheckIntervalSeconds);
+        }
+    }
+
+    private static void EnsureTeamBlackboardFieldReady()
+    {
+        TeamBlackboard teamBlackboard = TeamFacade.Instance != null
+            ? TeamFacade.Instance.TeamBlackboard
+            : null;
+        if (teamBlackboard == null)
+        {
+            Log("batch verify: TeamBlackboard missing");
+            return;
+        }
+
+        teamBlackboard.FieldInfo.Initialize(ConstData.FIELD_SIZE_Z, ConstData.FIELD_SIZE_X);
+        teamBlackboard.BallInfo.Initialize();
+        Log("batch verify: TeamBlackboard field context initialized");
     }
 
     private IEnumerator WaitForFieldPlayersSpawned(float timeoutSeconds)
@@ -213,8 +276,14 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (!HasMinimumFieldPlayers())
         {
-            Log($"spawn timeout: fieldPlayers={CountFieldPlayers()} photonInRoom={PhotonNetwork.InRoom} " +
-                $"battleMode={(PhotonNetwork.LocalPlayer != null ? PhotonNetwork.LocalPlayer.getBattleMode().ToString() : "null")}");
+            Log($"spawn timeout: fieldPlayers={CountFieldPlayers()} layout={GoapBatchVerifyLayoutReadiness.DescribeBlocked(new GoapSupportLayoutTuning())} " +
+                $"photonInRoom={PhotonNetwork.InRoom} battleMode={(PhotonNetwork.LocalPlayer != null ? PhotonNetwork.LocalPlayer.getBattleMode().ToString() : "null")}");
+            return;
+        }
+
+        if (!GoapBatchVerifyLayoutReadiness.IsReady(new GoapSupportLayoutTuning()))
+        {
+            Log($"spawn timeout: layout not ready ({GoapBatchVerifyLayoutReadiness.DescribeBlocked(new GoapSupportLayoutTuning())})");
             return;
         }
 

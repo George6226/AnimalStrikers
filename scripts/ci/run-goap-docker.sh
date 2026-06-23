@@ -135,7 +135,7 @@ if [[ "${MODE}" == "batch" || "${MODE}" == "all" ]]; then
       "${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"; do
       if [[ -f "${diag}" ]]; then
         echo "[goap-ci] --- ${diag} (BATCH markers) ---" >&2
-        grep -E 'BATCH_|SELECTION_|RUNTIME_|GOAP_BATCH_RUNNER|GoapDebugPlayBootstrap' "${diag}" | tail -30 >&2 || true
+        if grep -E 'BATCH_|SELECTION_|RUNTIME_|GOAP_BATCH_RUNNER|GoapDebugPlayBootstrap|GameDataInitializer' "${diag}" | tail -40 >&2 || true
       fi
     done
     if [[ "${docker_exit}" -eq 124 ]]; then

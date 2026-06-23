@@ -490,8 +490,9 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
                 GoapBatchVerifyEnvironment.ResolveTimeout(_initialApplyTimeoutSeconds, 180f));
             if (!IsReadyForLayoutApply())
             {
-                LogLine("RunBatchVerification aborted: layout apply not ready");
-                GoapDiagnosticLog.WriteBanner("BATCH_ABORT NOT_READY");
+                string blocked = GoapBatchVerifyLayoutReadiness.DescribeBlocked(LayoutTuning);
+                LogLine($"RunBatchVerification aborted: layout apply not ready ({blocked})");
+                GoapDiagnosticLog.WriteBanner($"BATCH_ABORT NOT_READY {blocked}");
                 yield break;
             }
 

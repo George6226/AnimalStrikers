@@ -9,42 +9,54 @@ public class GameDataInitializer : MonoBehaviour
 {
     private void OnEnable()
     {
-        // デフォルト値を保存
+        EnsureMatchSessionData();
+    }
+
+    /// <summary>
+    /// MainMenu を経由しない GameScene 直 Play（GOAP バッチ CI 等）向けの初期化。
+    /// </summary>
+    public static void EnsureMatchSessionData(bool forceDefaultFormation = false)
+    {
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_REMAINING_GAME_TIME, ConstData.TIME_GAME);
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_TEAM_SCORE, 0);
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_ENEMY_SCORE, 0);
-        
-        // PLAYER側のデータを初期化
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_VECTOR3_CHARACTER_POSITION_PLAYER, new List<Vector3>());
-        
-        // NPC側のデータを初期化
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_VECTOR3_CHARACTER_POSITION_NPC, new List<Vector3>());
-        
-        // PLAYER側のチーム編成データが存在しない場合、デフォルト値で初期化
+
         string playerFormationKey = DataKey.DATAKEY_GAME_INFO + DataKey.ARRAY_INT_TEAM_FORMATION_PLAYER;
-        if (!ES3.KeyExists(playerFormationKey))
+        if (forceDefaultFormation || !ES3.KeyExists(playerFormationKey))
         {
-            List<Param_AnimalInfo.AnimalType> defaultPlayerFormation = new List<Param_AnimalInfo.AnimalType>
-            {
-                Param_AnimalInfo.AnimalType.Lion,
-                Param_AnimalInfo.AnimalType.Gorilla,
-                Param_AnimalInfo.AnimalType.Boar,
-                Param_AnimalInfo.AnimalType.Bear,
-            };
-            ES3.Save(playerFormationKey, defaultPlayerFormation);
+            ES3.Save(playerFormationKey, CreateDefaultPlayerFormation());
         }
 
-        Debug.Log($"[GameDataInitializer] 保存した PLAYER側のチーム編成データ: {ES3.Load<List<Param_AnimalInfo.AnimalType>>(playerFormationKey)}");
-        
-        // NPC側のチーム編成データが存在しない場合、デフォルト値で初期化
         string npcFormationKey = DataKey.DATAKEY_GAME_INFO + DataKey.ARRAY_INT_TEAM_FORMATION_NPC;
-        List<Param_AnimalInfo.AnimalType> defaultNPCFormation = new List<Param_AnimalInfo.AnimalType>
+        if (forceDefaultFormation || !ES3.KeyExists(npcFormationKey))
         {
-        };
-        ES3.Save(npcFormationKey, defaultNPCFormation);
+            ES3.Save(npcFormationKey, CreateDefaultNpcFormation());
+        }
 
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.VECTOR3_BALL_POSITION, Vector3.zero);
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER, -1);
-    }
-}
 
+        Debug.Log(
+            $"[GameDataInitializer] match session ready formation={string.Join(", ", ES3.Load<List<Param_AnimalInfo.AnimalType>>(playerFormationKey))}");
+    }
+
+    private static List<Param_AnimalInfo.AnimalType> CreateDefaultPlayerFormation() =>
+        new()
+        {
+            Param_AnimalInfo.AnimalType.Lion,
+            Param_AnimalInfo.AnimalType.Gorilla,
+            Param_AnimalInfo.AnimalType.Boar,
+            Param_AnimalInfo.AnimalType.Bear,
+        };
+
+    private static List<Param_AnimalInfo.AnimalType> CreateDefaultNpcFormation() =>
+        new()
+        {
+            Param_AnimalInfo.AnimalType.Crocodile,
+            Param_AnimalInfo.AnimalType.Shark,
+            Param_AnimalInfo.AnimalType.Elephant,
+            Param_AnimalInfo.AnimalType.Tiger,
+        };
+}
