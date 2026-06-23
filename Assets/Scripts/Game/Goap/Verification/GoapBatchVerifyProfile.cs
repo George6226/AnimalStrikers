@@ -8,4 +8,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>翼保持ドライブ追従ランタイム（WingOwnerDrive #17/#18）。</summary>
     WingDrive = 1,
+
+    /// <summary>CF 保持ドライブ追従ランタイム（CfOwnerDrive #13〜16）。</summary>
+    CfDrive = 2,
 }

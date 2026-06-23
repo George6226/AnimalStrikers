@@ -13,9 +13,9 @@ BATCH_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-2400}"
 mkdir -p "${LOG_DIR}"
 
 case "${MODE}" in
-  all | editmode | batch | batch-combined | batch-wing) ;;
+  all | editmode | batch | batch-combined | batch-wing | batch-cf-drive) ;;
   *)
-    echo "usage: $0 [all|editmode|batch|batch-combined|batch-wing]" >&2
+    echo "usage: $0 [all|editmode|batch|batch-combined|batch-wing|batch-cf-drive]" >&2
     exit 2
     ;;
 esac
@@ -32,10 +32,11 @@ fi
 
 echo "[goap-ci] docker goap-ci mode=${MODE} image=${IMAGE}"
 
-if [[ "${MODE}" == "batch" || "${MODE}" == "all" || "${MODE}" == "batch-combined" || "${MODE}" == "batch-wing" ]]; then
+if [[ "${MODE}" == "batch" || "${MODE}" == "all" || "${MODE}" == "batch-combined" || "${MODE}" == "batch-wing" || "${MODE}" == "batch-cf-drive" ]]; then
   rm -f \
     "${LOG_DIR}/goap-batch-result.txt" \
     "${LOG_DIR}/goap-batch-wing-result.txt" \
+    "${LOG_DIR}/goap-batch-cf-drive-result.txt" \
     "${LOG_DIR}/goap-batch-pending-exit.txt" \
     "${LOG_DIR}/goap-batch-started.marker" \
     "${LOG_DIR}/goap-batch-profile.txt"
@@ -126,6 +127,18 @@ if [[ "${MODE}" == "batch" || "${MODE}" == "all" || "${MODE}" == "batch-wing" ]]
     exit "\${wing_exit}"
   fi
 fi
+
+if [[ "${MODE}" == "batch" || "${MODE}" == "all" || "${MODE}" == "batch-cf-drive" ]]; then
+  rm -f /project/Logs/goap-batch-pending-exit.txt /project/Logs/goap-batch-started.marker /project/Logs/goap-batch-profile.txt
+  set +e
+  run_batch_profile "-goapBatchVerify=cfDrive" "goap-batch-cf-drive-verify.log"
+  cf_exit=\$?
+  set -e
+  if [[ "\${cf_exit}" -ne 0 ]]; then
+    echo "[goap-ci] CF drive batch verify unity failed (exit=\${cf_exit})" >&2
+    exit "\${cf_exit}"
+  fi
+fi
 INNER
 )"
 docker_exit=$?
@@ -195,6 +208,35 @@ if [[ "${docker_exit}" -eq 0 && ( "${MODE}" == "batch" || "${MODE}" == "all" || 
       fi
     done
     echo "[goap-ci] docker wing drive batch verify failed" >&2
+  fi
+fi
+
+if [[ "${docker_exit}" -eq 0 && ( "${MODE}" == "batch" || "${MODE}" == "all" || "${MODE}" == "batch-cf-drive" ) ]]; then
+  if [[ -f "${LOG_DIR}/goap-batch-cf-drive-result.txt" ]]; then
+    cat "${LOG_DIR}/goap-batch-cf-drive-result.txt"
+  fi
+
+  if resolve_batch_verify_success "${PROJECT_ROOT}" cfDrive; then
+    if [[ "${docker_exit}" -ne 0 ]]; then
+      echo "[goap-ci] CF drive batch passed by result artifacts (unity exit=${docker_exit})"
+    else
+      echo "[goap-ci] docker CF drive batch verify passed"
+    fi
+    docker_exit=0
+  else
+    docker_exit=1
+    if [[ -f "${LOG_DIR}/goap-batch-cf-drive-verify.log" ]]; then
+      tail -40 "${LOG_DIR}/goap-batch-cf-drive-verify.log" >&2 || true
+    fi
+    for diag in \
+      "${LOG_DIR}/GoapDiag_cf_drive_latest.txt" \
+      "${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"; do
+      if [[ -f "${diag}" ]]; then
+        echo "[goap-ci] --- ${diag} (CF drive BATCH markers) ---" >&2
+        grep -E 'BATCH_|SELECTION_|RUNTIME_|GOAP_BATCH_RUNNER|AUTO_DRIVE|GoapDebugPlayBootstrap' "${diag}" | tail -40 >&2 || true
+      fi
+    done
+    echo "[goap-ci] docker CF drive batch verify failed" >&2
   fi
 fi
 

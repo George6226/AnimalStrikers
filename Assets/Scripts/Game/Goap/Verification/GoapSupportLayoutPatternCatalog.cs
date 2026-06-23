@@ -88,6 +88,9 @@ public static class GoapSupportLayoutPatternCatalog
     public static List<GoapSupportLayoutPatternId> BuildWingOwnerDriveSuite() =>
         BuildRange(17, 18);
 
+    public static List<GoapSupportLayoutPatternId> BuildCfOwnerDriveSuite() =>
+        BuildRange(13, 16);
+
     public static List<GoapSupportLayoutPatternId> BuildAllDriveSuite() =>
         BuildRange(13, 18);
 

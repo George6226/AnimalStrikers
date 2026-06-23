@@ -33,7 +33,7 @@ public enum GoapSupportLayoutPatternId
     CfOwner_AtCorrectLanes_DriveForwardBack = 14,
     /// <summary>#15 CF 保持・手前レーン + 前進ドライブ。</summary>
     CfOwner_NearCorrectLanes_DriveForward = 15,
-    /// <summary>#16 CF 保持・理想レーン + 横移動ドライブ。</summary>
+    /// <summary>#16 CF 保持・手前レーン + 横移動ドライブ（理想レーン上だと GetOpen が選ばれやすいため手前から開始）。</summary>
     CfOwner_AtCorrectLanes_DriveLateralRight = 16,
     /// <summary>#17 RW 保持 + 前後ドライブ。</summary>
     RwOwner_WingHold_DriveForward = 17,
@@ -54,6 +54,8 @@ public enum GoapSupportLayoutBatchPreset
     WingOwnerDrive = 3,
     /// <summary>#13〜18（全ドライブ）。</summary>
     AllDrive = 4,
+    /// <summary>#13〜16（CF 保持ドライブ）。</summary>
+    CfOwnerDrive = 8,
     /// <summary>#2〜5,7,10〜12（CF 保持静止。翼 #8/#9 と #6 AtCorrectLanes を除く）。</summary>
     CfOwnerStaticGetOpen = 5,
     /// <summary>#6,8,9（CSA 本番選出回帰。理想レーン上・翼保持で CSA が選ばれるパターン）。</summary>

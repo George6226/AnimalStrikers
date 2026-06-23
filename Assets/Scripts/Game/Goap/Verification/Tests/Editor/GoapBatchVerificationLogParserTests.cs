@@ -42,7 +42,7 @@ public sealed class GoapBatchVerificationLogParserTests
     }
 
     [Test]
-    public void Evaluate_PassesRuntimeTotal()
+    public void Evaluate_PassesWingDriveRuntimeTotal()
     {
         const string diag =
             "========== RUNTIME_TOTAL 2/2 ==========\n" +
@@ -53,6 +53,20 @@ public sealed class GoapBatchVerificationLogParserTests
         Assert.IsTrue(result.Succeeded);
         Assert.AreEqual(2, result.PassCount);
         Assert.AreEqual(2, result.EvalCount);
+    }
+
+    [Test]
+    public void Evaluate_PassesCfDriveRuntimeTotal()
+    {
+        const string diag =
+            "========== RUNTIME_TOTAL 4/4 ==========\n" +
+            "========== BATCH_COMPLETE ==========\n";
+
+        GoapBatchVerificationLogParser.Result result = GoapBatchVerificationLogParser.Evaluate(diag);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(4, result.PassCount);
+        Assert.AreEqual(4, result.EvalCount);
     }
 }
 #endif

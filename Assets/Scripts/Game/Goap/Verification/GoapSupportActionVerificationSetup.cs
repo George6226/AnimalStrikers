@@ -637,6 +637,8 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
                 GoapSupportLayoutPatternCatalog.BuildWingOwnerSuite(),
             GoapSupportLayoutBatchPreset.WingOwnerDrive =>
                 GoapSupportLayoutPatternCatalog.BuildWingOwnerDriveSuite(),
+            GoapSupportLayoutBatchPreset.CfOwnerDrive =>
+                GoapSupportLayoutPatternCatalog.BuildCfOwnerDriveSuite(),
             GoapSupportLayoutBatchPreset.AllDrive =>
                 GoapSupportLayoutPatternCatalog.BuildAllDriveSuite(),
             GoapSupportLayoutBatchPreset.CsaRegression =>

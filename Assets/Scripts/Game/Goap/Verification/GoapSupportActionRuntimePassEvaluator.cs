@@ -32,6 +32,11 @@ public static class GoapSupportActionRuntimePassEvaluator
             return EvaluateWingOwnerDrive(pattern, diagLines, resolvePlayerIdForSlot, result);
         }
 
+        if (criteria.Action == GoapSupportActionUnderTest.CfOwnerDriveFollow)
+        {
+            return EvaluateCfOwnerDrive(pattern, diagLines, resolvePlayerIdForSlot, result);
+        }
+
         if (criteria.Action == GoapSupportActionUnderTest.CreateSupportAngle)
         {
             return EvaluateCreateSupportAngle(pattern, diagLines, resolvePlayerIdForSlot, result);
@@ -205,6 +210,48 @@ public static class GoapSupportActionRuntimePassEvaluator
         return result;
     }
 
+    private static GoapSupportActionRuntimePassResult EvaluateCfOwnerDrive(
+        GoapSupportLayoutPatternId pattern,
+        IList<string> diagLines,
+        Func<int, int?> resolvePlayerIdForSlot,
+        GoapSupportActionRuntimePassResult result)
+    {
+        int ownerSlot = GoapSupportLayoutPatternLibrary.GetBallOwnerSlotForPattern(pattern, 0);
+        int passCount = 0;
+        int evalCount = 0;
+        var details = new List<string>();
+
+        for (int wingSlot = 1; wingSlot <= 2; wingSlot++)
+        {
+            if (wingSlot == ownerSlot)
+            {
+                continue;
+            }
+
+            evalCount++;
+            if (EvaluateWingDriveFollow(wingSlot, diagLines, resolvePlayerIdForSlot, out string wingDetail))
+            {
+                passCount++;
+                details.Add(wingDetail);
+            }
+            else
+            {
+                details.Add(wingDetail);
+            }
+        }
+
+        if (evalCount == 0)
+        {
+            result.ShouldEvaluate = false;
+            result.DetailText = "no wing slots to evaluate";
+            return result;
+        }
+
+        result.PatternPass = passCount == evalCount;
+        result.DetailText = string.Join("; ", details);
+        return result;
+    }
+
     private static bool EvaluateCentralDriveFollow(
         int slot,
         IList<string> diagLines,
@@ -266,7 +313,7 @@ public static class GoapSupportActionRuntimePassEvaluator
             diagLines, playerId.Value, "SupportAngle", "Finish(timeout)", out _)
             || TryFindDiagMessage(diagLines, playerId.Value, "SupportAngle", "Finish(cancel)", out _);
 
-        bool followOk = retargetCount >= GoapWingOwnerDriveRuntimePassCriteria.MinRetargetCount
+        bool followOk = retargetCount >= GoapCfOwnerDriveRuntimePassCriteria.MinRetargetCount
             && (continueMoving || passReceive || retargetCount >= 2);
 
         if (followOk)

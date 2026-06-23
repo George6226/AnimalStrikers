@@ -7,6 +7,8 @@ public enum GoapSupportActionUnderTest
     GetOpen = 3,
     /// <summary>翼保持ドライブ時の追従（#17/#18）。単体候補絞り込みは行わない。</summary>
     WingOwnerDriveFollow = 4,
+    /// <summary>CF 保持ドライブ時の翼追従（#13〜16）。単体候補絞り込みは行わない。</summary>
+    CfOwnerDriveFollow = 5,
 }
 
 public static class GoapSupportActionUnderTestExtensions

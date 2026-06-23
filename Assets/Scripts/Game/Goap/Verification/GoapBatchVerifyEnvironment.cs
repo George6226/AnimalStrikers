@@ -44,14 +44,20 @@ public static class GoapBatchVerifyEnvironment
         IsActive ? Math.Max(configuredSeconds, batchMinimumSeconds) : configuredSeconds;
 
     public static string GetResultFileName(GoapBatchVerifyProfile profile) =>
-        profile == GoapBatchVerifyProfile.WingDrive
-            ? "goap-batch-wing-result.txt"
-            : "goap-batch-result.txt";
+        profile switch
+        {
+            GoapBatchVerifyProfile.WingDrive => "goap-batch-wing-result.txt",
+            GoapBatchVerifyProfile.CfDrive => "goap-batch-cf-drive-result.txt",
+            _ => "goap-batch-result.txt",
+        };
 
     public static string GetLogFileName(GoapBatchVerifyProfile profile) =>
-        profile == GoapBatchVerifyProfile.WingDrive
-            ? "goap-batch-wing-verify.log"
-            : "goap-batch-verify.log";
+        profile switch
+        {
+            GoapBatchVerifyProfile.WingDrive => "goap-batch-wing-verify.log",
+            GoapBatchVerifyProfile.CfDrive => "goap-batch-cf-drive-verify.log",
+            _ => "goap-batch-verify.log",
+        };
 
     public static void WriteProfileMarker(GoapBatchVerifyProfile profile)
     {
@@ -130,6 +136,12 @@ public static class GoapBatchVerifyEnvironment
             || string.Equals(token, "wing", StringComparison.OrdinalIgnoreCase))
         {
             return GoapBatchVerifyProfile.WingDrive;
+        }
+
+        if (string.Equals(token, "cfDrive", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(token, "cf", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoapBatchVerifyProfile.CfDrive;
         }
 
         if (Enum.TryParse(token, ignoreCase: true, out GoapBatchVerifyProfile parsed))
