@@ -18,7 +18,7 @@ jobs:
   goap-ci:
     name: GOAP CI (EditMode + Batch)
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,12 +49,16 @@ jobs:
             Logs/goap-editmode-results.xml
             Logs/goap-batch-verify.log
             Logs/goap-batch-wing-verify.log
+            Logs/goap-batch-cf-drive-verify.log
             Logs/goap-batch-result.txt
             Logs/goap-batch-wing-result.txt
+            Logs/goap-batch-cf-drive-result.txt
             Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
             Logs/GoapDiag_wing_latest.txt
+            Logs/GoapDiag_cf_drive_latest.txt
             Logs/GoapSummary_latest.txt
             Logs/GoapSummary_wing_latest.txt
+            Logs/GoapSummary_cf_drive_latest.txt
             Assets/DebugLog/GoapDiag_latest.txt
             Assets/DebugLog/GoapSummary_latest.txt

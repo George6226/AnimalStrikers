@@ -10,7 +10,7 @@ public static class GoapSupportLayoutPatternLibrary
             GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForward => GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes,
             GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack => GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes,
             GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes_DriveForward => GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes,
-            GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveLateralRight => GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes,
+            GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveLateralRight => GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes,
             GoapSupportLayoutPatternId.RwOwner_WingHold_DriveForward => GoapSupportLayoutPatternId.RwOwner_WingHold,
             GoapSupportLayoutPatternId.LwOwner_WingHold_DriveForward => GoapSupportLayoutPatternId.LwOwner_WingHold,
             _ => pattern,

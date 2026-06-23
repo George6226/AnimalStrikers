@@ -120,18 +120,26 @@ run_editmode_tests() {
 }
 
 run_batch_verify() {
-  local unity_bin profile_flag result_file log_file label
+  local unity_bin profile_flag result_file log_file label profile_token
   profile_flag="${1:--goapBatchVerify=combined}"
   case "${profile_flag}" in
     *wingDrive*)
       result_file="${LOG_DIR}/goap-batch-wing-result.txt"
       log_file="${LOG_DIR}/goap-batch-wing-verify.log"
       label="翼ドライブ追従 #17/#18"
+      profile_token="wingDrive"
+      ;;
+    *cfDrive*)
+      result_file="${LOG_DIR}/goap-batch-cf-drive-result.txt"
+      log_file="${LOG_DIR}/goap-batch-cf-drive-verify.log"
+      label="CF 保持ドライブ追従 #13/#16"
+      profile_token="cfDrive"
       ;;
     *)
       result_file="${LOG_DIR}/goap-batch-result.txt"
       log_file="${LOG_DIR}/goap-batch-verify.log"
       label="統合本番選出 11 パターン"
+      profile_token="combined"
       ;;
   esac
 
@@ -168,10 +176,6 @@ run_batch_verify() {
 
   # shellcheck source=resolve-batch-verify-result.sh
   source "$(cd "$(dirname "$0")" && pwd)/resolve-batch-verify-result.sh"
-  local profile_token="combined"
-  if [[ "${profile_flag}" == *wingDrive* ]]; then
-    profile_token="wingDrive"
-  fi
 
   if resolve_batch_verify_success "${PROJECT_ROOT}" "${profile_token}"; then
     echo "[goap-ci] batch verify PASSED (${label})"
@@ -190,6 +194,7 @@ case "${MODE}" in
   batch)
     run_batch_verify "-goapBatchVerify=combined"
     run_batch_verify "-goapBatchVerify=wingDrive"
+    run_batch_verify "-goapBatchVerify=cfDrive"
     ;;
   batch-combined)
     run_batch_verify "-goapBatchVerify=combined"
@@ -197,15 +202,20 @@ case "${MODE}" in
   batch-wing)
     run_batch_verify "-goapBatchVerify=wingDrive"
     ;;
+  batch-cf-drive)
+    run_batch_verify "-goapBatchVerify=cfDrive"
+    ;;
   all)
     run_editmode_tests
     echo ""
     run_batch_verify "-goapBatchVerify=combined"
     echo ""
     run_batch_verify "-goapBatchVerify=wingDrive"
+    echo ""
+    run_batch_verify "-goapBatchVerify=cfDrive"
     ;;
   *)
-    echo "Usage: $0 [editmode|batch|batch-combined|batch-wing|all]" >&2
+    echo "Usage: $0 [editmode|batch|batch-combined|batch-wing|batch-cf-drive|all]" >&2
     exit 2
     ;;
 esac

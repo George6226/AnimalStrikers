@@ -21,6 +21,14 @@ resolve_batch_verify_success() {
         "${log_dir}/GoapDiag_latest.txt"
       )
       ;;
+    cf | cfDrive | CfDrive)
+      result_file="goap-batch-cf-drive-result.txt"
+      diag_candidates=(
+        "${log_dir}/GoapDiag_cf_drive_latest.txt"
+        "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+        "${log_dir}/GoapDiag_latest.txt"
+      )
+      ;;
     combined | *)
       ;;
   esac

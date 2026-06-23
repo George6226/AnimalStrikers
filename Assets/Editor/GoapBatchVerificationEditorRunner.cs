@@ -257,9 +257,12 @@ public static class GoapBatchVerificationEditorRunner
 
             if (!string.IsNullOrEmpty(diagText))
             {
-                string diagName = _profile == GoapBatchVerifyProfile.WingDrive
-                    ? "GoapDiag_wing_latest.txt"
-                    : "GoapDiag_latest.txt";
+                string diagName = _profile switch
+                {
+                    GoapBatchVerifyProfile.WingDrive => "GoapDiag_wing_latest.txt",
+                    GoapBatchVerifyProfile.CfDrive => "GoapDiag_cf_drive_latest.txt",
+                    _ => "GoapDiag_latest.txt",
+                };
                 File.WriteAllText(Path.Combine(_ciLogDir, diagName), diagText);
                 if (_profile == GoapBatchVerifyProfile.Combined)
                 {
@@ -269,9 +272,12 @@ public static class GoapBatchVerificationEditorRunner
 
             if (File.Exists(_summaryPath))
             {
-                string summaryName = _profile == GoapBatchVerifyProfile.WingDrive
-                    ? "GoapSummary_wing_latest.txt"
-                    : "GoapSummary_latest.txt";
+                string summaryName = _profile switch
+                {
+                    GoapBatchVerifyProfile.WingDrive => "GoapSummary_wing_latest.txt",
+                    GoapBatchVerifyProfile.CfDrive => "GoapSummary_cf_drive_latest.txt",
+                    _ => "GoapSummary_latest.txt",
+                };
                 File.Copy(_summaryPath, Path.Combine(_ciLogDir, summaryName), overwrite: true);
             }
         }

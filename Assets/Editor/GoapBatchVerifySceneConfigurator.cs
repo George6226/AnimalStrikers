@@ -17,19 +17,24 @@ public static class GoapBatchVerifySceneConfigurator
 
         var combined = Object.FindFirstObjectByType<GoapCombinedSupportRegressionDebugSetup>(FindObjectsInactive.Include);
         var wingDrive = Object.FindFirstObjectByType<GoapWingOwnerDriveDebugSetup>(FindObjectsInactive.Include);
+        var cfDrive = Object.FindFirstObjectByType<GoapCfOwnerDriveDebugSetup>(FindObjectsInactive.Include);
 
-        if (combined == null && wingDrive == null)
+        if (combined == null && wingDrive == null && cfDrive == null)
         {
             Debug.LogError("[GOAP_BATCH] no GoapSupportActionVerificationSetup found in scene");
             return;
         }
 
-        bool useCombined = profile == GoapBatchVerifyProfile.Combined;
-        ConfigureSetup(combined, useCombined);
-        ConfigureSetup(wingDrive, !useCombined);
+        ConfigureSetup(combined, profile == GoapBatchVerifyProfile.Combined);
+        ConfigureSetup(wingDrive, profile == GoapBatchVerifyProfile.WingDrive);
+        ConfigureSetup(cfDrive, profile == GoapBatchVerifyProfile.CfDrive);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        Debug.Log($"[GOAP_BATCH] scene profile={profile} combined={(combined != null && useCombined)} wingDrive={(wingDrive != null && !useCombined)}");
+        Debug.Log(
+            $"[GOAP_BATCH] scene profile={profile} " +
+            $"combined={(combined != null && profile == GoapBatchVerifyProfile.Combined)} " +
+            $"wingDrive={(wingDrive != null && profile == GoapBatchVerifyProfile.WingDrive)} " +
+            $"cfDrive={(cfDrive != null && profile == GoapBatchVerifyProfile.CfDrive)}");
     }
 
     private static void EnsureGameSceneOpen()

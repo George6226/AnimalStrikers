@@ -31,6 +31,9 @@ public static class GoapSupportActionRuntimePassCriteria
 
     public static readonly IGoapSupportActionRuntimePassCriteria WingOwnerDrive =
         new GoapWingOwnerDriveRuntimePassCriteria();
+
+    public static readonly IGoapSupportActionRuntimePassCriteria CfOwnerDrive =
+        new GoapCfOwnerDriveRuntimePassCriteria();
 }
 
 /// <summary>
@@ -134,5 +137,25 @@ public sealed class GoapWingOwnerDriveRuntimePassCriteria : IGoapSupportActionRu
         slot = -1;
         return pattern == GoapSupportLayoutPatternId.RwOwner_WingHold_DriveForward
             || pattern == GoapSupportLayoutPatternId.LwOwner_WingHold_DriveForward;
+    }
+}
+
+/// <summary>
+/// CF 保持ドライブ追従（#13〜16）合格基準:
+/// 両翼 slot1/2: [GOAP_MOVE][SupportAngle] Retarget が 1 回以上かつ
+/// ContinueMoving / passReceive / Retargetx2 / Execute のいずれかで追従を確認
+/// #16 横移動のみ: 上記に加え GetOpen の arrived=true も追従として許容
+/// </summary>
+public sealed class GoapCfOwnerDriveRuntimePassCriteria : IGoapSupportActionRuntimePassCriteria
+{
+    public const int MinRetargetCount = 1;
+
+    public GoapSupportActionUnderTest Action => GoapSupportActionUnderTest.CfOwnerDriveFollow;
+
+    public bool TryGetEvaluationSlot(GoapSupportLayoutPatternId pattern, out int slot)
+    {
+        slot = -1;
+        int number = GoapSupportLayoutPatternCatalog.GetNumber(pattern);
+        return number >= 13 && number <= 16;
     }
 }
