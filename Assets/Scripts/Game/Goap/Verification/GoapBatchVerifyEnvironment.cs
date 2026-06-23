@@ -10,7 +10,9 @@ public static class GoapBatchVerifyEnvironment
 {
     private const string CliFlag = "-goapBatchVerify";
     private const string StartedMarkerFileName = "goap-batch-started.marker";
+    private const string ProfileMarkerFileName = "goap-batch-profile.txt";
     private static bool? _isActive;
+    private static GoapBatchVerifyProfile? _profile;
 
     public static bool IsActive
     {
@@ -25,13 +27,133 @@ public static class GoapBatchVerifyEnvironment
         }
     }
 
+    public static GoapBatchVerifyProfile Profile
+    {
+        get
+        {
+            if (!_profile.HasValue)
+            {
+                _profile = ResolveProfile();
+            }
+
+            return _profile.Value;
+        }
+    }
+
     public static float ResolveTimeout(float configuredSeconds, float batchMinimumSeconds) =>
         IsActive ? Math.Max(configuredSeconds, batchMinimumSeconds) : configuredSeconds;
 
-    private static bool HasCliFlag() =>
-        Array.Exists(
-            Environment.GetCommandLineArgs(),
-            arg => string.Equals(arg, CliFlag, StringComparison.Ordinal));
+    public static string GetResultFileName(GoapBatchVerifyProfile profile) =>
+        profile == GoapBatchVerifyProfile.WingDrive
+            ? "goap-batch-wing-result.txt"
+            : "goap-batch-result.txt";
+
+    public static string GetLogFileName(GoapBatchVerifyProfile profile) =>
+        profile == GoapBatchVerifyProfile.WingDrive
+            ? "goap-batch-wing-verify.log"
+            : "goap-batch-verify.log";
+
+    public static void WriteProfileMarker(GoapBatchVerifyProfile profile)
+    {
+        string path = GetProfileMarkerPath();
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.WriteAllText(path, profile.ToString());
+        _profile = profile;
+    }
+
+    public static void DeleteProfileMarker()
+    {
+        string path = GetProfileMarkerPath();
+        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static GoapBatchVerifyProfile ResolveProfile()
+    {
+        if (TryParseProfileFromCli(out GoapBatchVerifyProfile cliProfile))
+        {
+            return cliProfile;
+        }
+
+        string markerPath = GetProfileMarkerPath();
+        if (!string.IsNullOrEmpty(markerPath) && File.Exists(markerPath))
+        {
+            string text = File.ReadAllText(markerPath).Trim();
+            if (Enum.TryParse(text, ignoreCase: true, out GoapBatchVerifyProfile markerProfile))
+            {
+                return markerProfile;
+            }
+        }
+
+        return GoapBatchVerifyProfile.Combined;
+    }
+
+    private static bool TryParseProfileFromCli(out GoapBatchVerifyProfile profile)
+    {
+        profile = GoapBatchVerifyProfile.Combined;
+        foreach (string arg in Environment.GetCommandLineArgs())
+        {
+            if (string.Equals(arg, CliFlag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (!arg.StartsWith(CliFlag + "=", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string value = arg.Substring(CliFlag.Length + 1);
+            profile = ParseProfileToken(value);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static GoapBatchVerifyProfile ParseProfileToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)
+            || string.Equals(token, "combined", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoapBatchVerifyProfile.Combined;
+        }
+
+        if (string.Equals(token, "wingDrive", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(token, "wing", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoapBatchVerifyProfile.WingDrive;
+        }
+
+        if (Enum.TryParse(token, ignoreCase: true, out GoapBatchVerifyProfile parsed))
+        {
+            return parsed;
+        }
+
+        Debug.LogWarning($"[GOAP_BATCH] unknown profile token '{token}', defaulting to Combined");
+        return GoapBatchVerifyProfile.Combined;
+    }
+
+    private static bool HasCliFlag()
+    {
+        foreach (string arg in Environment.GetCommandLineArgs())
+        {
+            if (string.Equals(arg, CliFlag, StringComparison.Ordinal)
+                || arg.StartsWith(CliFlag + "=", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool HasStartedMarker()
     {
@@ -41,17 +163,30 @@ public static class GoapBatchVerifyEnvironment
 
     private static string GetStartedMarkerPath()
     {
+        string logsDir = GetLogsDirectory();
+        return string.IsNullOrEmpty(logsDir)
+            ? null
+            : Path.Combine(logsDir, StartedMarkerFileName);
+    }
+
+    private static string GetProfileMarkerPath()
+    {
+        string logsDir = GetLogsDirectory();
+        return string.IsNullOrEmpty(logsDir)
+            ? null
+            : Path.Combine(logsDir, ProfileMarkerFileName);
+    }
+
+    private static string GetLogsDirectory()
+    {
         if (string.IsNullOrEmpty(Application.dataPath))
         {
             return null;
         }
 
         string projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
-        if (string.IsNullOrEmpty(projectRoot))
-        {
-            return null;
-        }
-
-        return Path.Combine(projectRoot, "Logs", StartedMarkerFileName);
+        return string.IsNullOrEmpty(projectRoot)
+            ? null
+            : Path.Combine(projectRoot, "Logs");
     }
 }

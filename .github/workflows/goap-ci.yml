@@ -12,28 +12,18 @@ on:
 env:
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
 
 jobs:
   goap-ci:
     name: GOAP CI (EditMode + Batch)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
-
-      - name: Normalize UNITY_LICENSE
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        run: |
-          chmod +x scripts/ci/normalize-unity-license-env.sh
-          if [[ -n "${UNITY_LICENSE}" ]]; then
-            scripts/ci/normalize-unity-license-env.sh
-          fi
 
       - name: Cache Unity Library
         uses: actions/cache@v4
@@ -45,8 +35,6 @@ jobs:
             Library-v1-
 
       - name: GOAP CI
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
         run: |
           chmod +x scripts/ci/run-goap-docker.sh
           scripts/ci/run-goap-docker.sh all
@@ -60,9 +48,13 @@ jobs:
             Logs/goap-editmode-tests.log
             Logs/goap-editmode-results.xml
             Logs/goap-batch-verify.log
+            Logs/goap-batch-wing-verify.log
             Logs/goap-batch-result.txt
+            Logs/goap-batch-wing-result.txt
             Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
+            Logs/GoapDiag_wing_latest.txt
             Logs/GoapSummary_latest.txt
+            Logs/GoapSummary_wing_latest.txt
             Assets/DebugLog/GoapDiag_latest.txt
             Assets/DebugLog/GoapSummary_latest.txt

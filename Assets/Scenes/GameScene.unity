@@ -8241,6 +8241,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1987654323}
   - component: {fileID: 1987654326}
+  - component: {fileID: 1987654328}
   m_Layer: 0
   m_Name: GoapCombinedSupportRegressionDebugSetup
   m_TagString: Untagged
@@ -8312,6 +8313,78 @@ MonoBehaviour:
   _batchPatternIndexEnd: 12
   _batchPreset: 7
   _enableBallOwnerAutoDrive: 0
+  _enemyLayouts: {fileID: 1158135302}
+  _defaultEnemyLayout: 5
+  _ballOwnerAutoDriveMode: 2
+  _ballOwnerAutoDriveIntensity: 0.85
+  _ballOwnerAutoDriveAmplitudeRatio: 0.12
+  _wingOwnerAutoDriveAmplitudeRatio: 0.06
+  _ballOwnerAutoDriveStartDelay: 3
+  _ballOwnerAutoDriveManualHoldSeconds: 12
+--- !u!114 &1987654328
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1987654324}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4c8e1f2a3b54c6d9e0f1a2b3c4d5e6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GoapWingOwnerDriveDebugSetup
+  _verificationOnlyCreateSupportAngle: 0
+  _verifyProductionSelection: 0
+  _verifyRuntimeFollowDuringBatch: 1
+  _triggerGoapReplanAfterApply: 1
+  _repositionBallOwnerSlot: 1
+  _assignBallToOwnerOnApply: 1
+  _ballOwnerFormationSlot: 0
+  _initialVerificationPattern: 17
+  _applyInitialLayoutOnStart: 1
+  _initialApplyTimeoutSeconds: 90
+  _customSlotPlacements:
+  - Slot: 0
+    Position: {x: 0, y: 0, z: 4.8}
+    Apply: 1
+  - Slot: 1
+    Position: {x: 0.8, y: 0, z: 6.4}
+    Apply: 1
+  - Slot: 2
+    Position: {x: -0.8, y: 0, z: 6.4}
+    Apply: 1
+  _enablePatternHotkeys: 0
+  _keyBaseline: 282
+  _keyClustered: 283
+  _keyRwWrong: 284
+  _keyLwWrong: 285
+  _keyNearLanes: 286
+  _keyAtCorrectLanes: 287
+  _keyAllOverlapped: 288
+  _keyCustom: 289
+  _keyRwOwner: 290
+  _keyLwOwner: 291
+  _keyCfRightWing: 292
+  _keyCfLeftWing: 293
+  _keyWingsTooDeep: 278
+  _ownerForwardRatio: 0.12
+  _clusterForwardRatio: 0.04
+  _clusterLateralRatio: 0.06
+  _wrongSideLateralRatio: 0.22
+  _nearLaneBackOffsetRatio: 0.1
+  _overlapMicroLateralRatio: 0.04
+  _overlapMicroForwardRatio: 0.02
+  _wingSideOwnerLateralRatio: 0.16
+  _behindOwnerBackOffsetRatio: 0.08
+  _runBatchVerificationOnStart: 1
+  _batchHoldSecondsPerPattern: 12
+  _batchWaitGameStateTimeoutSeconds: 120
+  _batchSettleSecondsAfterGameState: 2
+  _stopPlayModeWhenBatchEnds: 1
+  _batchPatternIndexStart: 17
+  _batchPatternIndexEnd: 18
+  _batchPreset: 3
+  _enableBallOwnerAutoDrive: 1
   _enemyLayouts: {fileID: 1158135302}
   _defaultEnemyLayout: 5
   _ballOwnerAutoDriveMode: 2

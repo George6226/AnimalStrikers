@@ -21,10 +21,12 @@ public static class GoapBatchVerificationEditorRunner
     private static bool _playRequested;
     private static bool _shutdownRequested;
     private static bool _sawBatchStart;
+    private static GoapBatchVerifyProfile _profile;
     private static double _playEnteredAt;
     private static string _diagPath;
     private static string _summaryPath;
     private static string _ciLogDir;
+    private static string _resultFileName;
 
     [InitializeOnLoadMethod]
     private static void OnLoad()
@@ -60,6 +62,11 @@ public static class GoapBatchVerificationEditorRunner
 
     private static void BeginFreshRun()
     {
+        _profile = GoapBatchVerifyEnvironment.Profile;
+        _resultFileName = GoapBatchVerifyEnvironment.GetResultFileName(_profile);
+        GoapBatchVerifySceneConfigurator.ApplyProfile(_profile);
+        GoapBatchVerifyEnvironment.WriteProfileMarker(_profile);
+
         ResetLogsForNewRun();
         File.WriteAllText(StartedMarkerPath(), DateTime.UtcNow.ToString("O"));
         DeletePendingExit();
@@ -72,7 +79,7 @@ public static class GoapBatchVerificationEditorRunner
             }
 
             _playRequested = true;
-            Debug.Log("[GOAP_BATCH_RUNNER] entering play mode");
+            Debug.Log($"[GOAP_BATCH_RUNNER] entering play mode profile={_profile}");
             EditorApplication.EnterPlaymode();
         }
     }
@@ -239,19 +246,33 @@ public static class GoapBatchVerificationEditorRunner
     {
         try
         {
-            string resultPath = Path.Combine(_ciLogDir, "goap-batch-result.txt");
+            string resultPath = Path.Combine(
+                _ciLogDir,
+                string.IsNullOrEmpty(_resultFileName)
+                    ? GoapBatchVerifyEnvironment.GetResultFileName(GoapBatchVerifyEnvironment.Profile)
+                    : _resultFileName);
             File.WriteAllText(
                 resultPath,
                 $"{(result.Succeeded ? "PASS" : "FAIL")}: {result.Summary}\n");
 
             if (!string.IsNullOrEmpty(diagText))
             {
-                File.WriteAllText(Path.Combine(_ciLogDir, "GoapDiag_latest.txt"), diagText);
+                string diagName = _profile == GoapBatchVerifyProfile.WingDrive
+                    ? "GoapDiag_wing_latest.txt"
+                    : "GoapDiag_latest.txt";
+                File.WriteAllText(Path.Combine(_ciLogDir, diagName), diagText);
+                if (_profile == GoapBatchVerifyProfile.Combined)
+                {
+                    File.WriteAllText(Path.Combine(_ciLogDir, "GoapDiag_latest.txt"), diagText);
+                }
             }
 
             if (File.Exists(_summaryPath))
             {
-                File.Copy(_summaryPath, Path.Combine(_ciLogDir, "GoapSummary_latest.txt"), overwrite: true);
+                string summaryName = _profile == GoapBatchVerifyProfile.WingDrive
+                    ? "GoapSummary_wing_latest.txt"
+                    : "GoapSummary_latest.txt";
+                File.Copy(_summaryPath, Path.Combine(_ciLogDir, summaryName), overwrite: true);
             }
         }
         catch (Exception ex)
@@ -316,9 +337,22 @@ public static class GoapBatchVerificationEditorRunner
         {
             File.Delete(StartedMarkerPath());
         }
+
+        GoapBatchVerifyEnvironment.DeleteProfileMarker();
     }
 
-    private static bool HasCliFlag(string flag) =>
-        Array.Exists(Environment.GetCommandLineArgs(), arg => string.Equals(arg, flag, StringComparison.Ordinal));
+    private static bool HasCliFlag(string flag)
+    {
+        foreach (string arg in Environment.GetCommandLineArgs())
+        {
+            if (string.Equals(arg, flag, StringComparison.Ordinal)
+                || arg.StartsWith(flag + "=", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 #endif

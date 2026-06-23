@@ -120,17 +120,31 @@ run_editmode_tests() {
 }
 
 run_batch_verify() {
-  local unity_bin
+  local unity_bin profile_flag result_file log_file label
+  profile_flag="${1:--goapBatchVerify=combined}"
+  case "${profile_flag}" in
+    *wingDrive*)
+      result_file="${LOG_DIR}/goap-batch-wing-result.txt"
+      log_file="${LOG_DIR}/goap-batch-wing-verify.log"
+      label="翼ドライブ追従 #17/#18"
+      ;;
+    *)
+      result_file="${LOG_DIR}/goap-batch-result.txt"
+      log_file="${LOG_DIR}/goap-batch-verify.log"
+      label="統合本番選出 11 パターン"
+      ;;
+  esac
+
   unity_bin="$(resolve_unity)"
-  local log_file="${LOG_DIR}/goap-batch-verify.log"
 
   rm -f \
-    "${LOG_DIR}/goap-batch-result.txt" \
+    "${result_file}" \
     "${LOG_DIR}/goap-batch-pending-exit.txt" \
-    "${LOG_DIR}/goap-batch-started.marker"
+    "${LOG_DIR}/goap-batch-started.marker" \
+    "${LOG_DIR}/goap-batch-profile.txt"
 
-  echo "[goap-ci] === Batch verify (約2〜4分) ==="
-  echo "[goap-ci] 統合本番選出 11 パターン (${log_file})"
+  echo "[goap-ci] === Batch verify (${label}) ==="
+  echo "[goap-ci] ${profile_flag} (${log_file})"
   echo "[goap-ci] 進捗は ${PROGRESS_INTERVAL}s ごとに表示します"
 
   set +e
@@ -138,7 +152,7 @@ run_batch_verify() {
     -batchmode \
     -nographics \
     -projectPath "${PROJECT_ROOT}" \
-    -goapBatchVerify \
+    "${profile_flag}" \
     -logFile "${log_file}" &
   local unity_pid=$!
   monitor_batch_progress "${unity_pid}"
@@ -148,18 +162,25 @@ run_batch_verify() {
 
   echo "[goap-ci] Unity プロセス終了 (exit=${exit_code})"
 
-  if [[ -f "${LOG_DIR}/goap-batch-result.txt" ]]; then
-    cat "${LOG_DIR}/goap-batch-result.txt"
+  if [[ -f "${result_file}" ]]; then
+    cat "${result_file}"
   fi
 
-  if [[ "${exit_code}" -ne 0 ]]; then
-    echo "[goap-ci] batch verify FAILED (exit=${exit_code})" >&2
-    echo "[goap-ci] 直近ログ:" >&2
-    tail -5 "${DIAG_LOG}" 2>/dev/null || true
-    exit "${exit_code}"
+  # shellcheck source=resolve-batch-verify-result.sh
+  source "$(cd "$(dirname "$0")" && pwd)/resolve-batch-verify-result.sh"
+  local profile_token="combined"
+  if [[ "${profile_flag}" == *wingDrive* ]]; then
+    profile_token="wingDrive"
   fi
 
-  echo "[goap-ci] batch verify PASSED"
+  if resolve_batch_verify_success "${PROJECT_ROOT}" "${profile_token}"; then
+    echo "[goap-ci] batch verify PASSED (${label})"
+    return 0
+  fi
+
+  echo "[goap-ci] batch verify FAILED (${label}, exit=${exit_code})" >&2
+  tail -5 "${DIAG_LOG}" 2>/dev/null || true
+  return 1
 }
 
 case "${MODE}" in
@@ -167,15 +188,24 @@ case "${MODE}" in
     run_editmode_tests
     ;;
   batch)
-    run_batch_verify
+    run_batch_verify "-goapBatchVerify=combined"
+    run_batch_verify "-goapBatchVerify=wingDrive"
+    ;;
+  batch-combined)
+    run_batch_verify "-goapBatchVerify=combined"
+    ;;
+  batch-wing)
+    run_batch_verify "-goapBatchVerify=wingDrive"
     ;;
   all)
     run_editmode_tests
     echo ""
-    run_batch_verify
+    run_batch_verify "-goapBatchVerify=combined"
+    echo ""
+    run_batch_verify "-goapBatchVerify=wingDrive"
     ;;
   *)
-    echo "Usage: $0 [editmode|batch|all]" >&2
+    echo "Usage: $0 [editmode|batch|batch-combined|batch-wing|all]" >&2
     exit 2
     ;;
 esac
