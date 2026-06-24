@@ -142,9 +142,7 @@ public sealed class GoapWingOwnerDriveRuntimePassCriteria : IGoapSupportActionRu
 
 /// <summary>
 /// CF 保持ドライブ追従（#13〜16）合格基準:
-/// 両翼 slot1/2: [GOAP_MOVE][SupportAngle] Retarget が 1 回以上かつ
-/// ContinueMoving / passReceive / Retargetx2 / Execute のいずれかで追従を確認
-/// #16 横移動のみ: 上記に加え GetOpen の arrived=true も追従として許容
+/// 両翼 slot1/2: CSA Retarget 追従、または GetOpen arrived=true（選出が GetOpen のとき）
 /// </summary>
 public sealed class GoapCfOwnerDriveRuntimePassCriteria : IGoapSupportActionRuntimePassCriteria
 {

@@ -264,11 +264,6 @@ public static class GoapSupportActionRuntimePassEvaluator
             return true;
         }
 
-        if (pattern != GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveLateralRight)
-        {
-            return false;
-        }
-
         if (EvaluateGetOpenWingFollow(slot, diagLines, resolvePlayerIdForSlot, out string getOpenDetail))
         {
             detail = getOpenDetail;
