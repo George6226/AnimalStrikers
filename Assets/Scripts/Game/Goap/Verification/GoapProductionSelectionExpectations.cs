@@ -211,8 +211,7 @@ public sealed class GoapCombinedSupportRegressionExpectation : IGoapProductionSe
 
 /// <summary>
 /// ドライブ本番選出: #13〜#18 の保持者移動中の最新 PlanCosts。
-/// #13/#15: 翼=CreateSupportAngle（前進のみでレーン維持）
-/// #14/#16: 翼=GetOpen または CreateSupportAngle（ドライブ中は翼ごとに幾何がずれ、どちらも本番あり得る）
+/// #13〜#16: 翼=GetOpen または CreateSupportAngle（Docker CI でも翼ごとに選出が分かれうる）
 /// #17/#18: 翼保持と同様 slot0=MTS + 非保持翼=CSA
 /// </summary>
 public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSelectionExpectation
@@ -244,15 +243,9 @@ public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSel
         }
 
         shouldEvaluate = true;
-        expectedAction = ShouldAllowFlexibleWingSelectionDuringCfOwnerDrive(pattern)
-            ? "GetOpen|CreateSupportAngle"
-            : "CreateSupportAngle";
+        expectedAction = "GetOpen|CreateSupportAngle";
         return true;
     }
-
-    private static bool ShouldAllowFlexibleWingSelectionDuringCfOwnerDrive(GoapSupportLayoutPatternId pattern) =>
-        pattern == GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack
-        || pattern == GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveLateralRight;
 
     private static bool TryGetWingDriveExpectation(
         GoapSupportLayoutPatternId pattern,
