@@ -1,4 +1,4 @@
-name: GOAP CI
+name: GOAP 自動検証
 
 on:
   push:
@@ -10,22 +10,24 @@ on:
   workflow_dispatch:
 
 env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
   UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
 
 jobs:
   goap-ci:
-    name: GOAP CI (EditMode + Batch)
+    name: GOAP 検証（EditMode + バッチ）
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
-      - name: Checkout
+      - name: リポジトリ取得
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Cache Unity Library
+      - name: Unity Library キャッシュ
         uses: actions/cache@v4
         id: unity-library-cache
         with:
@@ -34,12 +36,12 @@ jobs:
           restore-keys: |
             Library-v1-
 
-      - name: GOAP CI
+      - name: GOAP 検証実行
         run: |
           chmod +x scripts/ci/run-goap-docker.sh
           scripts/ci/run-goap-docker.sh all
 
-      - name: Upload GOAP CI logs
+      - name: ログをアップロード
         if: always()
         uses: actions/upload-artifact@v4
         with:
