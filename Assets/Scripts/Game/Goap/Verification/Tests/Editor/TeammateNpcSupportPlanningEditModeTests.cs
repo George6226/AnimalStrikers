@@ -336,6 +336,65 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
         }
     }
 
+    [Test]
+    public void CfOwnerHeld_Slot0UsesCentralWidthLayout_AndBlocksCreateSupportAngle()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+
+        PlayerBlackboard slot0 = _fixture.GetBlackboard(0);
+        Assert.IsTrue(
+            TeammateNpcSupportPlanning.ShouldUseWidthLayoutSupportPosition(slot0),
+            "slot0 should use central width layout under CF hold");
+        Assert.IsTrue(
+            TeammateNpcSupportPlanning.BlocksCreateSupportAngleForCentralWidthLayout(slot0),
+            "slot0 should block CSA under central width layout");
+        Assert.IsFalse(
+            TeammateNpcSupportPlanning.BlocksCreateSupportAngleForCentralWidthLayout(_fixture.GetBlackboard(1)),
+            "wing slots should not block CSA via central width layout");
+    }
+
+    [Test]
+    public void CfOwnerHeld_WingsBlockMoveToSupport()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+
+        Assert.IsTrue(
+            TeammateNpcSupportPlanning.BlocksMoveToSupportForWingLayout(_fixture.GetBlackboard(1)),
+            "slot1 should block MoveToSupport on wing layout");
+        Assert.IsTrue(
+            TeammateNpcSupportPlanning.BlocksMoveToSupportForWingLayout(_fixture.GetBlackboard(2)),
+            "slot2 should block MoveToSupport on wing layout");
+        Assert.IsFalse(
+            TeammateNpcSupportPlanning.BlocksMoveToSupportForWingLayout(_fixture.GetBlackboard(0)),
+            "slot0 should not block MoveToSupport on wing layout");
+    }
+
+    [Test]
+    public void Pattern5_WingsBlockCreateSupportAngleWhenGetOpenPreferred()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes);
+
+        foreach (int slot in new[] { 1, 2 })
+        {
+            Assert.IsTrue(
+                TeammateNpcSupportPlanning.BlocksCreateSupportAngleWhenGetOpenPreferred(_fixture.GetBlackboard(slot)),
+                $"#5 slot{slot} should block CSA when GetOpen is preferred");
+        }
+    }
+
+    [Test]
+    public void Pattern6_WingsDoNotBlockCreateSupportAngleWhenGetOpenPreferred()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes);
+
+        foreach (int slot in new[] { 1, 2 })
+        {
+            Assert.IsFalse(
+                TeammateNpcSupportPlanning.BlocksCreateSupportAngleWhenGetOpenPreferred(_fixture.GetBlackboard(slot)),
+                $"#6 slot{slot} should not block CSA when CSA is preferred");
+        }
+    }
+
     private float MeasureOwnerLateralFromFieldCenter()
     {
         TeamBlackboard teamBB = _fixture.TeamBlackboard;
