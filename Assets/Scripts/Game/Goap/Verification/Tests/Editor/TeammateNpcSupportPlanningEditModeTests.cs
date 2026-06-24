@@ -22,6 +22,39 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
     }
 
     [Test]
+    public void Pattern2_Clustered_WingsPreferGetOpen_AndNeedMovement()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+
+        AssertWingExpectations(
+            preferCreateSupportAngle: false,
+            needsMovement: true,
+            label: "#2 Clustered");
+    }
+
+    [Test]
+    public void Pattern3_RwWrongSide_WingsPreferGetOpen_AndNeedMovement()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_RwWrongSide);
+
+        AssertWingExpectations(
+            preferCreateSupportAngle: false,
+            needsMovement: true,
+            label: "#3 RwWrongSide");
+    }
+
+    [Test]
+    public void Pattern4_LwOnWrongSide_WingsPreferGetOpen_AndNeedMovement()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_LwOnWrongSide);
+
+        AssertWingExpectations(
+            preferCreateSupportAngle: false,
+            needsMovement: true,
+            label: "#4 LwOnWrongSide");
+    }
+
+    [Test]
     public void Pattern5_NearCorrectLanes_WingsPreferGetOpen_AndNeedMovement()
     {
         _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes);
@@ -138,6 +171,45 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
             Assert.IsTrue(
                 TeammateNpcSupportPlanning.IsOnAssignedWideLaneLaterally(_fixture.GetBlackboard(slot)),
                 $"#6 slot{slot} should be on assigned wide lane laterally");
+        }
+    }
+
+    [Test]
+    public void Pattern2_Clustered_WingsAreNotOnIdealWideLane()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+
+        foreach (int slot in new[] { 1, 2 })
+        {
+            Assert.IsFalse(
+                TeammateNpcSupportPlanning.IsOnIdealWideLaneForCreateSupportAngle(_fixture.GetBlackboard(slot)),
+                $"#2 slot{slot} should not be on ideal wide lane (clustered near owner)");
+        }
+    }
+
+    [Test]
+    public void Pattern3_WrongSideWings_AreNotOnAssignedWideLaneLaterally()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_RwWrongSide);
+
+        foreach (int slot in new[] { 1, 2 })
+        {
+            Assert.IsFalse(
+                TeammateNpcSupportPlanning.IsOnAssignedWideLaneLaterally(_fixture.GetBlackboard(slot)),
+                $"#3 slot{slot} should not be on assigned wide lane (wrong side)");
+        }
+    }
+
+    [Test]
+    public void Pattern4_WrongSideWings_AreNotOnAssignedWideLaneLaterally()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_LwOnWrongSide);
+
+        foreach (int slot in new[] { 1, 2 })
+        {
+            Assert.IsFalse(
+                TeammateNpcSupportPlanning.IsOnAssignedWideLaneLaterally(_fixture.GetBlackboard(slot)),
+                $"#4 slot{slot} should not be on assigned wide lane (wrong side)");
         }
     }
 
