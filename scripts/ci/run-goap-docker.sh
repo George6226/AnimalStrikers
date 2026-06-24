@@ -76,7 +76,7 @@ if [[ "${MODE}" == "editmode" || "${MODE}" == "all" ]]; then
     -projectPath /project \
     -runTests \
     -testPlatform EditMode \
-    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests" \
+    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests" \
     -testResults /project/Logs/goap-editmode-results.xml \
     -logFile /project/Logs/goap-editmode-tests.log
   editmode_exit=\$?

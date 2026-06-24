@@ -109,7 +109,7 @@ run_editmode_tests() {
     -projectPath "${PROJECT_ROOT}" \
     -runTests \
     -testPlatform EditMode \
-    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests" \
+    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests" \
     -testResults "${LOG_DIR}/goap-editmode-results.xml" \
     -logFile "${log_file}"
 
