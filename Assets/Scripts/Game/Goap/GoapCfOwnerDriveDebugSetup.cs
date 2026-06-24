@@ -2,8 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// CF 保持ドライブ追従検証（#13〜16）。
-/// _batchPreset=CfOwnerDrive、_verifyRuntimeFollowDuringBatch=ON、_enableBallOwnerAutoDrive=ON を推奨。
-/// 本番候補のまま CF をドライブさせ、両翼の CSA Retarget 追従を検証する。
+/// _batchPreset=CfOwnerDrive、_verifyRuntimeFollowDuringBatch=ON、
+/// _verifyProductionSelectionDuringDrive=ON、_enableBallOwnerAutoDrive=ON を推奨。
+/// 本番候補のまま CF をドライブさせ、両翼の CSA 選出と Retarget 追従を検証する。
 /// </summary>
 public class GoapCfOwnerDriveDebugSetup : GoapSupportActionVerificationSetup
 {

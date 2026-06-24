@@ -91,5 +91,107 @@ public sealed class GoapProductionSelectionExpectationsEditModeTests
         Assert.IsTrue(ok);
         Assert.IsFalse(shouldEvaluate, "#8 slot1 (ball owner) should be skipped");
     }
+
+    private static IEnumerable<TestCaseData> DriveRegressionCases()
+    {
+        foreach (GoapSupportLayoutPatternId pattern in GoapSupportLayoutPatternCatalog.BuildAllDriveSuite())
+        {
+            int number = GoapSupportLayoutPatternCatalog.GetNumber(pattern);
+            for (int slot = 0; slot <= 2; slot++)
+            {
+                if (!TryResolveDriveEvaluatedExpectation(pattern, slot, out string expectedAction))
+                {
+                    continue;
+                }
+
+                yield return new TestCaseData(pattern, slot, expectedAction)
+                    .SetName($"Drive_#{number:D2}_slot{slot}_{expectedAction}");
+            }
+        }
+    }
+
+    private static bool TryResolveDriveEvaluatedExpectation(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        out string expectedAction)
+    {
+        expectedAction = null;
+        if (!GoapProductionSelectionExpectations.Drive.TryGetExpectation(
+                pattern,
+                slot,
+                out string action,
+                out bool shouldEvaluate))
+        {
+            return false;
+        }
+
+        if (!shouldEvaluate)
+        {
+            return false;
+        }
+
+        expectedAction = action;
+        return true;
+    }
+
+    [TestCaseSource(nameof(DriveRegressionCases))]
+    public void DriveRegression_MatchesExpectedAction(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        string expectedAction)
+    {
+        bool ok = GoapProductionSelectionExpectations.Drive.TryGetExpectation(
+            pattern,
+            slot,
+            out string action,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
+        Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
+        Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "GetOpen", true)]
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "CreateSupportAngle", true)]
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "MoveToSupportPosition", false)]
+    public void DriveRegression_FlexibleWingSelection_AcceptsGetOpenOrCsa(
+        GoapSupportLayoutPatternId pattern,
+        string actualAction,
+        bool shouldMatch)
+    {
+        Assert.IsTrue(GoapProductionSelectionExpectations.Drive.TryGetExpectation(
+            pattern,
+            1,
+            out string expectedAction,
+            out bool shouldEvaluate));
+        Assert.IsTrue(shouldEvaluate);
+        Assert.AreEqual("GetOpen|CreateSupportAngle", expectedAction);
+
+        bool matched = MatchesExpectedAction(expectedAction, actualAction);
+        Assert.AreEqual(shouldMatch, matched, $"{actualAction} vs {expectedAction}");
+    }
+
+    private static bool MatchesExpectedAction(string expectedAction, string actualAction)
+    {
+        if (string.IsNullOrEmpty(expectedAction) || string.IsNullOrEmpty(actualAction))
+        {
+            return false;
+        }
+
+        if (expectedAction.IndexOf('|') >= 0)
+        {
+            foreach (string candidate in expectedAction.Split('|'))
+            {
+                if (actualAction == candidate || actualAction.StartsWith(candidate))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return actualAction == expectedAction || actualAction.StartsWith(expectedAction);
+    }
 }
 #endif

@@ -67,27 +67,32 @@ resolve_batch_verify_success() {
     return 1
   fi
 
-  local total_line
-  total_line="$(grep -E 'SELECTION_TOTAL|RUNTIME_TOTAL' "${diag}" | tail -1 || true)"
-  if [[ -z "${total_line}" ]]; then
+  local total_lines
+  total_lines="$(grep -E 'SELECTION_TOTAL|RUNTIME_TOTAL' "${diag}" || true)"
+  if [[ -z "${total_lines}" ]]; then
     return 1
   fi
 
-  local pass_count eval_count
-  if [[ "${total_line}" =~ (SELECTION_TOTAL|RUNTIME_TOTAL)[[:space:]]+([0-9]+)/([0-9]+) ]]; then
-    pass_count="${BASH_REMATCH[2]}"
-    eval_count="${BASH_REMATCH[3]}"
-  else
-    return 1
-  fi
+  local pass_count=0
+  local eval_count=0
+  local line
+  while IFS= read -r line; do
+    if [[ "${line}" =~ (SELECTION_TOTAL|RUNTIME_TOTAL)[[:space:]]+([0-9]+)/([0-9]+) ]]; then
+      local banner_pass="${BASH_REMATCH[2]}"
+      local banner_eval="${BASH_REMATCH[3]}"
+      if [[ "${banner_eval}" -le 0 || "${banner_pass}" != "${banner_eval}" ]]; then
+        echo "[goap-ci] batch total not satisfied (${profile}): ${line}" >&2
+        return 1
+      fi
+      pass_count=$((pass_count + banner_pass))
+      eval_count=$((eval_count + banner_eval))
+    fi
+  done <<< "${total_lines}"
 
-  if [[ "${eval_count}" -gt 0 && "${pass_count}" == "${eval_count}" ]]; then
-    echo "[goap-ci] batch PASS (${profile}) from ${diag}: ${total_line}"
+  if [[ "${eval_count}" -gt 0 ]]; then
+    echo "[goap-ci] batch PASS (${profile}) from ${diag}: ${total_lines//$'\n'/; }"
     return 0
   fi
-
-  echo "[goap-ci] batch total not satisfied (${profile}): ${total_line}" >&2
-  return 1
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

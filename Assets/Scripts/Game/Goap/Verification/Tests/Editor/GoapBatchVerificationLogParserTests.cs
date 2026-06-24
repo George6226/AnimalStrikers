@@ -68,5 +68,35 @@ public sealed class GoapBatchVerificationLogParserTests
         Assert.AreEqual(4, result.PassCount);
         Assert.AreEqual(4, result.EvalCount);
     }
+
+    [Test]
+    public void Evaluate_PassesDriveSelectionAndRuntimeTotals()
+    {
+        const string diag =
+            "========== SELECTION_TOTAL 2/2 ==========\n" +
+            "========== RUNTIME_TOTAL 2/2 ==========\n" +
+            "========== BATCH_COMPLETE ==========\n";
+
+        GoapBatchVerificationLogParser.Result result = GoapBatchVerificationLogParser.Evaluate(diag);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(4, result.PassCount);
+        Assert.AreEqual(4, result.EvalCount);
+        Assert.That(result.Summary, Does.Contain("SELECTION_TOTAL"));
+        Assert.That(result.Summary, Does.Contain("RUNTIME_TOTAL"));
+    }
+
+    [Test]
+    public void Evaluate_FailsWhenEitherTotalMismatch()
+    {
+        const string diag =
+            "========== SELECTION_TOTAL 2/2 ==========\n" +
+            "========== RUNTIME_TOTAL 1/2 ==========\n" +
+            "========== BATCH_COMPLETE ==========\n";
+
+        GoapBatchVerificationLogParser.Result result = GoapBatchVerificationLogParser.Evaluate(diag);
+
+        Assert.IsFalse(result.Succeeded);
+    }
 }
 #endif

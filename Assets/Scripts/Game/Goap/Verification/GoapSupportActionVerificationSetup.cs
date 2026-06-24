@@ -32,6 +32,9 @@ using UnityEditor;
 ///
 /// 本番選出検証（_verifyProductionSelection=ON）:
 /// 候補を本番どおりに戻し、パターン適用直後の最初の PlanCosts で選出を検証する。
+///
+/// ドライブ中本番選出（_verifyProductionSelectionDuringDrive=ON）:
+/// 自動ドライブ観測後の最新 PlanCosts で選出を検証（#13〜#18。RuntimePass と併用可）。
 /// </summary>
 public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
 {
@@ -43,6 +46,10 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
     protected abstract string ProductionSelectionVerificationBanner { get; }
 
     protected virtual IGoapSupportActionRuntimePassCriteria RuntimePassCriteria => null;
+
+    /// <summary>ドライブ中本番選出の期待表（既定は #13〜#18）。</summary>
+    protected virtual IGoapProductionSelectionExpectation DriveProductionSelectionExpectation =>
+        GoapProductionSelectionExpectations.Drive;
 
     /// <summary>味方配置適用後の付随セットアップ（敵配置など）。</summary>
     protected virtual void ApplyCompanionVerificationState(GoapSupportLayoutPatternId pattern)
@@ -63,6 +70,8 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
     [SerializeField] private bool _verificationOnlyCreateSupportAngle = true;
     [Tooltip("ON=本番候補で選出を検証（verificationOnly は強制 OFF）")]
     [SerializeField] private bool _verifyProductionSelection;
+    [Tooltip("ON=自動ドライブ観測後に最新 PlanCosts で本番選出を検証（#13〜#18、RuntimePass と併用可）")]
+    [SerializeField] private bool _verifyProductionSelectionDuringDrive;
     [Tooltip("ON=本番候補のままホールド後にランタイム追従を検証（ドライブ #17/#18 用）")]
     [SerializeField] private bool _verifyRuntimeFollowDuringBatch;
     [Tooltip("適用後に味方 GoapAgent のプランを中断し再計画")]
@@ -180,10 +189,19 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
 
     private GoapSupportActionUnderTest EffectiveVerificationOnlyAction =>
         !_verifyProductionSelection
+        && !_verifyProductionSelectionDuringDrive
         && !_verifyRuntimeFollowDuringBatch
         && _verificationOnlyCreateSupportAngle
             ? ActionUnderTest
             : GoapSupportActionUnderTest.None;
+
+    private bool UsesProductionSelectionAtApply =>
+        _verifyProductionSelection && !_verifyProductionSelectionDuringDrive;
+
+    private bool UsesProductionSelectionDuringDrive => _verifyProductionSelectionDuringDrive;
+
+    private bool UsesAnyProductionSelection =>
+        UsesProductionSelectionAtApply || UsesProductionSelectionDuringDrive;
 
     private bool ShouldEvaluateRuntimePassDuringBatch =>
         RuntimePassCriteria != null
@@ -497,9 +515,11 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
             }
 
             ResetDebugLogSession(
-                _verifyProductionSelection
+                UsesProductionSelectionAtApply
                     ? ProductionSelectionVerificationBanner
-                    : BatchVerificationBanner);
+                    : UsesProductionSelectionDuringDrive
+                        ? "Drive production selection during owner auto-drive (#13-#18)"
+                        : BatchVerificationBanner);
             if (_baseline.Count == 0)
             {
                 CaptureBaseline();
@@ -531,7 +551,9 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
             LogLine(
                 $"RunBatchVerification start {rangeLabel} count={total} " +
                 $"holdSec={_batchHoldSecondsPerPattern:F1} " +
-                $"productionSelection={_verifyProductionSelection} verificationOnly={EffectiveVerificationOnlyAction}");
+                $"productionSelection={UsesProductionSelectionAtApply} " +
+                $"driveSelection={UsesProductionSelectionDuringDrive} " +
+                $"verificationOnly={EffectiveVerificationOnlyAction}");
             GoapDiagnosticLog.WriteBanner(
                 _batchPreset == GoapSupportLayoutBatchPreset.ContiguousRange
                     ? $"BATCH_START range={rangeStart}-{rangeEnd} count={total}"
@@ -562,19 +584,41 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
 
                 yield return ApplyVerificationPatternAndWait(pattern);
 
-                if (_verifyProductionSelection)
+                if (UsesProductionSelectionAtApply)
                 {
                     yield return WaitForFirstProductionPlanCostsCoroutine(
                         pattern,
-                        ProductionSelectionPlanCostsTimeoutSeconds);
+                        ProductionSelectionPlanCostsTimeoutSeconds,
+                        ProductionSelectionExpectation);
                     LogAtCorrectLanesPlanningDiag(pattern, "postApply");
-                    EvaluateProductionSelectionForPattern(pattern, index, total);
+                    EvaluateProductionSelectionForPattern(
+                        pattern,
+                        index,
+                        total,
+                        ProductionSelectionExpectation,
+                        GoapProductionSelectionResolveMode.FirstPlanCosts);
                 }
                 else
                 {
-                    if (_batchHoldSecondsPerPattern > 0f)
+                    float holdSeconds = ResolveBatchHoldSeconds(pattern);
+                    if (holdSeconds > 0f)
                     {
-                        yield return HoldPatternObservationCoroutine(pattern, _batchHoldSecondsPerPattern);
+                        yield return HoldPatternObservationCoroutine(pattern, holdSeconds);
+                    }
+
+                    if (UsesProductionSelectionDuringDrive)
+                    {
+                        yield return WaitForDriveProductionPlanCostsCoroutine(
+                            pattern,
+                            ProductionSelectionPlanCostsTimeoutSeconds,
+                            DriveProductionSelectionExpectation);
+                        EvaluateProductionSelectionForPattern(
+                            pattern,
+                            index,
+                            total,
+                            DriveProductionSelectionExpectation,
+                            GoapProductionSelectionResolveMode.LastPlanCosts,
+                            "drive");
                     }
 
                     if (ShouldEvaluateRuntimePassDuringBatch)
@@ -587,17 +631,23 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
             }
 
             LogLine("RunBatchVerification complete");
-            if (_verifyProductionSelection)
+            if (UsesAnyProductionSelection)
             {
                 LogLine(
                     $"ProductionSelection TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount} patterns PASS");
                 GoapDiagnosticLog.WriteBanner(
                     $"SELECTION_TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount}");
             }
-            else if (ShouldEvaluateRuntimePassDuringBatch)
+
+            if (ShouldEvaluateRuntimePassDuringBatch)
             {
                 LogLine($"RuntimePass TOTAL {_runtimePassPassCount}/{_runtimePassEvalCount} patterns PASS");
                 GoapDiagnosticLog.WriteBanner($"RUNTIME_TOTAL {_runtimePassPassCount}/{_runtimePassEvalCount}");
+            }
+
+            if (!UsesAnyProductionSelection && !ShouldEvaluateRuntimePassDuringBatch)
+            {
+                LogLine("RunBatchVerification complete (no automated verdict configured)");
             }
             GoapDiagnosticLog.WriteBanner("BATCH_COMPLETE");
         }
@@ -834,11 +884,12 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
     {
         if (phase == "BEGIN")
         {
-            if (_verifyProductionSelection)
+            if (UsesAnyProductionSelection)
             {
                 _productionSelectionSummaryOffset = GoapActionVerificationSessionLog.CountLines();
             }
-            else if (ShouldEvaluateRuntimePassDuringBatch)
+
+            if (ShouldEvaluateRuntimePassDuringBatch)
             {
                 _runtimePassSummaryOffset = GoapActionVerificationSessionLog.CountLines();
                 _runtimePassDiagOffset = GoapDiagnosticLog.CountLines();
@@ -885,14 +936,62 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
         GoapDiagnosticLog.WriteBanner($"AT_CORRECT_LANES_DIAG phase={phase}");
     }
 
+    private float ResolveBatchHoldSeconds(GoapSupportLayoutPatternId pattern)
+    {
+        if (_batchHoldSecondsPerPattern > 0f)
+        {
+            return _batchHoldSecondsPerPattern;
+        }
+
+        if (UsesProductionSelectionDuringDrive
+            && GoapSupportLayoutDrivePatternLibrary.TryGetAutoDriveOverride(
+                pattern,
+                out GoapBallOwnerAutoDriveMode driveMode)
+            && driveMode != GoapBallOwnerAutoDriveMode.None)
+        {
+            return Mathf.Max(
+                _ballOwnerAutoDriveManualHoldSeconds,
+                _ballOwnerAutoDriveStartDelay + 4f);
+        }
+
+        return 0f;
+    }
+
     private IEnumerator WaitForFirstProductionPlanCostsCoroutine(
         GoapSupportLayoutPatternId pattern,
-        float timeoutSeconds)
+        float timeoutSeconds,
+        IGoapProductionSelectionExpectation expectation)
+    {
+        yield return WaitForProductionPlanCostsCoroutine(
+            pattern,
+            timeoutSeconds,
+            expectation,
+            "first");
+    }
+
+    private IEnumerator WaitForDriveProductionPlanCostsCoroutine(
+        GoapSupportLayoutPatternId pattern,
+        float timeoutSeconds,
+        IGoapProductionSelectionExpectation expectation)
+    {
+        yield return WaitForProductionPlanCostsCoroutine(
+            pattern,
+            timeoutSeconds,
+            expectation,
+            "drive-last");
+    }
+
+    private IEnumerator WaitForProductionPlanCostsCoroutine(
+        GoapSupportLayoutPatternId pattern,
+        float timeoutSeconds,
+        IGoapProductionSelectionExpectation expectation,
+        string phaseLabel)
     {
         var requiredSlots = new List<int>();
         for (int slot = 0; slot <= 2; slot++)
         {
-            if (ProductionSelectionExpectation.TryGetExpectation(pattern, slot, out _, out bool shouldEvaluate)
+            if (expectation != null
+                && expectation.TryGetExpectation(pattern, slot, out _, out bool shouldEvaluate)
                 && shouldEvaluate)
             {
                 requiredSlots.Add(slot);
@@ -911,7 +1010,7 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
             if (AllSlotsHavePlanCosts(lines, requiredSlots))
             {
                 LogLine(
-                    $"ProductionSelection ready first PlanCosts slots=[{string.Join(",", requiredSlots)}] " +
+                    $"ProductionSelection ready {phaseLabel} PlanCosts slots=[{string.Join(",", requiredSlots)}] " +
                     $"elapsed={elapsed:F2}s");
                 yield break;
             }
@@ -921,7 +1020,7 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
         }
 
         LogLine(
-            $"ProductionSelection WARN first PlanCosts timeout after {timeoutSeconds:F0}s " +
+            $"ProductionSelection WARN {phaseLabel} PlanCosts timeout after {timeoutSeconds:F0}s " +
             $"slots=[{string.Join(",", requiredSlots)}]");
     }
 
@@ -960,7 +1059,10 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
     private void EvaluateProductionSelectionForPattern(
         GoapSupportLayoutPatternId pattern,
         int index,
-        int total)
+        int total,
+        IGoapProductionSelectionExpectation expectation,
+        GoapProductionSelectionResolveMode resolveMode,
+        string phaseLabel = "apply")
     {
         if (pattern == GoapSupportLayoutPatternId.Baseline
             || pattern == GoapSupportLayoutPatternId.Custom)
@@ -972,13 +1074,16 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
         List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
         GoapProductionSelectionEvaluationResult result = GoapProductionSelectionEvaluator.EvaluatePattern(
             pattern,
-            ProductionSelectionExpectation,
+            expectation,
             lines,
-            GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot);
+            GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
+            resolveMode);
 
         if (result.EvalCount == 0)
         {
-            LogLine($"ProductionSelection SKIP {index}/{total} #{GetBatchPatternNumber(pattern)} {pattern} (no eval slots)");
+            LogLine(
+                $"ProductionSelection SKIP {index}/{total} #{GetBatchPatternNumber(pattern)} {pattern} " +
+                $"(no eval slots, phase={phaseLabel})");
             return;
         }
 
@@ -993,7 +1098,7 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
         string verdict = result.PatternPass ? "PASS" : "FAIL";
         LogLine(
             $"ProductionSelection {verdict} {index}/{total} #{patternNumber} {pattern} " +
-            $"({result.PassCount}/{result.EvalCount}) {result.DetailText}");
+            $"phase={phaseLabel} mode={resolveMode} ({result.PassCount}/{result.EvalCount}) {result.DetailText}");
         GoapDiagnosticLog.WriteBanner(
             $"SELECTION_{verdict} {index}/{total} #{patternNumber} {pattern} {result.PassCount}/{result.EvalCount}");
     }
