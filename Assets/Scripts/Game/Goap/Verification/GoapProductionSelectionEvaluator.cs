@@ -343,6 +343,24 @@ public static class GoapProductionSelectionEvaluator
             return false;
         }
 
+        if (expected.IndexOf('|', StringComparison.Ordinal) >= 0)
+        {
+            foreach (string candidate in expected.Split('|'))
+            {
+                if (ActionsMatchSingle(candidate, actual))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return ActionsMatchSingle(expected, actual);
+    }
+
+    private static bool ActionsMatchSingle(string expected, string actual)
+    {
         return string.Equals(expected, actual, StringComparison.Ordinal)
             || actual.StartsWith(expected, StringComparison.Ordinal);
     }

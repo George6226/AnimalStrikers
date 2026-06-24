@@ -150,5 +150,48 @@ public sealed class GoapProductionSelectionExpectationsEditModeTests
         Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
         Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
     }
+
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "GetOpen", true)]
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "CreateSupportAngle", true)]
+    [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "MoveToSupportPosition", false)]
+    public void DriveRegression_FlexibleWingSelection_AcceptsGetOpenOrCsa(
+        GoapSupportLayoutPatternId pattern,
+        string actualAction,
+        bool shouldMatch)
+    {
+        Assert.IsTrue(GoapProductionSelectionExpectations.Drive.TryGetExpectation(
+            pattern,
+            1,
+            out string expectedAction,
+            out bool shouldEvaluate));
+        Assert.IsTrue(shouldEvaluate);
+        Assert.AreEqual("GetOpen|CreateSupportAngle", expectedAction);
+
+        bool matched = MatchesExpectedAction(expectedAction, actualAction);
+        Assert.AreEqual(shouldMatch, matched, $"{actualAction} vs {expectedAction}");
+    }
+
+    private static bool MatchesExpectedAction(string expectedAction, string actualAction)
+    {
+        if (string.IsNullOrEmpty(expectedAction) || string.IsNullOrEmpty(actualAction))
+        {
+            return false;
+        }
+
+        if (expectedAction.IndexOf('|') >= 0)
+        {
+            foreach (string candidate in expectedAction.Split('|'))
+            {
+                if (actualAction == candidate || actualAction.StartsWith(candidate))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return actualAction == expectedAction || actualAction.StartsWith(expectedAction);
+    }
 }
 #endif
