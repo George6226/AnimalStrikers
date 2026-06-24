@@ -2,8 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// 翼保持ドライブ追従検証（#17/#18）。
-/// _batchPreset=WingOwnerDrive、_verifyRuntimeFollowDuringBatch=ON、_enableBallOwnerAutoDrive=ON を推奨。
-/// 本番候補のまま保持者を前後ドライブさせ、slot0=MTS / 非保持翼=CSA の Retarget 追従を検証する。
+/// _batchPreset=WingOwnerDrive、_verifyRuntimeFollowDuringBatch=ON、
+/// _verifyProductionSelectionDuringDrive=ON、_enableBallOwnerAutoDrive=ON を推奨。
+/// 本番候補のまま保持者を前後ドライブさせ、slot0=MTS / 非保持翼=CSA の選出と Retarget 追従を検証する。
 /// </summary>
 public class GoapWingOwnerDriveDebugSetup : GoapSupportActionVerificationSetup
 {

@@ -8336,6 +8336,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GoapWingOwnerDriveDebugSetup
   _verificationOnlyCreateSupportAngle: 0
   _verifyProductionSelection: 0
+  _verifyProductionSelectionDuringDrive: 1
   _verifyRuntimeFollowDuringBatch: 1
   _triggerGoapReplanAfterApply: 1
   _repositionBallOwnerSlot: 1
@@ -8408,6 +8409,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GoapCfOwnerDriveDebugSetup
   _verificationOnlyCreateSupportAngle: 0
   _verifyProductionSelection: 0
+  _verifyProductionSelectionDuringDrive: 1
   _verifyRuntimeFollowDuringBatch: 1
   _triggerGoapReplanAfterApply: 1
   _repositionBallOwnerSlot: 1

@@ -20,6 +20,10 @@ public static class GoapProductionSelectionExpectations
 
     public static readonly IGoapProductionSelectionExpectation CombinedSupportRegression =
         new GoapCombinedSupportRegressionExpectation();
+
+    /// <summary>ドライブ #13〜#18: 保持者移動中の本番選出（翼 CSA / 翼保持時 MTS+CSA）。</summary>
+    public static readonly IGoapProductionSelectionExpectation Drive =
+        new GoapDriveProductionSelectionExpectation();
 }
 
 /// <summary>CSA 本番選出: slot1/2=CreateSupportAngle, slot0=MoveToSupportPosition。</summary>
@@ -201,6 +205,72 @@ public sealed class GoapCombinedSupportRegressionExpectation : IGoapProductionSe
 
         shouldEvaluate = true;
         expectedAction = "CreateSupportAngle";
+        return true;
+    }
+}
+
+/// <summary>
+/// ドライブ本番選出: #13〜#18 の保持者移動中の最新 PlanCosts。
+/// #13/#15: 翼=CreateSupportAngle（前進のみでレーン維持）
+/// #14/#16: 翼=GetOpen（前後/横ドライブでレーンずれ → GetOpen 優先が本番意図）
+/// #17/#18: 翼保持と同様 slot0=MTS + 非保持翼=CSA
+/// </summary>
+public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        int number = GoapSupportLayoutPatternCatalog.GetNumber(pattern);
+        if (number < 13 || number > 18)
+        {
+            return true;
+        }
+
+        if (number >= 17)
+        {
+            return TryGetWingDriveExpectation(pattern, slot, out expectedAction, out shouldEvaluate);
+        }
+
+        int ownerSlot = GoapSupportLayoutPatternLibrary.GetBallOwnerSlotForPattern(pattern, 0);
+        if (slot == ownerSlot)
+        {
+            return true;
+        }
+
+        shouldEvaluate = true;
+        expectedAction = ShouldExpectGetOpenDuringCfOwnerDrive(pattern)
+            ? "GetOpen"
+            : "CreateSupportAngle";
+        return true;
+    }
+
+    private static bool ShouldExpectGetOpenDuringCfOwnerDrive(GoapSupportLayoutPatternId pattern) =>
+        pattern == GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack
+        || pattern == GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveLateralRight;
+
+    private static bool TryGetWingDriveExpectation(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        int ownerSlot = GoapSupportLayoutPatternLibrary.GetBallOwnerSlotForPattern(pattern, 0);
+        if (slot == ownerSlot)
+        {
+            return true;
+        }
+
+        shouldEvaluate = true;
+        expectedAction = slot == 0 ? "MoveToSupportPosition" : "CreateSupportAngle";
         return true;
     }
 }

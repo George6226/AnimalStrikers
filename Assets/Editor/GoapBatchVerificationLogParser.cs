@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -8,7 +9,7 @@ using System.Text.RegularExpressions;
 public static class GoapBatchVerificationLogParser
 {
     private static readonly Regex TotalBannerRegex = new(
-        @"(?:SELECTION_TOTAL|RUNTIME_TOTAL)\s+(\d+)\s*/\s*(\d+)",
+        @"(SELECTION_TOTAL|RUNTIME_TOTAL)\s+(\d+)\s*/\s*(\d+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public readonly struct Result
@@ -49,38 +50,64 @@ public static class GoapBatchVerificationLogParser
             return new Result(false, "BATCH_COMPLETE missing");
         }
 
-        Match lastTotal = null;
-        foreach (Match match in TotalBannerRegex.Matches(diagText))
-        {
-            lastTotal = match;
-        }
-
-        if (lastTotal == null)
+        List<(string label, int pass, int eval)> totals = CollectTotals(diagText);
+        if (totals.Count == 0)
         {
             return new Result(false, "SELECTION_TOTAL / RUNTIME_TOTAL missing");
         }
 
-        int passCount = int.Parse(lastTotal.Groups[1].Value);
-        int evalCount = int.Parse(lastTotal.Groups[2].Value);
-        if (evalCount <= 0)
+        int totalPass = 0;
+        int totalEval = 0;
+        foreach ((string label, int pass, int eval) in totals)
         {
-            return new Result(false, $"invalid total banner: {passCount}/{evalCount}");
+            if (eval <= 0)
+            {
+                return new Result(false, $"invalid {label}: {pass}/{eval}");
+            }
+
+            if (pass != eval)
+            {
+                return new Result(false, $"{label} mismatch: {pass}/{eval}", pass, eval);
+            }
+
+            totalPass += pass;
+            totalEval += eval;
         }
 
-        if (passCount != evalCount)
+        string summary = totals.Count == 1
+            ? $"batch passed {totals[0].pass}/{totals[0].eval}"
+            : $"batch passed {string.Join(" + ", FormatTotals(totals))}";
+
+        return new Result(true, summary, totalPass, totalEval);
+    }
+
+    private static List<(string label, int pass, int eval)> CollectTotals(string diagText)
+    {
+        var totals = new Dictionary<string, (int pass, int eval)>(StringComparer.Ordinal);
+
+        foreach (Match match in TotalBannerRegex.Matches(diagText))
         {
-            return new Result(
-                false,
-                $"total mismatch: {passCount}/{evalCount}",
-                passCount,
-                evalCount);
+            string label = match.Groups[1].Value;
+            int passCount = int.Parse(match.Groups[2].Value);
+            int evalCount = int.Parse(match.Groups[3].Value);
+            totals[label] = (passCount, evalCount);
         }
 
-        return new Result(
-            true,
-            $"batch passed {passCount}/{evalCount}",
-            passCount,
-            evalCount);
+        var result = new List<(string label, int pass, int eval)>();
+        foreach (KeyValuePair<string, (int pass, int eval)> entry in totals)
+        {
+            result.Add((entry.Key, entry.Value.pass, entry.Value.eval));
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<string> FormatTotals(List<(string label, int pass, int eval)> totals)
+    {
+        foreach ((string label, int pass, int eval) in totals)
+        {
+            yield return $"{label} {pass}/{eval}";
+        }
     }
 
     private static bool ContainsFailureBanner(string diagText)

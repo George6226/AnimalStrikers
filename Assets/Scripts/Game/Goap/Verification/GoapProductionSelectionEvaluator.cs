@@ -5,6 +5,8 @@ public enum GoapProductionSelectionResolveMode
 {
     /// <summary>パターン適用後の最初の PlanCosts（本番選出検証の既定）。</summary>
     FirstPlanCosts,
+    /// <summary>観測ウィンドウ内の最新 PlanCosts（ドライブ中本番選出検証）。</summary>
+    LastPlanCosts,
     /// <summary>最新の ActionStart を優先（旧挙動）。</summary>
     LastActionStart,
 }
@@ -117,47 +119,12 @@ public static class GoapProductionSelectionEvaluator
 
         if (resolveMode == GoapProductionSelectionResolveMode.FirstPlanCosts)
         {
-            for (int i = 0; i < lines.Count; i++)
-            {
-                string line = lines[i];
-                if (!line.Contains("[GOAP_SUMMARY]") || !line.Contains("PlanCosts("))
-                {
-                    continue;
-                }
+            return TryResolveFirstPlanCosts(lines, slot, playerId, out action, out source);
+        }
 
-                if (!line.Contains($"slot={slot},") && !line.Contains($"slot={slot} "))
-                {
-                    continue;
-                }
-
-                action = ExtractSelectedActionFromPlanCosts(line);
-                if (!string.IsNullOrEmpty(action))
-                {
-                    source = "PlanCosts:first";
-                    return true;
-                }
-            }
-
-            for (int i = 0; i < lines.Count; i++)
-            {
-                string line = lines[i];
-                if (!line.Contains("[GOAP_SUMMARY]")
-                    || !line.Contains("ForcedTacticalSupportPlan(action="))
-                {
-                    continue;
-                }
-
-                if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
-                {
-                    continue;
-                }
-
-                action = ExtractBetween(line, "ForcedTacticalSupportPlan(action=", ",");
-                source = "Forced:first";
-                return !string.IsNullOrEmpty(action);
-            }
-
-            return false;
+        if (resolveMode == GoapProductionSelectionResolveMode.LastPlanCosts)
+        {
+            return TryResolveLastPlanCosts(lines, slot, playerId, out action, out source);
         }
 
         for (int i = lines.Count - 1; i >= 0; i--)
@@ -215,6 +182,112 @@ public static class GoapProductionSelectionEvaluator
 
             action = ExtractBetween(line, "ForcedTacticalSupportPlan(action=", ",");
             source = "Forced";
+            return !string.IsNullOrEmpty(action);
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveFirstPlanCosts(
+        IList<string> lines,
+        int slot,
+        int? playerId,
+        out string action,
+        out string source)
+    {
+        action = null;
+        source = null;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]") || !line.Contains("PlanCosts("))
+            {
+                continue;
+            }
+
+            if (!line.Contains($"slot={slot},") && !line.Contains($"slot={slot} "))
+            {
+                continue;
+            }
+
+            action = ExtractSelectedActionFromPlanCosts(line);
+            if (!string.IsNullOrEmpty(action))
+            {
+                source = "PlanCosts:first";
+                return true;
+            }
+        }
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]")
+                || !line.Contains("ForcedTacticalSupportPlan(action="))
+            {
+                continue;
+            }
+
+            if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
+            {
+                continue;
+            }
+
+            action = ExtractBetween(line, "ForcedTacticalSupportPlan(action=", ",");
+            source = "Forced:first";
+            return !string.IsNullOrEmpty(action);
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveLastPlanCosts(
+        IList<string> lines,
+        int slot,
+        int? playerId,
+        out string action,
+        out string source)
+    {
+        action = null;
+        source = null;
+
+        for (int i = lines.Count - 1; i >= 0; i--)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]") || !line.Contains("PlanCosts("))
+            {
+                continue;
+            }
+
+            if (!line.Contains($"slot={slot},") && !line.Contains($"slot={slot} "))
+            {
+                continue;
+            }
+
+            action = ExtractSelectedActionFromPlanCosts(line);
+            if (!string.IsNullOrEmpty(action))
+            {
+                source = "PlanCosts:last";
+                return true;
+            }
+        }
+
+        for (int i = lines.Count - 1; i >= 0; i--)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]")
+                || !line.Contains("ForcedTacticalSupportPlan(action="))
+            {
+                continue;
+            }
+
+            if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
+            {
+                continue;
+            }
+
+            action = ExtractBetween(line, "ForcedTacticalSupportPlan(action=", ",");
+            source = "Forced:last";
             return !string.IsNullOrEmpty(action);
         }
 
