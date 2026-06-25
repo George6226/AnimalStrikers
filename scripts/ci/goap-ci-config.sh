@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# GOAP CI 共通設定（run-goap-ci.sh / run-goap-docker.sh / resolve-batch-verify-result.sh で source）。
+set -euo pipefail
+
+GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
+GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
+GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-74}"
+
+# token|cli_flag|result_file|unity_log|label
+GOAP_BATCH_PROFILES=(
+  "combined|-goapBatchVerify=combined|goap-batch-result.txt|goap-batch-verify.log|統合本番選出 #2-#12 (11/11)"
+  "wingDrive|-goapBatchVerify=wingDrive|goap-batch-wing-result.txt|goap-batch-wing-verify.log|翼ドライブ #17/#18 (SELECTION+RUNTIME 2/2)"
+  "cfDrive|-goapBatchVerify=cfDrive|goap-batch-cf-drive-result.txt|goap-batch-cf-drive-verify.log|CFドライブ #13-#16 (SELECTION+RUNTIME 4/4)"
+)
+
+GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive)
+
+goap_ci_script_dir() {
+  cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd
+}
+
+goap_ci_print_usage() {
+  local script_name="${1:-run-goap-ci.sh}"
+  echo "Usage: ${script_name} [$(IFS='|'; echo "${GOAP_CI_MODES[*]}")]" >&2
+  echo "" >&2
+  echo "  editmode        EditMode ${GOAP_EDITMODE_EXPECTED_TESTS} 件（約30秒）" >&2
+  echo "  batch-combined  combined 本番選出のみ" >&2
+  echo "  batch-wing      wingDrive 選出+追従のみ" >&2
+  echo "  batch-cf-drive  cfDrive 選出+追従のみ" >&2
+  echo "  batch           上記3バッチ連続" >&2
+  echo "  all             EditMode + 3バッチ（CI 相当・約7-10分）" >&2
+}
+
+goap_ci_mode_valid() {
+  local mode="$1"
+  local candidate
+  for candidate in "${GOAP_CI_MODES[@]}"; do
+    if [[ "${mode}" == "${candidate}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+goap_ci_mode_runs_editmode() {
+  [[ "${1}" == "editmode" || "${1}" == "all" ]]
+}
+
+goap_ci_mode_runs_batch() {
+  case "${1}" in
+    batch|all|batch-combined|batch-wing|batch-cf-drive) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+goap_ci_batch_profiles_for_mode() {
+  local mode="$1"
+  local entry token
+  for entry in "${GOAP_BATCH_PROFILES[@]}"; do
+    IFS='|' read -r token _ _ _ _ <<< "${entry}"
+    case "${mode}" in
+      batch|all)
+        echo "${token}"
+        ;;
+      batch-combined)
+        [[ "${token}" == "combined" ]] && echo "${token}"
+        ;;
+      batch-wing)
+        [[ "${token}" == "wingDrive" ]] && echo "${token}"
+        ;;
+      batch-cf-drive)
+        [[ "${token}" == "cfDrive" ]] && echo "${token}"
+        ;;
+    esac
+  done
+}
+
+goap_ci_resolve_batch_profile() {
+  local query="${1:?}"
+  local entry token flag result log label
+  for entry in "${GOAP_BATCH_PROFILES[@]}"; do
+    IFS='|' read -r token flag result log label <<< "${entry}"
+    if [[ "${query}" == "${token}" || "${query}" == *"${token}"* || "${query}" == "${flag}" ]]; then
+      GOAP_PROFILE_TOKEN="${token}"
+      GOAP_PROFILE_FLAG="${flag}"
+      GOAP_PROFILE_RESULT_FILE="${result}"
+      GOAP_PROFILE_LOG_FILE="${log}"
+      GOAP_PROFILE_LABEL="${label}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+goap_ci_batch_diag_candidates() {
+  local project_root="${1:?}"
+  local token="${2:?}"
+  local log_dir="${project_root}/Logs"
+  case "${token}" in
+    wingDrive)
+      echo "${log_dir}/GoapDiag_wing_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+      echo "${log_dir}/GoapDiag_latest.txt"
+      ;;
+    cfDrive)
+      echo "${log_dir}/GoapDiag_cf_drive_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+      echo "${log_dir}/GoapDiag_latest.txt"
+      ;;
+    *)
+      echo "${log_dir}/GoapDiag_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+      ;;
+  esac
+}
+
+goap_ci_clear_batch_markers() {
+  local log_dir="${1:?}"
+  rm -f \
+    "${log_dir}/goap-batch-pending-exit.txt" \
+    "${log_dir}/goap-batch-started.marker" \
+    "${log_dir}/goap-batch-profile.txt"
+}
+
+goap_ci_report_batch_failure() {
+  local project_root="${1:?}"
+  local token="${2:?}"
+  local unity_log="${3:-}"
+  local diag candidate
+  if [[ -n "${unity_log}" && -f "${unity_log}" ]]; then
+    echo "[goap-ci] --- tail ${unity_log} ---" >&2
+    tail -40 "${unity_log}" >&2 || true
+  fi
+  while IFS= read -r diag; do
+    [[ -z "${diag}" ]] && continue
+    if [[ -f "${diag}" ]]; then
+      echo "[goap-ci] --- ${diag} (${token} BATCH markers) ---" >&2
+      grep -E 'BATCH_|SELECTION_|RUNTIME_|GOAP_BATCH_RUNNER|AUTO_DRIVE|GoapDebugPlayBootstrap' "${diag}" | tail -40 >&2 || true
+      return 0
+    fi
+  done < <(goap_ci_batch_diag_candidates "${project_root}" "${token}")
+}

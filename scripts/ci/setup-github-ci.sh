@@ -3,8 +3,9 @@
 # 実行: ./scripts/ci/setup-github-ci.sh
 set -euo pipefail
 
-UNITY_VERSION="${UNITY_VERSION:-6000.2.7f2}"
-IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-base-3"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=goap-ci-config.sh
+source "${SCRIPT_DIR}/goap-ci-config.sh"
 
 cat <<EOF
 === GitHub CI セットアップ ===
@@ -53,16 +54,33 @@ cat <<EOF
    参考: https://game.ci/docs/github/activation
 
 4) Actions を手動実行 (workflow_dispatch) または push で確認
-   - editmode-geometry: 13 tests
-   - combined-batch-verify: SELECTION_TOTAL 11/11
+
+   ワークフロー: .github/workflows/goap-ci.yml（GOAP 自動検証）
+   ローカル相当: ./scripts/ci/run-goap-docker.sh all
+
+   合格基準（mode=all）:
+   | ステップ | 内容 |
+   |---------|------|
+   | EditMode | ${GOAP_EDITMODE_EXPECTED_TESTS} 件 |
+   | combined | 本番選出 #2-#12（11/11） |
+   | wingDrive | 翼ドライブ #17/#18（SELECTION+RUNTIME 2/2） |
+   | cfDrive | CFドライブ #13-#16（SELECTION+RUNTIME 4/4） |
+
+   部分実行:
+   ./scripts/ci/run-goap-docker.sh editmode
+   ./scripts/ci/run-goap-docker.sh batch-cf-drive
+
+   詳細: docs/goap-ci.md
 
 5) 失敗時は Artifacts から Logs/ をダウンロード
 
    よくある失敗:
-   - serial invalid (20110) → game-ci を使っている / UNITY_SERIAL が混在（本 CI では game-ci 不使用）
+   - serial invalid (20110) → UNITY_SERIAL / UNITY_LICENSE の混在（SERIAL 優先時は LICENSE を削除）
    - activation failed → UNITY_EMAIL / UNITY_PASSWORD の誤り、またはパスワードの特殊文字
+   - cfDrive フレーク → GoapDiag_cf_drive_latest.txt の SELECTION_/RUNTIME_ を確認
 
-Docker image (batch): ${IMAGE}
+Docker image: ${GOAP_DOCKER_IMAGE}
+Unity version: ${GOAP_UNITY_VERSION}
 
 Docker について:
 - 最新版 Docker Desktop は macOS 14 以降が必要（Ventura 13.7 では更新できない）

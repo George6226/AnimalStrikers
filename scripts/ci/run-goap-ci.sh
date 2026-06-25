@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
+# ローカル Mac: Unity 直実行で GOAP EditMode + バッチ検証。
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=goap-ci-config.sh
+source "${SCRIPT_DIR}/goap-ci-config.sh"
+
 MODE="${1:-all}"
-PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-UNITY_VERSION="${UNITY_VERSION:-6000.2.7f2}"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+UNITY_VERSION="${GOAP_UNITY_VERSION}"
 LOG_DIR="${PROJECT_ROOT}/Logs"
 DIAG_LOG="${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"
 SUMMARY_LOG="${PROJECT_ROOT}/Assets/DebugLog/GoapSummary_latest.txt"
 PROGRESS_INTERVAL="${GOAP_CI_PROGRESS_INTERVAL:-15}"
 mkdir -p "${LOG_DIR}"
+
+if ! goap_ci_mode_valid "${MODE}"; then
+  goap_ci_print_usage "$(basename "$0")"
+  exit 2
+fi
 
 resolve_unity() {
   if [[ -n "${UNITY_PATH:-}" && -x "${UNITY_PATH}" ]]; then
@@ -48,12 +58,11 @@ describe_batch_phase() {
     elif grep -q "BATCH_ABORT" "${DIAG_LOG}" 2>/dev/null; then
       phase="BATCH_ABORT 検出 → 終了処理中"
     elif grep -q "BATCH_START" "${DIAG_LOG}" 2>/dev/null; then
-      local last_pass last_begin count
-      last_pass="$(grep "SELECTION_PASS" "${DIAG_LOG}" | tail -1 || true)"
+      local last_marker last_begin
+      last_marker="$(grep -E "SELECTION_PASS|RUNTIME_PASS|SELECTION_FAIL|RUNTIME_FAIL" "${DIAG_LOG}" | tail -1 || true)"
       last_begin="$(grep "BATCH_BEGIN" "${DIAG_LOG}" | tail -1 || true)"
-      count="$(grep -c "SELECTION_PASS" "${DIAG_LOG}" 2>/dev/null || echo 0)"
-      if [[ -n "${last_pass}" ]]; then
-        phase="パターン検証中 (${count}/11 PASS) ${last_pass##*========== }"
+      if [[ -n "${last_marker}" ]]; then
+        phase="パターン検証中 ${last_marker##*========== }"
       elif [[ -n "${last_begin}" ]]; then
         phase="パターン適用中 ${last_begin##*========== }"
       else
@@ -101,15 +110,16 @@ run_editmode_tests() {
   unity_bin="$(resolve_unity)"
   local log_file="${LOG_DIR}/goap-editmode-tests.log"
 
-  echo "[goap-ci] === EditMode tests (約30秒) ==="
-  echo "[goap-ci] 幾何判定 + ログパーサー (${log_file})"
+  echo "[goap-ci] === EditMode tests (約30秒・期待 ${GOAP_EDITMODE_EXPECTED_TESTS} 件) ==="
+  echo "[goap-ci] filter=${GOAP_EDITMODE_TEST_FILTER}"
+  echo "[goap-ci] log=${log_file}"
   "${unity_bin}" \
     -batchmode \
     -nographics \
     -projectPath "${PROJECT_ROOT}" \
     -runTests \
     -testPlatform EditMode \
-    -testFilter "GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests" \
+    -testFilter "${GOAP_EDITMODE_TEST_FILTER}" \
     -testResults "${LOG_DIR}/goap-editmode-results.xml" \
     -logFile "${log_file}"
 
@@ -120,39 +130,17 @@ run_editmode_tests() {
 }
 
 run_batch_verify() {
-  local unity_bin profile_flag result_file log_file label profile_token
-  profile_flag="${1:--goapBatchVerify=combined}"
-  case "${profile_flag}" in
-    *wingDrive*)
-      result_file="${LOG_DIR}/goap-batch-wing-result.txt"
-      log_file="${LOG_DIR}/goap-batch-wing-verify.log"
-      label="翼ドライブ追従 #17/#18"
-      profile_token="wingDrive"
-      ;;
-    *cfDrive*)
-      result_file="${LOG_DIR}/goap-batch-cf-drive-result.txt"
-      log_file="${LOG_DIR}/goap-batch-cf-drive-verify.log"
-      label="CF 保持ドライブ追従 #13/#16"
-      profile_token="cfDrive"
-      ;;
-    *)
-      result_file="${LOG_DIR}/goap-batch-result.txt"
-      log_file="${LOG_DIR}/goap-batch-verify.log"
-      label="統合本番選出 11 パターン"
-      profile_token="combined"
-      ;;
-  esac
+  local profile_token="${1:?}"
+  goap_ci_resolve_batch_profile "${profile_token}"
 
+  local unity_bin
   unity_bin="$(resolve_unity)"
 
-  rm -f \
-    "${result_file}" \
-    "${LOG_DIR}/goap-batch-pending-exit.txt" \
-    "${LOG_DIR}/goap-batch-started.marker" \
-    "${LOG_DIR}/goap-batch-profile.txt"
+  rm -f "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}"
+  goap_ci_clear_batch_markers "${LOG_DIR}"
 
-  echo "[goap-ci] === Batch verify (${label}) ==="
-  echo "[goap-ci] ${profile_flag} (${log_file})"
+  echo "[goap-ci] === Batch verify (${GOAP_PROFILE_LABEL}) ==="
+  echo "[goap-ci] ${GOAP_PROFILE_FLAG} (${LOG_DIR}/${GOAP_PROFILE_LOG_FILE})"
   echo "[goap-ci] 進捗は ${PROGRESS_INTERVAL}s ごとに表示します"
 
   set +e
@@ -160,8 +148,8 @@ run_batch_verify() {
     -batchmode \
     -nographics \
     -projectPath "${PROJECT_ROOT}" \
-    "${profile_flag}" \
-    -logFile "${log_file}" &
+    "${GOAP_PROFILE_FLAG}" \
+    -logFile "${LOG_DIR}/${GOAP_PROFILE_LOG_FILE}" &
   local unity_pid=$!
   monitor_batch_progress "${unity_pid}"
   wait "${unity_pid}"
@@ -170,54 +158,43 @@ run_batch_verify() {
 
   echo "[goap-ci] Unity プロセス終了 (exit=${exit_code})"
 
-  if [[ -f "${result_file}" ]]; then
-    cat "${result_file}"
+  if [[ -f "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}" ]]; then
+    cat "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}"
   fi
 
   # shellcheck source=resolve-batch-verify-result.sh
-  source "$(cd "$(dirname "$0")" && pwd)/resolve-batch-verify-result.sh"
+  source "${SCRIPT_DIR}/resolve-batch-verify-result.sh"
 
-  if resolve_batch_verify_success "${PROJECT_ROOT}" "${profile_token}"; then
-    echo "[goap-ci] batch verify PASSED (${label})"
+  if resolve_batch_verify_success "${PROJECT_ROOT}" "${GOAP_PROFILE_TOKEN}"; then
+    echo "[goap-ci] batch verify PASSED (${GOAP_PROFILE_LABEL})"
     return 0
   fi
 
-  echo "[goap-ci] batch verify FAILED (${label}, exit=${exit_code})" >&2
-  tail -5 "${DIAG_LOG}" 2>/dev/null || true
+  echo "[goap-ci] batch verify FAILED (${GOAP_PROFILE_LABEL}, exit=${exit_code})" >&2
+  goap_ci_report_batch_failure "${PROJECT_ROOT}" "${GOAP_PROFILE_TOKEN}" "${LOG_DIR}/${GOAP_PROFILE_LOG_FILE}"
   return 1
 }
 
-case "${MODE}" in
-  editmode)
-    run_editmode_tests
-    ;;
-  batch)
-    run_batch_verify "-goapBatchVerify=combined"
-    run_batch_verify "-goapBatchVerify=wingDrive"
-    run_batch_verify "-goapBatchVerify=cfDrive"
-    ;;
-  batch-combined)
-    run_batch_verify "-goapBatchVerify=combined"
-    ;;
-  batch-wing)
-    run_batch_verify "-goapBatchVerify=wingDrive"
-    ;;
-  batch-cf-drive)
-    run_batch_verify "-goapBatchVerify=cfDrive"
-    ;;
-  all)
-    run_editmode_tests
+if goap_ci_mode_runs_editmode "${MODE}"; then
+  run_editmode_tests
+fi
+
+batch_tokens=()
+while IFS= read -r token; do
+  [[ -n "${token}" ]] && batch_tokens+=("${token}")
+done < <(goap_ci_batch_profiles_for_mode "${MODE}")
+
+if [[ ${#batch_tokens[@]} -gt 0 && "${MODE}" == "all" || "${MODE}" == "batch" ]]; then
+  if goap_ci_mode_runs_editmode "${MODE}"; then
     echo ""
-    run_batch_verify "-goapBatchVerify=combined"
+  fi
+fi
+
+for i in "${!batch_tokens[@]}"; do
+  if [[ "${i}" -gt 0 ]]; then
     echo ""
-    run_batch_verify "-goapBatchVerify=wingDrive"
-    echo ""
-    run_batch_verify "-goapBatchVerify=cfDrive"
-    ;;
-  *)
-    echo "Usage: $0 [editmode|batch|batch-combined|batch-wing|batch-cf-drive|all]" >&2
-    exit 2
-    ;;
-esac
+  fi
+  run_batch_verify "${batch_tokens[$i]}"
+done
 
 echo "[goap-ci] === ALL PASSED ==="
