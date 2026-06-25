@@ -5,6 +5,16 @@ public static class GoapDefenseLayoutPatternLibrary
 {
     public static int GetEnemyBallOwnerIndex(GoapDefenseLayoutPatternId pattern) => 0;
 
+    public static GoapDefenseLayoutPatternId ResolveBasePattern(GoapDefenseLayoutPatternId pattern) =>
+        pattern switch
+        {
+            GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward =>
+                GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies,
+            GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward =>
+                GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield,
+            _ => pattern,
+        };
+
     public static bool TryGetFieldContext(GoapSupportLayoutTuning tuning, out GoapSupportLayoutFieldContext ctx) =>
         GoapSupportLayoutPatternLibrary.TryGetFieldContext(tuning, out ctx);
 
@@ -16,9 +26,10 @@ public static class GoapDefenseLayoutPatternLibrary
         GoapSupportLayoutFieldContext ctx,
         GoapSupportLayoutTuning tuning)
     {
+        GoapDefenseLayoutPatternId layoutPattern = ResolveBasePattern(pattern);
         Vector3 ownGoal = ApproximateOwnGoal(ctx);
 
-        return pattern switch
+        return layoutPattern switch
         {
             GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane =>
                 ownGoal + ctx.ToGoal * (ctx.FieldLength * 0.1f),
@@ -27,6 +38,14 @@ public static class GoapDefenseLayoutPatternLibrary
     }
 
     public static Dictionary<int, Vector3> ComputeAllyTargets(
+        GoapDefenseLayoutPatternId pattern,
+        GoapSupportLayoutFieldContext ctx,
+        GoapSupportLayoutTuning tuning)
+    {
+        return ComputeAllyTargetsForLayout(ResolveBasePattern(pattern), ctx, tuning);
+    }
+
+    private static Dictionary<int, Vector3> ComputeAllyTargetsForLayout(
         GoapDefenseLayoutPatternId pattern,
         GoapSupportLayoutFieldContext ctx,
         GoapSupportLayoutTuning tuning)
@@ -91,10 +110,11 @@ public static class GoapDefenseLayoutPatternLibrary
             return false;
         }
 
-        Vector3 enemyOwner = ResolveEnemyOwnerPosition(pattern, ctx, tuning);
+        GoapDefenseLayoutPatternId layoutPattern = ResolveBasePattern(pattern);
+        Vector3 enemyOwner = ResolveEnemyOwnerPosition(layoutPattern, ctx, tuning);
         float wingLane = ctx.FieldWidth * 0.22f;
 
-        switch (pattern)
+        switch (layoutPattern)
         {
             case GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget:
                 position = enemyOwner + ctx.Right * wingLane + ctx.ToGoal * (ctx.FieldLength * 0.06f);
