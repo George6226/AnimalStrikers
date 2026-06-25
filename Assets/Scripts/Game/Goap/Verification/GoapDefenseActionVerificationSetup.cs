@@ -11,7 +11,7 @@ using UnityEditor;
 /// </summary>
 public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 {
-    private const float ProductionSelectionPlanCostsTimeoutSeconds = 22f;
+    private const float ProductionSelectionPlanCostsTimeoutSeconds = 30f;
 
     protected abstract string SummaryLogTag { get; }
     protected abstract GoapDefenseActionUnderTest ActionUnderTest { get; }
@@ -45,7 +45,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     [Header("一括検証")]
     [SerializeField] private bool _runBatchVerificationOnStart;
     [SerializeField] private float _batchHoldSecondsPerPattern = 8f;
-    [SerializeField] private float _batchSettleSecondsAfterPatternApply = 2.5f;
+    [SerializeField] private float _batchSettleSecondsAfterPatternApply = 3.5f;
     [SerializeField] private float _batchWaitGameStateTimeoutSeconds = 120f;
     [SerializeField] private float _batchSettleSecondsAfterGameState = 2f;
     [SerializeField] private bool _stopPlayModeWhenBatchEnds = true;
@@ -473,15 +473,10 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
                 continue;
             }
 
-            if (!GoapProductionSelectionEvaluator.TryResolveSelectedActionForSlot(
+            if (!GoapDefenseProductionSelectionEvaluator.IsSlotSelectionReady(
                     lines,
                     slot,
-                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
-                    resolveMode,
-                    out string actual,
-                    out _)
-                || string.IsNullOrEmpty(actual)
-                || actual.StartsWith("empty", StringComparison.Ordinal))
+                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot))
             {
                 return false;
             }

@@ -64,6 +64,19 @@ public static class GoapDefenseProductionSelectionEvaluator
         return result;
     }
 
+    public static bool IsSlotSelectionReady(
+        IList<string> lines,
+        int slot,
+        Func<int, int?> resolvePlayerIdForSlot)
+    {
+        return TryResolveFirstNonEmptySelectedForSlot(
+            lines,
+            slot,
+            resolvePlayerIdForSlot,
+            out _,
+            out _);
+    }
+
     private static bool TryResolveFirstNonEmptySelectedForSlot(
         IList<string> lines,
         int slot,
