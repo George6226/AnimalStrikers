@@ -2,36 +2,28 @@
 # goap-batch-result.txt / GoapDiag からバッチ合格を判定する（Unity 終了ハング時の CI フォールバック）。
 set -euo pipefail
 
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=goap-ci-config.sh
+source "${_SCRIPT_DIR}/goap-ci-config.sh"
+
 resolve_batch_verify_success() {
   local project_root="${1:?}"
   local profile="${2:-combined}"
   local log_dir="${project_root}/Logs"
   local result_file="goap-batch-result.txt"
-  local diag_candidates=(
-    "${log_dir}/GoapDiag_latest.txt"
-    "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
-  )
+  local diag_candidates=()
 
-  case "${profile}" in
-    wing | wingDrive | WingDrive)
-      result_file="goap-batch-wing-result.txt"
-      diag_candidates=(
-        "${log_dir}/GoapDiag_wing_latest.txt"
-        "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
-        "${log_dir}/GoapDiag_latest.txt"
-      )
-      ;;
-    cf | cfDrive | CfDrive)
-      result_file="goap-batch-cf-drive-result.txt"
-      diag_candidates=(
-        "${log_dir}/GoapDiag_cf_drive_latest.txt"
-        "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
-        "${log_dir}/GoapDiag_latest.txt"
-      )
-      ;;
-    combined | *)
-      ;;
-  esac
+  if goap_ci_resolve_batch_profile "${profile}"; then
+    result_file="${GOAP_PROFILE_RESULT_FILE}"
+    while IFS= read -r candidate; do
+      [[ -n "${candidate}" ]] && diag_candidates+=("${candidate}")
+    done < <(goap_ci_batch_diag_candidates "${project_root}" "${GOAP_PROFILE_TOKEN}")
+  else
+    diag_candidates=(
+      "${log_dir}/GoapDiag_latest.txt"
+      "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+    )
+  fi
 
   if [[ -f "${log_dir}/${result_file}" ]]; then
     if grep -q '^PASS:' "${log_dir}/${result_file}"; then
@@ -93,6 +85,8 @@ resolve_batch_verify_success() {
     echo "[goap-ci] batch PASS (${profile}) from ${diag}: ${total_lines//$'\n'/; }"
     return 0
   fi
+
+  return 1
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -8,6 +8,19 @@ on:
       - develop
   pull_request:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "run-goap-docker.sh のモード"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - editmode
+          - batch
+          - batch-combined
+          - batch-wing
+          - batch-cf-drive
 
 env:
   LANG: C.UTF-8
@@ -37,9 +50,11 @@ jobs:
             Library-v1-
 
       - name: GOAP 検証実行
+        env:
+          GOAP_CI_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'all' }}
         run: |
-          chmod +x scripts/ci/run-goap-docker.sh
-          scripts/ci/run-goap-docker.sh all
+          chmod +x scripts/ci/run-goap-docker.sh scripts/ci/goap-ci-config.sh
+          scripts/ci/run-goap-docker.sh "${GOAP_CI_MODE}"
 
       - name: ログをアップロード
         if: always()
