@@ -1,6 +1,6 @@
 /// <summary>
-/// 守備検証パターン番号 = enum 値（0〜6 連番）。
-/// #0=Baseline, #1=Custom, #2-#3=基本, #4-#6=戦術アクション単体
+/// 守備検証パターン番号 = enum 値（0〜8 連番）。
+/// #0=Baseline, #1=Custom, #2-#3=基本, #4-#6=戦術, #7-#8=敵保持ドライブ追従
 /// </summary>
 public enum GoapDefenseLayoutPatternId
 {
@@ -11,4 +11,6 @@ public enum GoapDefenseLayoutPatternId
     EnemyOwner_MarkFreeTarget = 4,
     EnemyOwner_BlockPassLane = 5,
     EnemyOwner_BlockShotLane = 6,
+    EnemyOwner_ClusteredAllies_DriveForward = 7,
+    EnemyOwner_SpreadMidfield_DriveForward = 8,
 }

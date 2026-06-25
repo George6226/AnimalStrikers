@@ -44,6 +44,19 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         }
     }
 
+    private static IEnumerable<TestCaseData> DefenseDriveCases()
+    {
+        foreach (GoapDefenseLayoutPatternId pattern in GoapDefenseLayoutPatternCatalog.BuildDefenseDriveSuite())
+        {
+            int number = GoapDefenseLayoutPatternCatalog.GetNumber(pattern);
+            for (int slot = 0; slot <= 2; slot++)
+            {
+                yield return new TestCaseData(pattern, slot, "MoveToDefensivePosition")
+                    .SetName($"DefenseDrive_#{number:D2}_slot{slot}_MoveToDefensivePosition");
+            }
+        }
+    }
+
     [TestCaseSource(nameof(DefenseBaselineCases))]
     public void DefenseBaseline_MatchesExpectedAction(
         GoapDefenseLayoutPatternId pattern,
@@ -76,6 +89,36 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
         Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
         Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [TestCaseSource(nameof(DefenseDriveCases))]
+    public void DefenseDrive_MatchesExpectedAction(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        string expectedAction)
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.DefenseDrive.TryGetExpectation(
+            pattern,
+            slot,
+            out string action,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
+        Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
+        Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [Test]
+    public void DefenseDrive_BaselinePattern_SkipsEvaluation()
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.DefenseDrive.TryGetExpectation(
+            GoapDefenseLayoutPatternId.Baseline,
+            0,
+            out _,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok);
+        Assert.IsFalse(shouldEvaluate, "Baseline should be skipped");
     }
 
     [Test]

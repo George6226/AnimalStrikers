@@ -11,13 +11,18 @@ using UnityEditor;
 /// </summary>
 public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 {
-    private const float ProductionSelectionPlanCostsTimeoutSeconds = 22f;
+    private const float ProductionSelectionPlanCostsTimeoutSeconds = 30f;
 
     protected abstract string SummaryLogTag { get; }
     protected abstract GoapDefenseActionUnderTest ActionUnderTest { get; }
     protected abstract IGoapDefenseProductionSelectionExpectation ProductionSelectionExpectation { get; }
     protected abstract string BatchVerificationBanner { get; }
     protected abstract string ProductionSelectionVerificationBanner { get; }
+
+    protected virtual IGoapDefenseActionRuntimePassCriteria RuntimePassCriteria => null;
+
+    protected virtual IGoapDefenseProductionSelectionExpectation DriveProductionSelectionExpectation =>
+        ProductionSelectionExpectation;
 
     [Header("検証モード")]
     [Tooltip("ON=DefensivePositioning の候補を ActionUnderTest のみにする（単体動作検証）")]
@@ -40,19 +45,33 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     [Header("一括検証")]
     [SerializeField] private bool _runBatchVerificationOnStart;
     [SerializeField] private float _batchHoldSecondsPerPattern = 8f;
-    [SerializeField] private float _batchSettleSecondsAfterPatternApply = 2.5f;
+    [SerializeField] private float _batchSettleSecondsAfterPatternApply = 3.5f;
     [SerializeField] private float _batchWaitGameStateTimeoutSeconds = 120f;
     [SerializeField] private float _batchSettleSecondsAfterGameState = 2f;
     [SerializeField] private bool _stopPlayModeWhenBatchEnds = true;
     [SerializeField] private int _batchPatternIndexStart = 2;
     [SerializeField] private int _batchPatternIndexEnd = 3;
 
+    [Header("敵保持者自動ドライブ（追従検証）")]
+    [SerializeField] private bool _enableEnemyOwnerAutoDrive;
+    [SerializeField] private bool _verifyProductionSelectionDuringDrive;
+    [SerializeField] private bool _verifyRuntimeFollowDuringBatch;
+    [SerializeField] private GoapBallOwnerAutoDriveMode _enemyOwnerAutoDriveMode = GoapBallOwnerAutoDriveMode.ForwardBack;
+    [SerializeField] private float _enemyOwnerAutoDriveIntensity = 0.85f;
+    [SerializeField] private float _enemyOwnerAutoDriveAmplitudeRatio = 0.08f;
+    [SerializeField] private float _enemyOwnerAutoDriveStartDelay = 3f;
+
     private readonly List<Snapshot> _baseline = new List<Snapshot>();
     private readonly List<EnemySnapshot> _enemyBaseline = new List<EnemySnapshot>();
     private Coroutine _batchCoroutine;
+    private Coroutine _enemyDriveCoroutine;
     private int _productionSelectionSummaryOffset;
     private int _productionSelectionPassCount;
     private int _productionSelectionEvalCount;
+    private int _runtimePassSummaryOffset;
+    private int _runtimePassDiagOffset;
+    private int _runtimePassPassCount;
+    private int _runtimePassEvalCount;
     private bool _lastAssignBallOwnershipChanged;
 
     private struct Snapshot
@@ -69,8 +88,28 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     protected bool RestrictCandidatesToActionUnderTest => _restrictCandidatesToActionUnderTest;
 
-    private GoapDefenseActionUnderTest EffectiveDefenseActionFilter =>
-        ResolveDefenseActionFilterForPattern(GoapDefenseLayoutPatternId.Baseline);
+    private GoapDefenseActionUnderTest EffectiveVerificationOnlyDefenseAction =>
+        !_verifyProductionSelection
+        && !_verifyProductionSelectionDuringDrive
+        && !_verifyRuntimeFollowDuringBatch
+        && (_verificationOnlyDefenseAction || _restrictCandidatesToActionUnderTest)
+            ? ActionUnderTest
+            : GoapDefenseActionUnderTest.None;
+
+    private bool UsesProductionSelectionAtApply =>
+        _verifyProductionSelection && !_verifyProductionSelectionDuringDrive;
+
+    private bool UsesProductionSelectionDuringDrive => _verifyProductionSelectionDuringDrive;
+
+    private bool UsesAnyProductionSelection =>
+        UsesProductionSelectionAtApply || UsesProductionSelectionDuringDrive;
+
+    private bool ShouldEvaluateRuntimePassDuringBatch =>
+        RuntimePassCriteria != null
+        && (EffectiveVerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None
+            || _verifyRuntimeFollowDuringBatch);
+
+    private bool IsBatchCoroutineActive => _batchCoroutine != null;
 
     protected virtual GoapDefenseActionUnderTest ResolveDefenseActionFilterForPattern(
         GoapDefenseLayoutPatternId pattern)
@@ -102,11 +141,12 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     private void OnEnable()
     {
-        TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(EffectiveDefenseActionFilter);
+        TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(EffectiveVerificationOnlyDefenseAction);
     }
 
     private void OnDisable()
     {
+        StopActiveEnemyDrive();
         TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(GoapDefenseActionUnderTest.None);
     }
 
@@ -157,6 +197,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
             _productionSelectionPassCount = 0;
             _productionSelectionEvalCount = 0;
+            _runtimePassPassCount = 0;
+            _runtimePassEvalCount = 0;
 
             List<GoapDefenseLayoutPatternId> patterns = GoapDefenseLayoutPatternCatalog.BuildRange(
                 _batchPatternIndexStart,
@@ -171,7 +213,9 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
             LogLine(
                 $"RunBatchVerification start range={_batchPatternIndexStart}..{_batchPatternIndexEnd} " +
-                $"count={total} productionSelection={_verifyProductionSelection} " +
+                $"count={total} productionSelectionAtApply={UsesProductionSelectionAtApply} " +
+                $"driveSelection={UsesProductionSelectionDuringDrive} " +
+                $"runtimeFollow={ShouldEvaluateRuntimePassDuringBatch} " +
                 $"actionFilter={ActionUnderTest}");
             GoapDiagnosticLog.WriteBanner(
                 $"BATCH_START range={_batchPatternIndexStart}-{_batchPatternIndexEnd} count={total}");
@@ -200,33 +244,77 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
                 yield return ApplyVerificationPatternAndWait(pattern);
 
-                if (_batchSettleSecondsAfterPatternApply > 0f)
+                if (_batchSettleSecondsAfterPatternApply > 0f && UsesProductionSelectionAtApply)
                 {
                     yield return new WaitForSeconds(_batchSettleSecondsAfterPatternApply);
                 }
 
-                if (_verifyProductionSelection)
+                if (UsesProductionSelectionAtApply)
                 {
-                    yield return WaitForProductionPlanCostsCoroutine(ProductionSelectionPlanCostsTimeoutSeconds);
-                    EvaluateProductionSelectionForPattern(pattern, index + 1, total);
+                    yield return WaitForProductionPlanCostsCoroutine(
+                        ProductionSelectionPlanCostsTimeoutSeconds,
+                        ProductionSelectionExpectation,
+                        GoapProductionSelectionResolveMode.FirstPlanCosts);
+                    EvaluateProductionSelectionForPattern(
+                        pattern,
+                        index + 1,
+                        total,
+                        ProductionSelectionExpectation,
+                        GoapProductionSelectionResolveMode.FirstPlanCosts,
+                        "apply");
                 }
-                else if (_batchHoldSecondsPerPattern > 0f)
+                else
                 {
-                    yield return new WaitForSeconds(_batchHoldSecondsPerPattern);
+                    float holdSeconds = _batchHoldSecondsPerPattern;
+                    if (holdSeconds > 0f)
+                    {
+                        yield return HoldPatternObservationCoroutine(pattern, holdSeconds);
+                    }
+
+                    if (UsesProductionSelectionDuringDrive)
+                    {
+                        yield return WaitForProductionPlanCostsCoroutine(
+                            ProductionSelectionPlanCostsTimeoutSeconds,
+                            DriveProductionSelectionExpectation,
+                            GoapProductionSelectionResolveMode.LastPlanCosts);
+                        EvaluateProductionSelectionForPattern(
+                            pattern,
+                            index + 1,
+                            total,
+                            DriveProductionSelectionExpectation,
+                            GoapProductionSelectionResolveMode.LastPlanCosts,
+                            "drive");
+                    }
+
+                    if (ShouldEvaluateRuntimePassDuringBatch)
+                    {
+                        EvaluateRuntimePassForPattern(pattern, index + 1, total);
+                    }
                 }
 
                 WriteBatchPatternBoundary("END", pattern, index + 1, total);
             }
 
-            LogLine(
-                $"ProductionSelection TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount} patterns PASS");
-            GoapDiagnosticLog.WriteBanner(
-                $"SELECTION_TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount}");
+            if (UsesAnyProductionSelection)
+            {
+                LogLine(
+                    $"ProductionSelection TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount} patterns PASS");
+                GoapDiagnosticLog.WriteBanner(
+                    $"SELECTION_TOTAL {_productionSelectionPassCount}/{_productionSelectionEvalCount}");
+            }
+
+            if (ShouldEvaluateRuntimePassDuringBatch)
+            {
+                LogLine($"RuntimePass TOTAL {_runtimePassPassCount}/{_runtimePassEvalCount} patterns PASS");
+                GoapDiagnosticLog.WriteBanner($"RUNTIME_TOTAL {_runtimePassPassCount}/{_runtimePassEvalCount}");
+            }
+
             GoapDiagnosticLog.WriteBanner("BATCH_COMPLETE");
             LogLine("RunBatchVerification complete");
         }
         finally
         {
+            StopActiveEnemyDrive();
             TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(GoapDefenseActionUnderTest.None);
 #if UNITY_EDITOR
             if (_stopPlayModeWhenBatchEnds && GoapBatchVerifyEnvironment.IsActive)
@@ -303,7 +391,10 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     private void EvaluateProductionSelectionForPattern(
         GoapDefenseLayoutPatternId pattern,
         int index,
-        int total)
+        int total,
+        IGoapDefenseProductionSelectionExpectation expectation,
+        GoapProductionSelectionResolveMode resolveMode,
+        string phaseLabel)
     {
         if (pattern == GoapDefenseLayoutPatternId.Baseline)
         {
@@ -314,10 +405,10 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
         GoapDefenseProductionSelectionEvaluationResult result = GoapDefenseProductionSelectionEvaluator.EvaluatePattern(
             pattern,
-            ProductionSelectionExpectation,
+            expectation,
             lines,
             GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
-            GoapProductionSelectionResolveMode.FirstPlanCosts);
+            resolveMode);
 
         if (result.EvalCount == 0)
         {
@@ -334,18 +425,21 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         string verdict = result.PatternPass ? "PASS" : "FAIL";
         LogLine(
             $"ProductionSelection {verdict} {index}/{total} #{GetPatternNumber(pattern)} {pattern} " +
-            $"{result.PassCount}/{result.EvalCount} {result.DetailText}");
+            $"phase={phaseLabel} mode={resolveMode} {result.PassCount}/{result.EvalCount} {result.DetailText}");
         GoapDiagnosticLog.WriteBanner(
             $"SELECTION_{verdict} #{GetPatternNumber(pattern)} {pattern} {result.PassCount}/{result.EvalCount}");
     }
 
-    private IEnumerator WaitForProductionPlanCostsCoroutine(float timeoutSeconds)
+    private IEnumerator WaitForProductionPlanCostsCoroutine(
+        float timeoutSeconds,
+        IGoapDefenseProductionSelectionExpectation expectation,
+        GoapProductionSelectionResolveMode resolveMode)
     {
         float elapsed = 0f;
         while (elapsed < timeoutSeconds)
         {
             List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
-            if (HasReadyProductionSelection(lines))
+            if (HasReadyProductionSelection(lines, expectation, resolveMode))
             {
                 yield break;
             }
@@ -357,16 +451,19 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         LogLine($"WaitForProductionPlanCosts timeout={timeoutSeconds:F0}s");
     }
 
-    private bool HasReadyProductionSelection(IList<string> lines)
+    private bool HasReadyProductionSelection(
+        IList<string> lines,
+        IGoapDefenseProductionSelectionExpectation expectation,
+        GoapProductionSelectionResolveMode resolveMode)
     {
-        if (ProductionSelectionExpectation == null)
+        if (expectation == null)
         {
             return HasPlanCostsForAllSlots(lines);
         }
 
         for (int slot = 0; slot <= 2; slot++)
         {
-            if (!ProductionSelectionExpectation.TryGetExpectation(
+            if (!expectation.TryGetExpectation(
                     _activeBatchPattern,
                     slot,
                     out string expected,
@@ -376,15 +473,10 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
                 continue;
             }
 
-            if (!GoapProductionSelectionEvaluator.TryResolveSelectedActionForSlot(
+            if (!GoapDefenseProductionSelectionEvaluator.IsSlotSelectionReady(
                     lines,
                     slot,
-                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
-                    GoapProductionSelectionResolveMode.FirstPlanCosts,
-                    out string actual,
-                    out _)
-                || string.IsNullOrEmpty(actual)
-                || actual.StartsWith("empty", StringComparison.Ordinal))
+                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot))
             {
                 return false;
             }
@@ -421,12 +513,188 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     {
         if (phase == "BEGIN")
         {
-            _productionSelectionSummaryOffset = GoapActionVerificationSessionLog.CountLines();
+            if (UsesAnyProductionSelection)
+            {
+                _productionSelectionSummaryOffset = GoapActionVerificationSessionLog.CountLines();
+            }
+
+            if (ShouldEvaluateRuntimePassDuringBatch)
+            {
+                _runtimePassSummaryOffset = GoapActionVerificationSessionLog.CountLines();
+                _runtimePassDiagOffset = GoapDiagnosticLog.CountLines();
+            }
         }
 
         string title = $"BATCH_{phase} {index}/{total} #{GetPatternNumber(pattern)} {pattern}";
         GoapDiagnosticLog.WriteBanner(title);
         LogLine(title);
+    }
+
+    private void EvaluateRuntimePassForPattern(
+        GoapDefenseLayoutPatternId pattern,
+        int index,
+        int total)
+    {
+        if (RuntimePassCriteria == null)
+        {
+            return;
+        }
+
+        List<string> summaryLines = GoapActionVerificationSessionLog.ReadLinesSince(_runtimePassSummaryOffset);
+        List<string> diagLines = GoapDiagnosticLog.ReadLinesSince(_runtimePassDiagOffset);
+        GoapDefenseActionRuntimePassResult result = GoapDefenseActionRuntimePassEvaluator.EvaluatePattern(
+            pattern,
+            RuntimePassCriteria,
+            diagLines,
+            summaryLines,
+            GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot);
+
+        if (!result.ShouldEvaluate)
+        {
+            LogLine($"RuntimePass SKIP {index}/{total} #{GetPatternNumber(pattern)} {pattern} ({result.DetailText})");
+            return;
+        }
+
+        _runtimePassEvalCount++;
+        if (result.PatternPass)
+        {
+            _runtimePassPassCount++;
+        }
+
+        string verdict = result.PatternPass ? "PASS" : "FAIL";
+        LogLine($"RuntimePass {verdict} {index}/{total} #{GetPatternNumber(pattern)} {pattern} {result.DetailText}");
+        GoapDiagnosticLog.WriteBanner($"RUNTIME_{verdict} {index}/{total} #{GetPatternNumber(pattern)} {pattern}");
+    }
+
+    private IEnumerator HoldPatternObservationCoroutine(GoapDefenseLayoutPatternId pattern, float duration)
+    {
+        if (duration <= 0f)
+        {
+            yield break;
+        }
+
+        bool driveEnabled = _enableEnemyOwnerAutoDrive
+            && pattern != GoapDefenseLayoutPatternId.Baseline
+            && IsGameState();
+        GoapBallOwnerAutoDriveMode driveMode = ResolveEnemyOwnerAutoDriveMode(pattern);
+
+        if (driveEnabled && driveMode != GoapBallOwnerAutoDriveMode.None)
+        {
+            float ampRatio = ResolveEnemyOwnerAutoDriveAmplitudeRatio(pattern);
+            LogLine(
+                $"EnemyOwnerAutoDrive start pattern={pattern} mode={driveMode} ampRatio={ampRatio:F2} " +
+                $"duration={duration:F1}s delay={_enemyOwnerAutoDriveStartDelay:F1}s");
+            GoapDiagnosticLog.WriteBanner(
+                $"AUTO_DRIVE_BEGIN #{GetPatternNumber(pattern)} {pattern} {driveMode} amp={ampRatio:F2}");
+        }
+
+        float elapsed = 0f;
+        Vector3 driveAnchor = Vector3.zero;
+        bool anchorSet = false;
+
+        while (elapsed < duration)
+        {
+            if (driveEnabled
+                && driveMode != GoapBallOwnerAutoDriveMode.None
+                && elapsed >= _enemyOwnerAutoDriveStartDelay)
+            {
+                AnimalFacade enemyOwner = GoapDefenseVerificationBallHelper.GetEnemyByIndex(_enemyBallOwnerIndex);
+                if (enemyOwner != null)
+                {
+                    if (!anchorSet)
+                    {
+                        driveAnchor = enemyOwner.transform.position;
+                        anchorSet = true;
+                    }
+
+                    float driveElapsed = elapsed - _enemyOwnerAutoDriveStartDelay;
+                    float driveDuration = Mathf.Max(duration - _enemyOwnerAutoDriveStartDelay, 0.01f);
+                    Vector3 target = ComputeEnemyOwnerDriveTarget(
+                        enemyOwner,
+                        driveAnchor,
+                        driveElapsed,
+                        driveDuration,
+                        driveMode,
+                        pattern);
+                    GoapDebugAnimalMotor.TryMoveToward(enemyOwner, target, _enemyOwnerAutoDriveIntensity);
+                }
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        StopEnemyOwnerDrive();
+
+        if (driveEnabled && driveMode != GoapBallOwnerAutoDriveMode.None)
+        {
+            LogLine($"EnemyOwnerAutoDrive end pattern={pattern}");
+            GoapDiagnosticLog.WriteBanner($"AUTO_DRIVE_END #{GetPatternNumber(pattern)} {pattern}");
+        }
+    }
+
+    private GoapBallOwnerAutoDriveMode ResolveEnemyOwnerAutoDriveMode(GoapDefenseLayoutPatternId pattern)
+    {
+        if (GoapDefenseLayoutDrivePatternLibrary.TryGetAutoDriveOverride(pattern, out GoapBallOwnerAutoDriveMode overrideMode))
+        {
+            return overrideMode;
+        }
+
+        return _enemyOwnerAutoDriveMode;
+    }
+
+    private float ResolveEnemyOwnerAutoDriveAmplitudeRatio(GoapDefenseLayoutPatternId pattern) =>
+        GoapDefenseLayoutDrivePatternLibrary.ResolveAmplitudeRatio(
+            pattern,
+            _enemyOwnerAutoDriveAmplitudeRatio,
+            _enemyOwnerAutoDriveAmplitudeRatio);
+
+    private Vector3 ComputeEnemyOwnerDriveTarget(
+        AnimalFacade enemyOwner,
+        Vector3 anchor,
+        float driveElapsed,
+        float driveDuration,
+        GoapBallOwnerAutoDriveMode driveMode,
+        GoapDefenseLayoutPatternId pattern)
+    {
+        if (!TryGetFieldContext(out GoapSupportLayoutFieldContext ctx) || enemyOwner == null)
+        {
+            return anchor;
+        }
+
+        float amp = ctx.FieldLength * ResolveEnemyOwnerAutoDriveAmplitudeRatio(pattern);
+        float phase = driveDuration > 0.01f ? driveElapsed / driveDuration : 0f;
+        float wave = Mathf.Sin(phase * Mathf.PI * 2f);
+        Vector3 pressDir = -ctx.ToGoal;
+
+        return driveMode switch
+        {
+            GoapBallOwnerAutoDriveMode.Forward => enemyOwner.transform.position + pressDir * amp,
+            GoapBallOwnerAutoDriveMode.ForwardBack => anchor + pressDir * (wave * amp),
+            GoapBallOwnerAutoDriveMode.LateralRight => anchor + ctx.Right * (wave * amp),
+            GoapBallOwnerAutoDriveMode.LateralLeft => anchor - ctx.Right * (wave * amp),
+            _ => anchor,
+        };
+    }
+
+    private void StopEnemyOwnerDrive()
+    {
+        AnimalFacade enemyOwner = GoapDefenseVerificationBallHelper.GetEnemyByIndex(_enemyBallOwnerIndex);
+        if (enemyOwner != null)
+        {
+            GoapDebugAnimalMotor.Stop(enemyOwner);
+        }
+    }
+
+    private void StopActiveEnemyDrive()
+    {
+        if (_enemyDriveCoroutine != null)
+        {
+            StopCoroutine(_enemyDriveCoroutine);
+            _enemyDriveCoroutine = null;
+        }
+
+        StopEnemyOwnerDrive();
     }
 
     private IEnumerator WaitUntilReadyForLayoutApply(float timeoutSeconds)

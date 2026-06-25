@@ -17,6 +17,9 @@ public static class GoapDefenseProductionSelectionExpectations
 
     public static readonly IGoapDefenseProductionSelectionExpectation DefenseTactical =
         new GoapDefenseTacticalProductionSelectionExpectation();
+
+    public static readonly IGoapDefenseProductionSelectionExpectation DefenseDrive =
+        new GoapDefenseDriveProductionSelectionExpectation();
 }
 
 /// <summary>
@@ -46,7 +49,9 @@ public sealed class GoapMoveToDefensivePositionProductionSelectionExpectation
         }
 
         if (pattern is GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies
-            or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield)
+            or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield
+            or GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward
+            or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward)
         {
             shouldEvaluate = true;
             expectedAction = "MoveToDefensivePosition";
@@ -114,5 +119,23 @@ public sealed class GoapDefenseTacticalProductionSelectionExpectation
         shouldEvaluate = true;
         expectedAction = action;
         return true;
+    }
+}
+
+/// <summary>Phase 6 守備ドライブ: 敵保持ドライブ中も MoveToDefensivePosition を期待。</summary>
+public sealed class GoapDefenseDriveProductionSelectionExpectation
+    : IGoapDefenseProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        return GoapDefenseProductionSelectionExpectations.MoveToDefensivePosition.TryGetExpectation(
+            pattern,
+            slot,
+            out expectedAction,
+            out shouldEvaluate);
     }
 }

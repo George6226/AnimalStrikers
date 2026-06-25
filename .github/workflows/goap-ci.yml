@@ -23,6 +23,7 @@ on:
           - batch-cf-drive
           - batch-defense
           - batch-defense-tactical
+          - batch-defense-drive
 
 env:
   LANG: C.UTF-8
@@ -71,17 +72,20 @@ jobs:
             Logs/goap-batch-cf-drive-verify.log
             Logs/goap-batch-defense-verify.log
             Logs/goap-batch-defense-tactical-verify.log
+            Logs/goap-batch-defense-drive-verify.log
             Logs/goap-batch-result.txt
             Logs/goap-batch-wing-result.txt
             Logs/goap-batch-cf-drive-result.txt
             Logs/goap-batch-defense-result.txt
             Logs/goap-batch-defense-tactical-result.txt
+            Logs/goap-batch-defense-drive-result.txt
             Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
             Logs/GoapDiag_wing_latest.txt
             Logs/GoapDiag_cf_drive_latest.txt
             Logs/GoapDiag_defense_latest.txt
             Logs/GoapDiag_defense_tactical_latest.txt
+            Logs/GoapDiag_defense_drive_latest.txt
             Logs/GoapSummary_latest.txt
             Logs/GoapSummary_wing_latest.txt
             Logs/GoapSummary_cf_drive_latest.txt

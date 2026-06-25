@@ -7,6 +7,7 @@ public enum GoapDefenseActionUnderTest
     BlockPassLane = 3,
     BlockShotLane = 4,
     RetreatToDefensiveLine = 5,
+    EnemyOwnerDriveFollow = 6,
 }
 
 public static class GoapDefenseActionUnderTestExtensions

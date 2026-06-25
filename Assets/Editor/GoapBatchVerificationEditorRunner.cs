@@ -263,6 +263,7 @@ public static class GoapBatchVerificationEditorRunner
                     GoapBatchVerifyProfile.CfDrive => "GoapDiag_cf_drive_latest.txt",
                     GoapBatchVerifyProfile.DefenseBaseline => "GoapDiag_defense_latest.txt",
                     GoapBatchVerifyProfile.DefenseTactical => "GoapDiag_defense_tactical_latest.txt",
+                    GoapBatchVerifyProfile.DefenseDrive => "GoapDiag_defense_drive_latest.txt",
                     _ => "GoapDiag_latest.txt",
                 };
                 File.WriteAllText(Path.Combine(_ciLogDir, diagName), diagText);
