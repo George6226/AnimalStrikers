@@ -5,7 +5,7 @@ set -euo pipefail
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
 GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-81}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-91}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(
@@ -13,9 +13,10 @@ GOAP_BATCH_PROFILES=(
   "wingDrive|-goapBatchVerify=wingDrive|goap-batch-wing-result.txt|goap-batch-wing-verify.log|翼ドライブ #17/#18 (SELECTION+RUNTIME 2/2)"
   "cfDrive|-goapBatchVerify=cfDrive|goap-batch-cf-drive-result.txt|goap-batch-cf-drive-verify.log|CFドライブ #13-#16 (SELECTION+RUNTIME 4/4)"
   "defenseBaseline|-goapBatchVerify=defenseBaseline|goap-batch-defense-result.txt|goap-batch-defense-verify.log|守備基本 #2-#3 (SELECTION 2/2)"
+  "defenseTactical|-goapBatchVerify=defenseTactical|goap-batch-defense-tactical-result.txt|goap-batch-defense-tactical-verify.log|守備戦術 #4-#6 (SELECTION 3/3)"
 )
 
-GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-defense)
+GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-defense batch-defense-tactical)
 
 goap_ci_script_dir() {
   cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd
@@ -30,8 +31,9 @@ goap_ci_print_usage() {
   echo "  batch-wing      wingDrive 選出+追従のみ" >&2
   echo "  batch-cf-drive  cfDrive 選出+追従のみ" >&2
   echo "  batch-defense   defenseBaseline 守備基本のみ" >&2
-  echo "  batch           上記4バッチ連続" >&2
-  echo "  all             EditMode + 4バッチ（CI 相当・約8-12分）" >&2
+  echo "  batch-defense-tactical  defenseTactical 守備戦術のみ" >&2
+  echo "  batch           上記5バッチ連続" >&2
+  echo "  all             EditMode + 5バッチ（CI 相当・約10-14分）" >&2
 }
 
 goap_ci_mode_valid() {
@@ -51,7 +53,7 @@ goap_ci_mode_runs_editmode() {
 
 goap_ci_mode_runs_batch() {
   case "${1}" in
-    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-defense) return 0 ;;
+    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-defense|batch-defense-tactical) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -76,6 +78,9 @@ goap_ci_batch_profiles_for_mode() {
         ;;
       batch-defense)
         [[ "${token}" == "defenseBaseline" ]] && echo "${token}"
+        ;;
+      batch-defense-tactical)
+        [[ "${token}" == "defenseTactical" ]] && echo "${token}"
         ;;
     esac
   done
@@ -115,6 +120,11 @@ goap_ci_batch_diag_candidates() {
       ;;
     defenseBaseline)
       echo "${log_dir}/GoapDiag_defense_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+      echo "${log_dir}/GoapDiag_latest.txt"
+      ;;
+    defenseTactical)
+      echo "${log_dir}/GoapDiag_defense_tactical_latest.txt"
       echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
       echo "${log_dir}/GoapDiag_latest.txt"
       ;;

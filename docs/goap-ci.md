@@ -24,14 +24,15 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-wing` | 翼ドライブ #17/#18 | 約2分 |
 | `batch-cf-drive` | CFドライブ #13-#16 | 約3分 |
 | `batch-defense` | 守備基本 #2-#3 | 約2分 |
-| `batch` | 上記4バッチ連続 | 約9分 |
-| `all` | EditMode + 4バッチ（CI 相当） | 約8-12分 |
+| `batch-defense-tactical` | 守備戦術 #4-#6 | 約2分 |
+| `batch` | 上記5バッチ連続 | 約11分 |
+| `all` | EditMode + 5バッチ（CI 相当） | 約10-14分 |
 
 設定の単一ソース: `scripts/ci/goap-ci-config.sh`
 
 ## 合格基準
 
-### EditMode（81 件）
+### EditMode（91 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -48,6 +49,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `wingDrive` | #17/#18 翼ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `cfDrive` | #13-#16 CFドライブ | SELECTION 4/4 + RUNTIME 4/4 |
 | `defenseBaseline` | #2-#3 守備基本 | SELECTION 2/2 |
+| `defenseTactical` | #4-#6 守備戦術 | SELECTION 3/3 |
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。
 

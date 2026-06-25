@@ -14,6 +14,9 @@ public static class GoapDefenseProductionSelectionExpectations
 
     public static readonly IGoapDefenseProductionSelectionExpectation DefenseBaseline =
         new GoapDefenseBaselineProductionSelectionExpectation();
+
+    public static readonly IGoapDefenseProductionSelectionExpectation DefenseTactical =
+        new GoapDefenseTacticalProductionSelectionExpectation();
 }
 
 /// <summary>
@@ -42,8 +45,13 @@ public sealed class GoapMoveToDefensivePositionProductionSelectionExpectation
             return true;
         }
 
-        shouldEvaluate = true;
-        expectedAction = "MoveToDefensivePosition";
+        if (pattern is GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies
+            or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield)
+        {
+            shouldEvaluate = true;
+            expectedAction = "MoveToDefensivePosition";
+        }
+
         return true;
     }
 }
@@ -63,5 +71,48 @@ public sealed class GoapDefenseBaselineProductionSelectionExpectation
             slot,
             out expectedAction,
             out shouldEvaluate);
+    }
+}
+
+/// <summary>Phase 5b: パターンごとに戦術守備アクション1種を期待。</summary>
+public sealed class GoapDefenseTacticalProductionSelectionExpectation
+    : IGoapDefenseProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        if (pattern == GoapDefenseLayoutPatternId.Baseline
+            || pattern == GoapDefenseLayoutPatternId.Custom)
+        {
+            return true;
+        }
+
+        if (slot < 0 || slot > 2)
+        {
+            return true;
+        }
+
+        string action = pattern switch
+        {
+            GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget => "MarkOpponent",
+            GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane => "BlockPassLane",
+            GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane => "BlockShotLane",
+            _ => null,
+        };
+
+        if (string.IsNullOrEmpty(action))
+        {
+            return true;
+        }
+
+        shouldEvaluate = true;
+        expectedAction = action;
+        return true;
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 public static class GoapDefenseLayoutPatternCatalog
 {
     public const int NumberMin = 0;
-    public const int NumberMax = 3;
+    public const int NumberMax = 6;
 
     public static bool TryGetByNumber(int number, out GoapDefenseLayoutPatternId pattern)
     {
@@ -46,4 +46,8 @@ public static class GoapDefenseLayoutPatternCatalog
     /// <summary>Phase 5 守備基本: 相手保持・味方守備位置外の2パターン。</summary>
     public static List<GoapDefenseLayoutPatternId> BuildDefenseBaselineSuite() =>
         BuildRange(2, 3);
+
+    /// <summary>Phase 5b 守備戦術: Mark / BlockPass / BlockShot 単体選出。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildDefenseTacticalSuite() =>
+        BuildRange(4, 6);
 }
