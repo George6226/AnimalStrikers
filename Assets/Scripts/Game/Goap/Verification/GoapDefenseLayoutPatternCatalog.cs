@@ -1,0 +1,49 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public static class GoapDefenseLayoutPatternCatalog
+{
+    public const int NumberMin = 0;
+    public const int NumberMax = 3;
+
+    public static bool TryGetByNumber(int number, out GoapDefenseLayoutPatternId pattern)
+    {
+        if (!Enum.IsDefined(typeof(GoapDefenseLayoutPatternId), number))
+        {
+            pattern = GoapDefenseLayoutPatternId.Baseline;
+            return false;
+        }
+
+        pattern = (GoapDefenseLayoutPatternId)number;
+        return true;
+    }
+
+    public static int GetNumber(GoapDefenseLayoutPatternId pattern) => (int)pattern;
+
+    public static List<GoapDefenseLayoutPatternId> BuildRange(int start, int end)
+    {
+        if (start > end)
+        {
+            (start, end) = (end, start);
+        }
+
+        start = Mathf.Clamp(start, NumberMin, NumberMax);
+        end = Mathf.Clamp(end, NumberMin, NumberMax);
+
+        var list = new List<GoapDefenseLayoutPatternId>();
+        for (int number = start; number <= end; number++)
+        {
+            if (TryGetByNumber(number, out GoapDefenseLayoutPatternId pattern))
+            {
+                list.Add(pattern);
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>Phase 5 守備基本: 相手保持・味方守備位置外の2パターン。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildDefenseBaselineSuite() =>
+        BuildRange(2, 3);
+}

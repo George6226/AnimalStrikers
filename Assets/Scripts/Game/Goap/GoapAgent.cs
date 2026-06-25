@@ -707,7 +707,8 @@ public class GoapAgent : MonoBehaviour
         {
             var resolvedPlan = bestPlan.plan;
             if (resolvedPlan.Count == 0
-                && TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan))
+                && (TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan)
+                    || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)))
             {
                 bestPlan.plan = resolvedPlan;
             }
@@ -862,8 +863,7 @@ public class GoapAgent : MonoBehaviour
             // 複数のプランから一番コストが低いものを選択
             var bestPlan = SelectBestPlanFromPlans(plans);
             if ((bestPlan == null || bestPlan.Count == 0)
-                && TeammateNpcSupportPlanning.TryBuildForcedTacticalSupportPlan(
-                    _playerBlackboard, goalActions, out var forcedPlan))
+                && TryBuildForcedTacticalPlanForGoal(_playerBlackboard, goalActions, out var forcedPlan))
             {
                 bestPlan = forcedPlan;
                 LogSummary("ForcedTacticalSupportPlan(action=" +
@@ -884,7 +884,7 @@ public class GoapAgent : MonoBehaviour
 
         LogPlanCostSummary(bestGoal, goalActions, plans, null);
 
-        if (TeammateNpcSupportPlanning.TryBuildForcedTacticalSupportPlan(
+        if (TryBuildForcedTacticalPlanForGoal(
                 _playerBlackboard, goalActions, out var forcedPlanWhenNoCandidates)
             && forcedPlanWhenNoCandidates != null
             && forcedPlanWhenNoCandidates.Count > 0)
@@ -944,7 +944,8 @@ public class GoapAgent : MonoBehaviour
         }
 
         if (emptyPlan != null
-            && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard))
+            && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
+            && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -980,6 +981,51 @@ public class GoapAgent : MonoBehaviour
         LogSummary("ForcedTacticalSupportPlan(action=" +
             (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
         return true;
+    }
+
+    private bool TryConvertEmptyPlanToForcedDefense(GoapGoalSO goal, ref Queue<GoapActionSO> plan)
+    {
+        if (plan == null || plan.Count > 0 || goal == null)
+        {
+            return false;
+        }
+
+        if (!(goal is DefensivePositioningGoalSO or EnemyBallDefenseGoalSO))
+        {
+            return false;
+        }
+
+        if (!TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard))
+        {
+            return false;
+        }
+
+        var goalActions = GoapTeammateNpcCatalog.FilterActionsForGoal(goal, _availableActions);
+        if (!TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(
+                _playerBlackboard, goalActions, out var forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedTacticalDefensePlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
+        return true;
+    }
+
+    private static bool TryBuildForcedTacticalPlanForGoal(
+        PlayerBlackboard bb,
+        List<GoapActionSO> goalActions,
+        out Queue<GoapActionSO> plan)
+    {
+        if (TeammateNpcSupportPlanning.TryBuildForcedTacticalSupportPlan(bb, goalActions, out plan))
+        {
+            return true;
+        }
+
+        return TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan);
     }
 
     /// <summary>

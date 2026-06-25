@@ -51,6 +51,12 @@ public static class GoapTeammateNpcCatalog
 
         if (goal is DefensivePositioningGoalSO or EnemyBallDefenseGoalSO)
         {
+            if (TeammateNpcDefensePlanning.VerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None)
+            {
+                string onlyName = TeammateNpcDefensePlanning.VerificationOnlyDefenseAction.ToActionName();
+                return actions.Where(a => a.ActionName == onlyName).ToList();
+            }
+
             return actions.Where(IsDefenseAction).ToList();
         }
 
