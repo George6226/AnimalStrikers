@@ -1,6 +1,6 @@
 /// <summary>
-/// 守備検証パターン番号 = enum 値（0〜3 連番）。
-/// #0=Baseline, #1=Custom, #2=ClusteredAllies, #3=SpreadMidfield
+/// 守備検証パターン番号 = enum 値（0〜6 連番）。
+/// #0=Baseline, #1=Custom, #2-#3=基本, #4-#6=戦術アクション単体
 /// </summary>
 public enum GoapDefenseLayoutPatternId
 {
@@ -8,4 +8,7 @@ public enum GoapDefenseLayoutPatternId
     Custom = 1,
     EnemyOwner_ClusteredAllies = 2,
     EnemyOwner_SpreadMidfield = 3,
+    EnemyOwner_MarkFreeTarget = 4,
+    EnemyOwner_BlockPassLane = 5,
+    EnemyOwner_BlockShotLane = 6,
 }

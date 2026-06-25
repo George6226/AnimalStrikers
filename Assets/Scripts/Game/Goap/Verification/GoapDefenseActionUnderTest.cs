@@ -3,6 +3,10 @@ public enum GoapDefenseActionUnderTest
 {
     None = 0,
     MoveToDefensivePosition = 1,
+    MarkOpponent = 2,
+    BlockPassLane = 3,
+    BlockShotLane = 4,
+    RetreatToDefensiveLine = 5,
 }
 
 public static class GoapDefenseActionUnderTestExtensions
@@ -12,6 +16,10 @@ public static class GoapDefenseActionUnderTestExtensions
         return action switch
         {
             GoapDefenseActionUnderTest.MoveToDefensivePosition => "MoveToDefensivePosition",
+            GoapDefenseActionUnderTest.MarkOpponent => "MarkOpponent",
+            GoapDefenseActionUnderTest.BlockPassLane => "BlockPassLane",
+            GoapDefenseActionUnderTest.BlockShotLane => "BlockShotLane",
+            GoapDefenseActionUnderTest.RetreatToDefensiveLine => "RetreatToDefensiveLine",
             _ => null,
         };
     }

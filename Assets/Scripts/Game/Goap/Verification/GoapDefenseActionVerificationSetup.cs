@@ -67,11 +67,22 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         public Vector3 Position;
     }
 
+    protected bool RestrictCandidatesToActionUnderTest => _restrictCandidatesToActionUnderTest;
+
     private GoapDefenseActionUnderTest EffectiveDefenseActionFilter =>
-        _restrictCandidatesToActionUnderTest
-        || (_verificationOnlyDefenseAction && !_verifyProductionSelection)
-            ? ActionUnderTest
-            : GoapDefenseActionUnderTest.None;
+        ResolveDefenseActionFilterForPattern(GoapDefenseLayoutPatternId.Baseline);
+
+    protected virtual GoapDefenseActionUnderTest ResolveDefenseActionFilterForPattern(
+        GoapDefenseLayoutPatternId pattern)
+    {
+        if (!_restrictCandidatesToActionUnderTest
+            && !(_verificationOnlyDefenseAction && !_verifyProductionSelection))
+        {
+            return GoapDefenseActionUnderTest.None;
+        }
+
+        return ActionUnderTest;
+    }
 
     private GoapSupportLayoutTuning LayoutTuning
     {
@@ -161,7 +172,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             LogLine(
                 $"RunBatchVerification start range={_batchPatternIndexStart}..{_batchPatternIndexEnd} " +
                 $"count={total} productionSelection={_verifyProductionSelection} " +
-                $"actionFilter={EffectiveDefenseActionFilter}");
+                $"actionFilter={ActionUnderTest}");
             GoapDiagnosticLog.WriteBanner(
                 $"BATCH_START range={_batchPatternIndexStart}-{_batchPatternIndexEnd} count={total}");
 
@@ -184,7 +195,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
                 GoapDefenseLayoutPatternId pattern = patterns[index];
                 _activeBatchPattern = pattern;
                 WriteBatchPatternBoundary("BEGIN", pattern, index + 1, total);
-                TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(EffectiveDefenseActionFilter);
+                GoapDefenseActionUnderTest actionFilter = ResolveDefenseActionFilterForPattern(pattern);
+                TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(actionFilter);
 
                 yield return ApplyVerificationPatternAndWait(pattern);
 
@@ -252,7 +264,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     private bool TryApplyVerificationPatternLayout(GoapDefenseLayoutPatternId pattern)
     {
-        TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(EffectiveDefenseActionFilter);
+        GoapDefenseActionUnderTest actionFilter = ResolveDefenseActionFilterForPattern(pattern);
+        TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(actionFilter);
 
         if (pattern == GoapDefenseLayoutPatternId.Baseline)
         {
@@ -278,10 +291,11 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             ctx,
             LayoutTuning);
         ApplyEnemyOwnerPosition(enemyOwnerTarget);
+        ApplySecondaryEnemyPositions(pattern, ctx);
 
         LogLine(
             $"ApplyVerificationPattern({pattern}) enemyOwner={Fmt(enemyOwnerTarget)} " +
-            $"filter={EffectiveDefenseActionFilter} " +
+            $"filter={actionFilter} " +
             $"slot0={SlotPos(allyTargets, 0)} slot1={SlotPos(allyTargets, 1)} slot2={SlotPos(allyTargets, 2)}");
         return true;
     }
@@ -533,6 +547,37 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
         target.y = owner.transform.position.y;
         owner.transform.position = target;
+    }
+
+    private void ApplySecondaryEnemyPositions(
+        GoapDefenseLayoutPatternId pattern,
+        GoapSupportLayoutFieldContext ctx)
+    {
+        List<AnimalFacade> enemies = GoapDefenseVerificationBallHelper.GetFieldEnemies();
+        if (enemies.Count <= 1)
+        {
+            return;
+        }
+
+        if (!GoapDefenseLayoutPatternLibrary.TryGetSecondaryEnemyTarget(
+                1,
+                pattern,
+                ctx,
+                LayoutTuning,
+                out Vector3 target))
+        {
+            return;
+        }
+
+        AnimalFacade secondary = enemies[1];
+        if (secondary == null)
+        {
+            return;
+        }
+
+        target.y = secondary.transform.position.y;
+        secondary.transform.position = target;
+        LogLine($"ApplySecondaryEnemy({pattern}) index=1 pos={Fmt(target)}");
     }
 
     private IEnumerator AssignBallToEnemyCoroutine(int enemyIndex)

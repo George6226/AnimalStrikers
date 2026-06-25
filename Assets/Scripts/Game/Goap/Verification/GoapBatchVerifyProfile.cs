@@ -14,4 +14,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>守備基本本番選出（DefenseBaseline #2〜#3）。</summary>
     DefenseBaseline = 3,
+
+    /// <summary>守備戦術本番選出（DefenseTactical #4〜#6）。</summary>
+    DefenseTactical = 4,
 }

@@ -49,6 +49,7 @@ public static class GoapBatchVerifyEnvironment
             GoapBatchVerifyProfile.WingDrive => "goap-batch-wing-result.txt",
             GoapBatchVerifyProfile.CfDrive => "goap-batch-cf-drive-result.txt",
             GoapBatchVerifyProfile.DefenseBaseline => "goap-batch-defense-result.txt",
+            GoapBatchVerifyProfile.DefenseTactical => "goap-batch-defense-tactical-result.txt",
             _ => "goap-batch-result.txt",
         };
 
@@ -58,6 +59,7 @@ public static class GoapBatchVerifyEnvironment
             GoapBatchVerifyProfile.WingDrive => "goap-batch-wing-verify.log",
             GoapBatchVerifyProfile.CfDrive => "goap-batch-cf-drive-verify.log",
             GoapBatchVerifyProfile.DefenseBaseline => "goap-batch-defense-verify.log",
+            GoapBatchVerifyProfile.DefenseTactical => "goap-batch-defense-tactical-verify.log",
             _ => "goap-batch-verify.log",
         };
 
@@ -150,6 +152,12 @@ public static class GoapBatchVerifyEnvironment
             || string.Equals(token, "defense", StringComparison.OrdinalIgnoreCase))
         {
             return GoapBatchVerifyProfile.DefenseBaseline;
+        }
+
+        if (string.Equals(token, "defenseTactical", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(token, "defense-tactical", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoapBatchVerifyProfile.DefenseTactical;
         }
 
         if (Enum.TryParse(token, ignoreCase: true, out GoapBatchVerifyProfile parsed))
