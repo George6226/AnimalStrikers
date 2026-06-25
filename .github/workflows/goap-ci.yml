@@ -21,6 +21,7 @@ on:
           - batch-combined
           - batch-wing
           - batch-cf-drive
+          - batch-defense
 
 env:
   LANG: C.UTF-8
@@ -67,9 +68,11 @@ jobs:
             Logs/goap-batch-verify.log
             Logs/goap-batch-wing-verify.log
             Logs/goap-batch-cf-drive-verify.log
+            Logs/goap-batch-defense-verify.log
             Logs/goap-batch-result.txt
             Logs/goap-batch-wing-result.txt
             Logs/goap-batch-cf-drive-result.txt
+            Logs/goap-batch-defense-result.txt
             Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
             Logs/GoapDiag_wing_latest.txt

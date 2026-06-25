@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Goap;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -7,8 +8,17 @@ using UnityEngine;
 /// </summary>
 public static class TeammateNpcDefensePlanning
 {
+    private const float TemporarilyDisabledActionCostPenalty = 50f;
+
     /// <summary>EnemyBallDefense より DefensivePositioning を優先する味方NPC向け。</summary>
     public const float DefensivePositioningEnemyBallPriority = 88f;
+
+    public static GoapDefenseActionUnderTest VerificationOnlyDefenseAction { get; private set; }
+
+    public static void SetVerificationOnlyDefenseAction(GoapDefenseActionUnderTest action)
+    {
+        VerificationOnlyDefenseAction = action;
+    }
 
     /// <summary>
     /// 戦術守備の到達は IS_IN_DEFENSIVE_POSITION（IS_MOVING だけだと MoveToSupport が誤選択される）。
@@ -88,6 +98,12 @@ public static class TeammateNpcDefensePlanning
         float baseCost,
         float situationalAdjustment)
     {
+        if (VerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None
+            && !VerificationOnlyDefenseAction.MatchesAction(action))
+        {
+            return TemporarilyDisabledActionCostPenalty + baseCost;
+        }
+
         float cost = baseCost + situationalAdjustment;
         if (!ShouldUseTacticalDefenseGoal(bb))
         {
@@ -96,5 +112,38 @@ public static class TeammateNpcDefensePlanning
 
         cost = TeammateNpcGoapRoleDifferentiation.AdjustActionCost(cost, bb, TeammateNpcTacticalMode.Defend);
         return Mathf.Max(0.1f, cost);
+    }
+
+    /// <summary>戦術守備で空プランを避け、DefensivePositioning 候補を継続する。</summary>
+    public static bool NeedsTacticalDefenseMovement(PlayerBlackboard bb)
+    {
+        return ShouldUseTacticalDefenseGoal(bb);
+    }
+
+    /// <summary>プランナーが空プランを返したとき、戦術守備移動を強制する。</summary>
+    public static bool TryBuildForcedTacticalDefensePlan(
+        PlayerBlackboard bb,
+        List<GoapActionSO> scopedActions,
+        out Queue<GoapActionSO> plan)
+    {
+        plan = null;
+        if (!NeedsTacticalDefenseMovement(bb) || scopedActions == null || scopedActions.Count == 0)
+        {
+            return false;
+        }
+
+        GoapActionSO action = VerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None
+            ? scopedActions.FirstOrDefault(a => VerificationOnlyDefenseAction.MatchesAction(a))
+            : scopedActions
+                .OrderBy(a => a.CalculateDynamicCost(bb))
+                .FirstOrDefault();
+        if (action == null)
+        {
+            return false;
+        }
+
+        plan = new Queue<GoapActionSO>();
+        plan.Enqueue(action);
+        return true;
     }
 }

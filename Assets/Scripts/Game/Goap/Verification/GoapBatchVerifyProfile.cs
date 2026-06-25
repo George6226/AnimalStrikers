@@ -11,4 +11,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>CF 保持ドライブ追従ランタイム（CfOwnerDrive #13〜16）。</summary>
     CfDrive = 2,
+
+    /// <summary>守備基本本番選出（DefenseBaseline #2〜#3）。</summary>
+    DefenseBaseline = 3,
 }
