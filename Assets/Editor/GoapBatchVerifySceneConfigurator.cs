@@ -161,7 +161,7 @@ public static class GoapBatchVerifySceneConfigurator
         SetBool(serialized, "_assignBallToEnemyOnApply", true);
         SetInt(serialized, "_batchPatternIndexStart", 2);
         SetInt(serialized, "_batchPatternIndexEnd", 6);
-        SetFloat(serialized, "_batchSettleSecondsAfterPatternApply", 5.5f);
+        SetFloat(serialized, "_batchSettleSecondsAfterPatternApply", 6f);
         serialized.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log("[GOAP_BATCH] added GoapCombinedDefenseRegressionDebugSetup to scene");
         return defense;

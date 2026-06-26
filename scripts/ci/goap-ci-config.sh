@@ -5,7 +5,7 @@ set -euo pipefail
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
 GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-110}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-107}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(

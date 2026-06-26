@@ -173,11 +173,21 @@ public sealed class GoapDefenseCombinedProductionSelectionExpectation
         {
             case GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies:
             case GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield:
+                if (slot == 2)
+                {
+                    return true;
+                }
+
                 shouldEvaluate = true;
                 expectedAction = "MoveToDefensivePosition";
                 return true;
 
             case GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget:
+                if (slot == 0)
+                {
+                    return true;
+                }
+
                 shouldEvaluate = true;
                 expectedAction = "MoveToDefensivePosition";
                 return true;

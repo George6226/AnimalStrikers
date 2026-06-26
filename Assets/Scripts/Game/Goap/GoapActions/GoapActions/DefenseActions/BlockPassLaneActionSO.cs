@@ -71,87 +71,99 @@ public class BlockPassLaneActionSO : GoapActionSO
         }
 
         float totalAdjustment = 0f;
-
         float distPlayerToOwner = Vector3.Distance(playerPos, ownerPos);
-        if (distPlayerToOwner <= fieldLen * 0.22f)
+        if (distPlayerToOwner > fieldLen * 0.24f)
         {
-            totalAdjustment += 1.05f;
+            totalAdjustment += 1.15f;
         }
 
-        List<Vector3> enemyPositions = teamBB.BasicInfo.EnemyPositions;
-        
-        // 1. ボール保持者へのプレッシャーを計算（一定距離以内の味方の数）
-        float pressureThreshold = fieldLen * 0.15f; // フィールド長の15%以内
+        float pressureThreshold = fieldLen * 0.15f;
         int pressureCount = 0;
-        foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+        foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
         {
-            // 自分自身は除外
-            if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
-            
-            float distance = Vector3.Distance(allyPos, ownerPos);
-            if (distance <= pressureThreshold)
+            if (Vector3.Distance(allyPos, playerPos) < 0.1f)
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(allyPos, ownerPos) <= pressureThreshold)
             {
                 pressureCount++;
             }
         }
-        
-        // プレッシャーがかかっている局面ではパスコース遮断を優先
+
         if (pressureCount >= 1)
         {
-            float pressureBonus = Mathf.Clamp01(pressureCount / 3f);
-            totalAdjustment -= pressureBonus * 1.15f;
+            totalAdjustment -= Mathf.Clamp01(pressureCount / 3f) * 0.85f;
         }
-        
-        // 2. フリー状態の敵（ボールを持っていない & 味方がマークしていない）が近いほどコストを下げる
-        float markThreshold = fieldLen * 0.15f; // マーク判定の閾値（フィールド長の15%以内）
-        List<Vector3> freeEnemies = new List<Vector3>();
-        foreach (var enemyPos in enemyPositions)
+
+        float markThreshold = fieldLen * 0.15f;
+        Vector3 passTarget = default;
+        float passTargetDist = float.MaxValue;
+        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
         {
-            // ボール保持者の位置と異なる敵（ボールを持っていない敵）
-            if (Vector3.Distance(enemyPos, ownerPos) > 0.1f)
+            if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
             {
-                // 味方がマークしているかチェック
-                bool isMarked = false;
-                foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+                continue;
+            }
+
+            bool isMarked = false;
+            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            {
+                if (Vector3.Distance(allyPos, playerPos) < 0.1f)
                 {
-                    // 自分自身は除外
-                    if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
-                    
-                    float distance = Vector3.Distance(allyPos, enemyPos);
-                    if (distance <= markThreshold)
-                    {
-                        isMarked = true;
-                        break;
-                    }
+                    continue;
                 }
-                
-                // マークされていない敵のみ追加
-                if (!isMarked)
+
+                if (Vector3.Distance(allyPos, enemyPos) <= markThreshold)
                 {
-                    freeEnemies.Add(enemyPos);
+                    isMarked = true;
+                    break;
                 }
             }
-        }
-        
-        if (freeEnemies.Count > 0)
-        {
-            // 最も近いフリー状態の敵を探す
-            float minDistance = float.MaxValue;
-            foreach (var enemyPos in freeEnemies)
+
+            if (isMarked)
             {
-                float distance = Vector3.Distance(playerPos, enemyPos);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                }
+                continue;
             }
-            
-            // 距離が近いほどコストを下げる
-            float idealDistance = fieldLen * 0.2f; // 理想的な距離（フィールド長の20%）
-            float proximityScore = 1f - Mathf.Clamp01(minDistance / Mathf.Max(idealDistance, 0.01f));
-            totalAdjustment -= proximityScore * 1.0f; // 最大-1.0のコスト減
+
+            float distFromOwner = Vector3.Distance(enemyPos, ownerPos);
+            if (distFromOwner < passTargetDist)
+            {
+                passTargetDist = distFromOwner;
+                passTarget = enemyPos;
+            }
         }
-        
+
+        if (passTargetDist >= float.MaxValue * 0.5f)
+        {
+            return totalAdjustment;
+        }
+
+        Vector3 passDir = passTarget - ownerPos;
+        passDir.y = 0f;
+        if (passDir.sqrMagnitude < 0.01f)
+        {
+            return totalAdjustment;
+        }
+
+        passDir.Normalize();
+        Vector3 ownerToPlayer = playerPos - ownerPos;
+        ownerToPlayer.y = 0f;
+        float laneAlign = ownerToPlayer.sqrMagnitude < 0.01f
+            ? 0f
+            : Vector3.Dot(ownerToPlayer.normalized, passDir);
+        float alongLane = Vector3.Dot(ownerToPlayer, passDir);
+
+        if (alongLane > 0f && alongLane <= fieldLen * 0.24f && laneAlign > 0.32f)
+        {
+            totalAdjustment -= 1.3f;
+        }
+        else if (distPlayerToOwner <= fieldLen * 0.22f && laneAlign < 0.25f)
+        {
+            totalAdjustment += 1.35f;
+        }
+
         return totalAdjustment;
     }
 }
