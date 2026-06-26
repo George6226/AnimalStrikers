@@ -59,11 +59,26 @@ public class BlockPassLaneActionSO : GoapActionSO
         if (teamBB == null) return 0f;
 
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
+        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
-        List<Vector3> enemyPositions = teamBB.BasicInfo.EnemyPositions;
-        
+
+        float ownerDistToGoal = Vector3.Distance(ownerPos, ownGoal);
+        float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
+        if (shotDangerScore >= 0.52f)
+        {
+            return 0.8f;
+        }
+
         float totalAdjustment = 0f;
+
+        float distPlayerToOwner = Vector3.Distance(playerPos, ownerPos);
+        if (distPlayerToOwner <= fieldLen * 0.22f)
+        {
+            totalAdjustment += 1.05f;
+        }
+
+        List<Vector3> enemyPositions = teamBB.BasicInfo.EnemyPositions;
         
         // 1. ボール保持者へのプレッシャーを計算（一定距離以内の味方の数）
         float pressureThreshold = fieldLen * 0.15f; // フィールド長の15%以内
@@ -80,11 +95,11 @@ public class BlockPassLaneActionSO : GoapActionSO
             }
         }
         
-        // プレッシャーが高い（2人以上）場合はコストを下げる
-        if (pressureCount >= 2)
+        // プレッシャーがかかっている局面ではパスコース遮断を優先
+        if (pressureCount >= 1)
         {
-            float pressureBonus = (pressureCount - 1) / 3f; // 2人で0.33、3人で0.67、4人以上で1.0
-            totalAdjustment -= Mathf.Clamp01(pressureBonus) * 1.0f; // 最大-1.0のコスト減
+            float pressureBonus = Mathf.Clamp01(pressureCount / 3f);
+            totalAdjustment -= pressureBonus * 1.15f;
         }
         
         // 2. フリー状態の敵（ボールを持っていない & 味方がマークしていない）が近いほどコストを下げる

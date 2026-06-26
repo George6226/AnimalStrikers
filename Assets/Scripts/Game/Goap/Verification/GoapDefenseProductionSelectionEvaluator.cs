@@ -45,6 +45,7 @@ public static class GoapDefenseProductionSelectionEvaluator
                     summaryLines,
                     slot,
                     resolvePlayerIdForSlot,
+                    resolveMode,
                     out string actual,
                     out string source)
                 && ActionsMatch(expected, actual))
@@ -67,12 +68,14 @@ public static class GoapDefenseProductionSelectionEvaluator
     public static bool IsSlotSelectionReady(
         IList<string> lines,
         int slot,
-        Func<int, int?> resolvePlayerIdForSlot)
+        Func<int, int?> resolvePlayerIdForSlot,
+        GoapProductionSelectionResolveMode resolveMode = GoapProductionSelectionResolveMode.FirstPlanCosts)
     {
         return TryResolveFirstNonEmptySelectedForSlot(
             lines,
             slot,
             resolvePlayerIdForSlot,
+            resolveMode,
             out _,
             out _);
     }
@@ -81,6 +84,7 @@ public static class GoapDefenseProductionSelectionEvaluator
         IList<string> lines,
         int slot,
         Func<int, int?> resolvePlayerIdForSlot,
+        GoapProductionSelectionResolveMode resolveMode,
         out string action,
         out string source)
     {
@@ -88,13 +92,15 @@ public static class GoapDefenseProductionSelectionEvaluator
                 lines,
                 slot,
                 resolvePlayerIdForSlot,
-                GoapProductionSelectionResolveMode.FirstPlanCosts,
+                resolveMode,
                 out action,
                 out source)
             && !string.IsNullOrEmpty(action)
             && !action.StartsWith("empty", StringComparison.Ordinal))
         {
-            source = "PlanCosts:first";
+            source = resolveMode == GoapProductionSelectionResolveMode.LastPlanCosts
+                ? "PlanCosts:last"
+                : "PlanCosts:first";
             return true;
         }
 

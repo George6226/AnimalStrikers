@@ -63,6 +63,18 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
         if (teamBB == null) return 0f;
 
         float fieldLen = teamBB.FieldInfo.FieldLength;
+        Vector3 ballOwner = teamBB.BallInfo.BallOwnerPosition;
+        float distToOwner = Vector3.Distance(bb.PhysicalState.Position, ballOwner);
+        if (distToOwner <= fieldLen * 0.25f)
+        {
+            return 2.0f;
+        }
+
+        if (HasUnmarkedFreeEnemy(teamBB, bb.PhysicalState.Position))
+        {
+            return 2.5f;
+        }
+
         float depth = fieldLen * _retreatDepthRatio;
         Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
         Vector3 center = teamBB.FieldInfo.FieldCenter;
@@ -73,8 +85,59 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
         Vector3 toBallLateral = Vector3.ProjectOnPlane(ball - linePoint, Vector3.up);
         linePoint += Vector3.ClampMagnitude(toBallLateral, teamBB.FieldInfo.FieldWidth * 0.15f) * (1f - _centralBias);
 
-        float d = Vector3.Distance(bb.PhysicalState.Position, linePoint);
+        Vector3 playerPos = bb.PhysicalState.Position;
+        Vector3 fromLineToGoal = ownGoal - linePoint;
+        float goalSide = Vector3.Dot(playerPos - linePoint, fromLineToGoal.normalized);
+        if (goalSide > fieldLen * 0.02f)
+        {
+            // ラインより自陣側にいるならリトリート不要
+            return 1.65f;
+        }
+
+        if (goalSide >= -fieldLen * 0.02f)
+        {
+            return 0.45f;
+        }
+
+        float d = Vector3.Distance(playerPos, linePoint);
         return -Mathf.Clamp(d / Mathf.Max(fieldLen * 0.5f, 0.01f), 0f, 1f) * 2.0f;
+    }
+
+    private static bool HasUnmarkedFreeEnemy(TeamBlackboard teamBB, Vector3 playerPos)
+    {
+        Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
+        float fieldLen = teamBB.FieldInfo.FieldLength;
+        float markThreshold = fieldLen * 0.15f;
+
+        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
+        {
+            if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
+            {
+                continue;
+            }
+
+            bool isMarked = false;
+            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            {
+                if (Vector3.Distance(allyPos, playerPos) < 0.1f)
+                {
+                    continue;
+                }
+
+                if (Vector3.Distance(allyPos, enemyPos) <= markThreshold)
+                {
+                    isMarked = true;
+                    break;
+                }
+            }
+
+            if (!isMarked)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

@@ -61,14 +61,23 @@ public class BlockShotLaneActionSO : GoapActionSO
         Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
-        
-        float totalAdjustment = 0f;
-        
+
         // 1. ゴールが危険なほどコスト減（ボール保持者がゴールに近いほど危険）
         float distanceToGoal = Vector3.Distance(ownerPos, ownGoal);
         float normalizedDistance = Mathf.Clamp01(distanceToGoal / fieldLen);
         float dangerScore = 1f - normalizedDistance;
-        totalAdjustment -= dangerScore * 1.5f; // 最大-1.5のコスト減
+        const float minDangerForShotBlock = 0.52f;
+        if (dangerScore < minDangerForShotBlock)
+        {
+            return 0.9f;
+        }
+
+        float totalAdjustment = 0f;
+        totalAdjustment -= dangerScore * 1.5f;
+        if (dangerScore >= 0.58f)
+        {
+            totalAdjustment -= 0.45f;
+        }
         
         // 2. 敵のボール保持者にプレッシャーがかかっていなければコスト減
         float pressureThreshold = fieldLen * 0.15f; // フィールド長の15%以内

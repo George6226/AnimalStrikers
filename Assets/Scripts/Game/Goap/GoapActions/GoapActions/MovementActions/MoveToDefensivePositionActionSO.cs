@@ -85,10 +85,10 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
             }
         }
 
-        float adjustment = -pressureScore * 0.9f;
+        float adjustment = -pressureScore * 1.45f;
         if (nearbyPressurers >= 2)
         {
-            adjustment += 0.55f;
+            adjustment += 0.45f;
         }
 
         return adjustment;

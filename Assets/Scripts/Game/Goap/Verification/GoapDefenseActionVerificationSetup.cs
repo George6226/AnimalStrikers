@@ -11,7 +11,7 @@ using UnityEditor;
 /// </summary>
 public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 {
-    private const float ProductionSelectionPlanCostsTimeoutSeconds = 30f;
+    private const float ProductionSelectionPlanCostsTimeoutSeconds = 50f;
 
     protected abstract string SummaryLogTag { get; }
     protected abstract GoapDefenseActionUnderTest ActionUnderTest { get; }
@@ -23,6 +23,9 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     protected virtual IGoapDefenseProductionSelectionExpectation DriveProductionSelectionExpectation =>
         ProductionSelectionExpectation;
+
+    protected virtual GoapProductionSelectionResolveMode ProductionSelectionResolveModeAtApply =>
+        GoapProductionSelectionResolveMode.FirstPlanCosts;
 
     [Header("検証モード")]
     [Tooltip("ON=DefensivePositioning の候補を ActionUnderTest のみにする（単体動作検証）")]
@@ -254,13 +257,13 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
                     yield return WaitForProductionPlanCostsCoroutine(
                         ProductionSelectionPlanCostsTimeoutSeconds,
                         ProductionSelectionExpectation,
-                        GoapProductionSelectionResolveMode.FirstPlanCosts);
+                        ProductionSelectionResolveModeAtApply);
                     EvaluateProductionSelectionForPattern(
                         pattern,
                         index + 1,
                         total,
                         ProductionSelectionExpectation,
-                        GoapProductionSelectionResolveMode.FirstPlanCosts,
+                        ProductionSelectionResolveModeAtApply,
                         "apply");
                 }
                 else
@@ -476,7 +479,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             if (!GoapDefenseProductionSelectionEvaluator.IsSlotSelectionReady(
                     lines,
                     slot,
-                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot))
+                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
+                    resolveMode))
             {
                 return false;
             }

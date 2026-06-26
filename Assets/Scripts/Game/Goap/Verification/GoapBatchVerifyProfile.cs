@@ -20,4 +20,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>守備ドライブ追従（DefenseDrive #7〜#8）。</summary>
     DefenseDrive = 5,
+
+    /// <summary>守備統合本番選出（DefenseCombined #2〜#6）。</summary>
+    DefenseCombined = 6,
 }

@@ -54,4 +54,8 @@ public static class GoapDefenseLayoutPatternCatalog
     /// <summary>Phase 6 守備ドライブ: 敵保持者前後ドライブ + 味方 Retarget 追従。</summary>
     public static List<GoapDefenseLayoutPatternId> BuildDefenseDriveSuite() =>
         BuildRange(7, 8);
+
+    /// <summary>Phase 7a 守備統合本番選出: #2〜#6（全候補コスト競争）。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedSuite() =>
+        BuildRange(2, 6);
 }

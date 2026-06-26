@@ -21,9 +21,11 @@ public static class GoapBatchVerifySceneConfigurator
         var defenseBaseline = EnsureDefenseBaselineSetup(combined);
         var defenseTactical = EnsureDefenseTacticalSetup(combined);
         var defenseDrive = EnsureDefenseDriveSetup(combined);
+        var defenseCombined = EnsureDefenseCombinedSetup(combined);
 
         if (combined == null && wingDrive == null && cfDrive == null
-            && defenseBaseline == null && defenseTactical == null && defenseDrive == null)
+            && defenseBaseline == null && defenseTactical == null && defenseDrive == null
+            && defenseCombined == null)
         {
             Debug.LogError("[GOAP_BATCH] no Goap verification setup found in scene");
             return;
@@ -35,6 +37,7 @@ public static class GoapBatchVerifySceneConfigurator
         ConfigureDefenseSetup(defenseBaseline, profile == GoapBatchVerifyProfile.DefenseBaseline);
         ConfigureDefenseSetup(defenseTactical, profile == GoapBatchVerifyProfile.DefenseTactical);
         ConfigureDefenseSetup(defenseDrive, profile == GoapBatchVerifyProfile.DefenseDrive);
+        ConfigureDefenseSetup(defenseCombined, profile == GoapBatchVerifyProfile.DefenseCombined);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log(
@@ -44,7 +47,8 @@ public static class GoapBatchVerifySceneConfigurator
             $"cfDrive={(cfDrive != null && profile == GoapBatchVerifyProfile.CfDrive)} " +
             $"defenseBaseline={(defenseBaseline != null && profile == GoapBatchVerifyProfile.DefenseBaseline)} " +
             $"defenseTactical={(defenseTactical != null && profile == GoapBatchVerifyProfile.DefenseTactical)} " +
-            $"defenseDrive={(defenseDrive != null && profile == GoapBatchVerifyProfile.DefenseDrive)}");
+            $"defenseDrive={(defenseDrive != null && profile == GoapBatchVerifyProfile.DefenseDrive)} " +
+            $"defenseCombined={(defenseCombined != null && profile == GoapBatchVerifyProfile.DefenseCombined)}");
     }
 
     private static GoapCombinedDefenseBaselineDebugSetup EnsureDefenseBaselineSetup(
@@ -134,6 +138,35 @@ public static class GoapBatchVerifySceneConfigurator
         return defense;
     }
 
+    private static GoapCombinedDefenseRegressionDebugSetup EnsureDefenseCombinedSetup(
+        GoapCombinedSupportRegressionDebugSetup combined)
+    {
+        var defense = Object.FindFirstObjectByType<GoapCombinedDefenseRegressionDebugSetup>(FindObjectsInactive.Include);
+        if (defense != null)
+        {
+            return defense;
+        }
+
+        if (combined == null)
+        {
+            return null;
+        }
+
+        defense = combined.gameObject.AddComponent<GoapCombinedDefenseRegressionDebugSetup>();
+        var serialized = new SerializedObject(defense);
+        SetBool(serialized, "_runBatchVerificationOnStart", true);
+        SetBool(serialized, "_verifyProductionSelection", true);
+        SetBool(serialized, "_restrictCandidatesToActionUnderTest", false);
+        SetBool(serialized, "_verificationOnlyDefenseAction", false);
+        SetBool(serialized, "_assignBallToEnemyOnApply", true);
+        SetInt(serialized, "_batchPatternIndexStart", 2);
+        SetInt(serialized, "_batchPatternIndexEnd", 6);
+        SetFloat(serialized, "_batchSettleSecondsAfterPatternApply", 5.5f);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[GOAP_BATCH] added GoapCombinedDefenseRegressionDebugSetup to scene");
+        return defense;
+    }
+
     private static void EnsureGameSceneOpen()
     {
         Scene active = SceneManager.GetActiveScene();
@@ -180,6 +213,15 @@ public static class GoapBatchVerifySceneConfigurator
         if (property != null)
         {
             property.intValue = value;
+        }
+    }
+
+    private static void SetFloat(SerializedObject serialized, string propertyName, float value)
+    {
+        SerializedProperty property = serialized.FindProperty(propertyName);
+        if (property != null)
+        {
+            property.floatValue = value;
         }
     }
 }

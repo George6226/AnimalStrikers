@@ -111,8 +111,13 @@ public class MarkOpponentActionSO : GoapActionSO
         
         // 距離が近いほどコストを下げる
         float idealDistance = fieldLen * _markDistanceRatio;
+        if (minDistance <= idealDistance * 0.55f)
+        {
+            return -1.85f;
+        }
+
         float score = 1f - Mathf.Clamp01(minDistance / Mathf.Max(idealDistance * 2f, 0.01f));
-        return -score * 1.2f;
+        return -score * 1.55f;
     }
 }
 
