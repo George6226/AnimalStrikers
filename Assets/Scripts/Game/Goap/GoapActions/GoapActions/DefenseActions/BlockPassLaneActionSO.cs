@@ -65,12 +65,13 @@ public class BlockPassLaneActionSO : GoapActionSO
 
         float ownerDistToGoal = Vector3.Distance(ownerPos, ownGoal);
         float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
-        if (shotDangerScore >= 0.52f)
-        {
-            return 0.8f;
-        }
 
         float totalAdjustment = 0f;
+        if (shotDangerScore >= 0.52f)
+        {
+            totalAdjustment += 0.95f;
+        }
+
         float distPlayerToOwner = Vector3.Distance(playerPos, ownerPos);
         if (distPlayerToOwner > fieldLen * 0.24f)
         {
@@ -162,6 +163,24 @@ public class BlockPassLaneActionSO : GoapActionSO
         else if (distPlayerToOwner <= fieldLen * 0.22f && laneAlign < 0.25f)
         {
             totalAdjustment += 1.35f;
+        }
+        else if (distPlayerToOwner <= fieldLen * 0.22f && laneAlign >= 0.25f)
+        {
+            float distPlayerToPassTarget = Vector3.Distance(playerPos, passTarget);
+            if (distPlayerToOwner < distPlayerToPassTarget * 0.8f)
+            {
+                totalAdjustment -= 1.15f;
+            }
+        }
+
+        float blockUrgency = TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(bb);
+        if (blockUrgency < 0.75f)
+        {
+            totalAdjustment += 1.25f;
+        }
+        else if (!TeammateNpcDefensePlanning.IsPrimaryPassLaneBlocker(bb))
+        {
+            totalAdjustment += 1.75f;
         }
 
         return totalAdjustment;

@@ -549,7 +549,7 @@ public static class TeammateNpcGoapRoleDifferentiation
         return Mathf.Max(0f, adjusted);
     }
 
-    public static float AdjustActionCost(float baseCost, PlayerBlackboard bb, TeammateNpcTacticalMode mode, GoapActionSO action = null)
+    public static float AdjustActionCost(float baseCost, PlayerBlackboard bb, TeammateNpcTacticalMode mode, GoapActionSO action = null, bool applyFloor = true)
     {
         if (!Enabled || bb == null)
         {
@@ -576,7 +576,7 @@ public static class TeammateNpcGoapRoleDifferentiation
             adjusted += ComputeFreeBallChaseAdjustment(bb, forGoalPriority: false);
         }
 
-        return Mathf.Max(0.1f, adjusted);
+        return applyFloor ? Mathf.Max(0.1f, adjusted) : adjusted;
     }
 
     /// <summary>アクション別の移動先予測（サポート攻撃は各 SO ごと、それ以外は戦術モード既定）。</summary>

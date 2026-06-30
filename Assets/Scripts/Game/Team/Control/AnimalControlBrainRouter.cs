@@ -46,6 +46,12 @@ public class AnimalControlBrainRouter : MonoBehaviour
     public void ApplyRole(AnimalControlRole role)
     {
         bool useGoap = role == AnimalControlRole.TeammateNpc && ShouldUseGoapPilot();
+        if (GoapBatchVerifyEnvironment.IsActive && _facade != null)
+        {
+            var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+            useGoap = squad != null && squad.ShouldUseGoapFor(_facade);
+        }
+
         if (useGoap)
         {
             TryConfigureGoapPilot();

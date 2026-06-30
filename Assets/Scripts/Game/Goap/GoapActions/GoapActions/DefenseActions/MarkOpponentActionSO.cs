@@ -109,8 +109,22 @@ public class MarkOpponentActionSO : GoapActionSO
             }
         }
         
-        // 距離が近いほどコストを下げる
+        float distToOwner = Vector3.Distance(playerPos, ownerPos);
         float idealDistance = fieldLen * _markDistanceRatio;
+        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        float ownerDistToGoal = Vector3.Distance(ownerPos, ownGoal);
+        float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
+        if (shotDangerScore >= 0.45f && minDistance > idealDistance * 0.85f)
+        {
+            return 0.75f;
+        }
+
+        if (distToOwner <= fieldLen * 0.22f && minDistance > distToOwner * 1.1f)
+        {
+            return 1.15f;
+        }
+
+        // 距離が近いほどコストを下げる
         if (minDistance <= idealDistance * 0.55f)
         {
             return -1.85f;

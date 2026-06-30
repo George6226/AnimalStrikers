@@ -212,11 +212,13 @@ public static class GoapProductionSelectionEvaluator
             }
 
             action = ExtractSelectedActionFromPlanCosts(line);
-            if (!string.IsNullOrEmpty(action))
+            if (string.IsNullOrEmpty(action) || action.StartsWith("empty", StringComparison.Ordinal))
             {
-                source = "PlanCosts:first";
-                return true;
+                continue;
             }
+
+            source = "PlanCosts:first";
+            return true;
         }
 
         for (int i = 0; i < lines.Count; i++)
@@ -264,12 +266,19 @@ public static class GoapProductionSelectionEvaluator
                 continue;
             }
 
-            action = ExtractSelectedActionFromPlanCosts(line);
-            if (!string.IsNullOrEmpty(action))
+            if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
             {
-                source = "PlanCosts:last";
-                return true;
+                continue;
             }
+
+            action = ExtractSelectedActionFromPlanCosts(line);
+            if (string.IsNullOrEmpty(action) || action.StartsWith("empty", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            source = "PlanCosts:last";
+            return true;
         }
 
         for (int i = lines.Count - 1; i >= 0; i--)

@@ -182,7 +182,18 @@ public class SquadControlController : MonoBehaviour
         }
 
         var assignment = facade.GetComponent<AnimalControlAssignment>();
-        if (assignment == null || assignment.Role != AnimalControlRole.TeammateNpc)
+        if (assignment == null)
+        {
+            return false;
+        }
+
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            return assignment.Role == AnimalControlRole.TeammateNpc
+                || assignment.Role == AnimalControlRole.Human;
+        }
+
+        if (assignment.Role != AnimalControlRole.TeammateNpc)
         {
             return false;
         }
@@ -547,6 +558,11 @@ public class SquadControlController : MonoBehaviour
     /// </summary>
     public void SetActiveHumanPlayer(AnimalFacade activeHuman)
     {
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
         if (activeHuman != null && (activeHuman.IsGK() || !IsLocalAlly(activeHuman)))
         {
             return;
@@ -587,6 +603,17 @@ public class SquadControlController : MonoBehaviour
         RefreshLocalSquadRoles();
     }
 
+    /// <summary>GOAP バッチ検証中: AnimalSelector の Human 割当を抑止し全フィールド味方を TeammateNpc に固定する。</summary>
+    public void RefreshLocalSquadRolesForBatchVerification()
+    {
+        if (!GoapBatchVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
+        RefreshLocalSquadRoles();
+    }
+
     private void RefreshLocalSquadRoles()
     {
         foreach (var facade in _pendingLocalAllies.ToList())
@@ -597,7 +624,10 @@ public class SquadControlController : MonoBehaviour
                 continue;
             }
 
-            ApplyRole(facade, ResolveRole(facade));
+            AnimalControlRole role = GoapBatchVerifyEnvironment.IsActive && !facade.IsGK()
+                ? AnimalControlRole.TeammateNpc
+                : ResolveRole(facade);
+            ApplyRole(facade, role);
             TryConfigureGoapPilot(facade);
         }
     }
