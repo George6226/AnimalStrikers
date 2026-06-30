@@ -85,10 +85,24 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
             }
         }
 
-        float adjustment = -pressureScore * 0.9f;
+        float ownerDistToGoal = Vector3.Distance(ownerPos, teamBB.FieldInfo.OwnGoalPosition);
+        float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
+
+        float adjustment = -pressureScore * 1.45f;
         if (nearbyPressurers >= 2)
         {
-            adjustment += 0.55f;
+            adjustment += 0.45f;
+        }
+
+        if (TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(bb) >= 0.75f
+            && shotDangerScore < 0.45f)
+        {
+            adjustment += TeammateNpcDefensePlanning.ComputePassLaneDelegationPenalty(bb);
+        }
+
+        if (shotDangerScore >= 0.45f)
+        {
+            adjustment -= 0.7f;
         }
 
         return adjustment;

@@ -634,6 +634,12 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            var squadDuringBatch = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+            return squadDuringBatch == null || squadDuringBatch.ShouldUseGoapFor(facade);
+        }
+
         if (IsActiveHumanSelectedPlayer(facade))
         {
             return false;
@@ -664,6 +670,11 @@ public class GoapAgent : MonoBehaviour
     private static bool IsActiveHumanSelectedPlayer(AnimalFacade facade)
     {
         if (facade == null)
+        {
+            return false;
+        }
+
+        if (GoapBatchVerifyEnvironment.IsActive)
         {
             return false;
         }
@@ -1372,6 +1383,22 @@ public class GoapAgent : MonoBehaviour
         LogSummary(_lastPlanSummary);
 
         DebugLogger.Log($"[{this.name}(GoapAgent)] プラン中断");
+    }
+
+    /// <summary>検証レイアウト適用後: クールダウンを解除して即再プランニング可能にする。</summary>
+    public void ResetPlanningStateForVerification()
+    {
+        EnsureInitialized();
+        StopAllCoroutines();
+        _isPlanning = false;
+        _currentAction = null;
+        _currentPlan?.Clear();
+        _nextAllowedReplanTime = 0f;
+        _lastPlanningTime = 0f;
+        _planFailed = true;
+        _lastReplanReason = "VerificationReset";
+        _lastFailureCategory = "None";
+        _lastFailureDetails = "-";
     }
 
     private void LogSummary(string message)

@@ -59,84 +59,144 @@ public class BlockPassLaneActionSO : GoapActionSO
         if (teamBB == null) return 0f;
 
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
+        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
-        List<Vector3> enemyPositions = teamBB.BasicInfo.EnemyPositions;
-        
+
+        float ownerDistToGoal = Vector3.Distance(ownerPos, ownGoal);
+        float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
+
         float totalAdjustment = 0f;
-        
-        // 1. ボール保持者へのプレッシャーを計算（一定距離以内の味方の数）
-        float pressureThreshold = fieldLen * 0.15f; // フィールド長の15%以内
-        int pressureCount = 0;
-        foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+        if (shotDangerScore >= 0.52f)
         {
-            // 自分自身は除外
-            if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
-            
-            float distance = Vector3.Distance(allyPos, ownerPos);
-            if (distance <= pressureThreshold)
+            totalAdjustment += 0.95f;
+        }
+
+        float distPlayerToOwner = Vector3.Distance(playerPos, ownerPos);
+        if (distPlayerToOwner > fieldLen * 0.24f)
+        {
+            totalAdjustment += 1.15f;
+        }
+
+        float pressureThreshold = fieldLen * 0.15f;
+        int pressureCount = 0;
+        foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+        {
+            if (Vector3.Distance(allyPos, playerPos) < 0.1f)
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(allyPos, ownerPos) <= pressureThreshold)
             {
                 pressureCount++;
             }
         }
-        
-        // プレッシャーが高い（2人以上）場合はコストを下げる
-        if (pressureCount >= 2)
+
+        if (pressureCount >= 1)
         {
-            float pressureBonus = (pressureCount - 1) / 3f; // 2人で0.33、3人で0.67、4人以上で1.0
-            totalAdjustment -= Mathf.Clamp01(pressureBonus) * 1.0f; // 最大-1.0のコスト減
+            totalAdjustment -= Mathf.Clamp01(pressureCount / 3f) * 0.85f;
         }
-        
-        // 2. フリー状態の敵（ボールを持っていない & 味方がマークしていない）が近いほどコストを下げる
-        float markThreshold = fieldLen * 0.15f; // マーク判定の閾値（フィールド長の15%以内）
-        List<Vector3> freeEnemies = new List<Vector3>();
-        foreach (var enemyPos in enemyPositions)
+
+        float markThreshold = fieldLen * 0.15f;
+        Vector3 passTarget = default;
+        float passTargetDist = float.MaxValue;
+        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
         {
-            // ボール保持者の位置と異なる敵（ボールを持っていない敵）
-            if (Vector3.Distance(enemyPos, ownerPos) > 0.1f)
+            if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
             {
-                // 味方がマークしているかチェック
-                bool isMarked = false;
-                foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+                continue;
+            }
+
+            bool isMarked = false;
+            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            {
+                if (Vector3.Distance(allyPos, playerPos) < 0.1f)
                 {
-                    // 自分自身は除外
-                    if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
-                    
-                    float distance = Vector3.Distance(allyPos, enemyPos);
-                    if (distance <= markThreshold)
-                    {
-                        isMarked = true;
-                        break;
-                    }
+                    continue;
                 }
-                
-                // マークされていない敵のみ追加
-                if (!isMarked)
+
+                if (Vector3.Distance(allyPos, enemyPos) <= markThreshold)
                 {
-                    freeEnemies.Add(enemyPos);
+                    isMarked = true;
+                    break;
                 }
             }
-        }
-        
-        if (freeEnemies.Count > 0)
-        {
-            // 最も近いフリー状態の敵を探す
-            float minDistance = float.MaxValue;
-            foreach (var enemyPos in freeEnemies)
+
+            if (isMarked)
             {
-                float distance = Vector3.Distance(playerPos, enemyPos);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                }
+                continue;
             }
-            
-            // 距離が近いほどコストを下げる
-            float idealDistance = fieldLen * 0.2f; // 理想的な距離（フィールド長の20%）
-            float proximityScore = 1f - Mathf.Clamp01(minDistance / Mathf.Max(idealDistance, 0.01f));
-            totalAdjustment -= proximityScore * 1.0f; // 最大-1.0のコスト減
+
+            float distFromOwner = Vector3.Distance(enemyPos, ownerPos);
+            if (distFromOwner < passTargetDist)
+            {
+                passTargetDist = distFromOwner;
+                passTarget = enemyPos;
+            }
         }
-        
+
+        if (passTargetDist >= float.MaxValue * 0.5f)
+        {
+            return totalAdjustment;
+        }
+
+        Vector3 passDir = passTarget - ownerPos;
+        passDir.y = 0f;
+        if (passDir.sqrMagnitude < 0.01f)
+        {
+            return totalAdjustment;
+        }
+
+        passDir.Normalize();
+        Vector3 ownerToPlayer = playerPos - ownerPos;
+        ownerToPlayer.y = 0f;
+        float laneAlign = ownerToPlayer.sqrMagnitude < 0.01f
+            ? 0f
+            : Vector3.Dot(ownerToPlayer.normalized, passDir);
+        float alongLane = Vector3.Dot(ownerToPlayer, passDir);
+
+        if (alongLane > 0f && alongLane <= fieldLen * 0.24f && laneAlign > 0.32f)
+        {
+            totalAdjustment -= 1.3f;
+        }
+        else if (distPlayerToOwner <= fieldLen * 0.22f && laneAlign < 0.25f)
+        {
+            totalAdjustment += 1.35f;
+        }
+        else if (distPlayerToOwner <= fieldLen * 0.22f && laneAlign >= 0.25f)
+        {
+            float distPlayerToPassTarget = Vector3.Distance(playerPos, passTarget);
+            if (distPlayerToOwner < distPlayerToPassTarget * 0.8f)
+            {
+                totalAdjustment -= 1.15f;
+            }
+        }
+
+        if (shotDangerScore >= 0.45f && laneAlign < 0.3f)
+        {
+            totalAdjustment += 1.4f;
+        }
+
+        float blockUrgency = TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(bb);
+        if (shotDangerScore >= 0.45f && blockUrgency < 0.95f)
+        {
+            totalAdjustment += 1.35f;
+        }
+
+        if (blockUrgency < 0.88f)
+        {
+            totalAdjustment += 1.25f;
+        }
+        else if (!TeammateNpcDefensePlanning.IsPrimaryPassLaneBlocker(bb))
+        {
+            totalAdjustment += 0.95f;
+        }
+        else if (blockUrgency >= 0.85f)
+        {
+            totalAdjustment -= 0.45f;
+        }
+
         return totalAdjustment;
     }
 }

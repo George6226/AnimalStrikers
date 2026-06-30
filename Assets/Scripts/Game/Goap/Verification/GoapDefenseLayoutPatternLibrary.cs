@@ -40,18 +40,21 @@ public static class GoapDefenseLayoutPatternLibrary
     public static Dictionary<int, Vector3> ComputeAllyTargets(
         GoapDefenseLayoutPatternId pattern,
         GoapSupportLayoutFieldContext ctx,
-        GoapSupportLayoutTuning tuning)
+        GoapSupportLayoutTuning tuning,
+        Vector3? enemyOwnerAnchor = null)
     {
-        return ComputeAllyTargetsForLayout(ResolveBasePattern(pattern), ctx, tuning);
+        Vector3 enemyOwner = enemyOwnerAnchor
+            ?? ResolveEnemyOwnerPosition(ResolveBasePattern(pattern), ctx, tuning);
+        return ComputeAllyTargetsForLayout(ResolveBasePattern(pattern), ctx, tuning, enemyOwner);
     }
 
     private static Dictionary<int, Vector3> ComputeAllyTargetsForLayout(
         GoapDefenseLayoutPatternId pattern,
         GoapSupportLayoutFieldContext ctx,
-        GoapSupportLayoutTuning tuning)
+        GoapSupportLayoutTuning tuning,
+        Vector3 enemyOwner)
     {
         var map = new Dictionary<int, Vector3>();
-        Vector3 enemyOwner = ResolveEnemyOwnerPosition(pattern, ctx, tuning);
         float wingLane = ctx.FieldWidth * 0.28f;
         Vector3 ownGoal = ApproximateOwnGoal(ctx);
         float pressRadius = ctx.FieldLength * 0.1f;
@@ -102,7 +105,8 @@ public static class GoapDefenseLayoutPatternLibrary
         GoapDefenseLayoutPatternId pattern,
         GoapSupportLayoutFieldContext ctx,
         GoapSupportLayoutTuning tuning,
-        out Vector3 position)
+        out Vector3 position,
+        Vector3? enemyOwnerAnchor = null)
     {
         position = default;
         if (enemyIndex != 1)
@@ -111,7 +115,8 @@ public static class GoapDefenseLayoutPatternLibrary
         }
 
         GoapDefenseLayoutPatternId layoutPattern = ResolveBasePattern(pattern);
-        Vector3 enemyOwner = ResolveEnemyOwnerPosition(layoutPattern, ctx, tuning);
+        Vector3 enemyOwner = enemyOwnerAnchor
+            ?? ResolveEnemyOwnerPosition(layoutPattern, ctx, tuning);
         float wingLane = ctx.FieldWidth * 0.22f;
 
         switch (layoutPattern)

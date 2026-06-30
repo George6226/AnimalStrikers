@@ -69,6 +69,17 @@ public class GoapActionSO : ScriptableObject
         return 0f;
     }
 
+    /// <summary>戦術守備の強制プラン選出など、0.1 下限で同点化しない比較用コスト。</summary>
+    public float CalculateTacticalSelectionCost(PlayerBlackboard bb)
+    {
+        return TeammateNpcDefensePlanning.ComputeDynamicCost(
+            this,
+            bb,
+            _baseCost,
+            CalculateSituationalAdjustment(bb),
+            applyFloor: false);
+    }
+
     // === 初期化メソッド ===
     
     /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Goap;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,7 +12,7 @@ using UnityEditor;
 /// </summary>
 public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 {
-    private const float ProductionSelectionPlanCostsTimeoutSeconds = 30f;
+    protected virtual float ProductionSelectionPlanCostsTimeoutSeconds => 50f;
 
     protected abstract string SummaryLogTag { get; }
     protected abstract GoapDefenseActionUnderTest ActionUnderTest { get; }
@@ -23,6 +24,13 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     protected virtual IGoapDefenseProductionSelectionExpectation DriveProductionSelectionExpectation =>
         ProductionSelectionExpectation;
+
+    protected virtual GoapProductionSelectionResolveMode ProductionSelectionResolveModeAtApply =>
+        GoapProductionSelectionResolveMode.FirstPlanCosts;
+
+    protected virtual GoapProductionSelectionResolveMode ResolveProductionSelectionModeForPattern(
+        GoapDefenseLayoutPatternId pattern) =>
+        ProductionSelectionResolveModeAtApply;
 
     [Header("検証モード")]
     [Tooltip("ON=DefensivePositioning の候補を ActionUnderTest のみにする（単体動作検証）")]
@@ -66,6 +74,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     private Coroutine _batchCoroutine;
     private Coroutine _enemyDriveCoroutine;
     private int _productionSelectionSummaryOffset;
+    private int _productionSelectionReadyLineCount;
     private int _productionSelectionPassCount;
     private int _productionSelectionEvalCount;
     private int _runtimePassSummaryOffset;
@@ -122,6 +131,12 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
         return ActionUnderTest;
     }
+
+    /// <summary>
+    /// true のとき ready 判定で期待アクション一致まで待つ（#5/#6 など再プランで誤選出が先に出るパターン向け）。
+    /// </summary>
+    protected virtual bool RequiresExpectedActionMatchForReady(GoapDefenseLayoutPatternId pattern) =>
+        false;
 
     private GoapSupportLayoutTuning LayoutTuning
     {
@@ -251,16 +266,18 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
                 if (UsesProductionSelectionAtApply)
                 {
+                    GoapProductionSelectionResolveMode resolveMode =
+                        ResolveProductionSelectionModeForPattern(pattern);
                     yield return WaitForProductionPlanCostsCoroutine(
                         ProductionSelectionPlanCostsTimeoutSeconds,
                         ProductionSelectionExpectation,
-                        GoapProductionSelectionResolveMode.FirstPlanCosts);
+                        resolveMode);
                     EvaluateProductionSelectionForPattern(
                         pattern,
                         index + 1,
                         total,
                         ProductionSelectionExpectation,
-                        GoapProductionSelectionResolveMode.FirstPlanCosts,
+                        resolveMode,
                         "apply");
                 }
                 else
@@ -332,22 +349,52 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             yield break;
         }
 
-        ApplyCompanionVerificationState(pattern);
+        if (pattern != GoapDefenseLayoutPatternId.Baseline)
+        {
+            ApplyCompanionVerificationState(pattern);
+            if (pattern == GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane)
+            {
+                ReapplyAllyTargetsAnchoredToEnemyOwner(pattern);
+            }
+
+            SyncTeamBlackboardMemberPositions();
+        }
 
         if (pattern != GoapDefenseLayoutPatternId.Baseline && _assignBallToEnemyOnApply)
         {
             yield return AssignBallToEnemyCoroutine(
                 GoapDefenseLayoutPatternLibrary.GetEnemyBallOwnerIndex(pattern));
             yield return null;
-            if (!_lastAssignBallOwnershipChanged && _triggerGoapReplanAfterApply)
-            {
-                TriggerAllyGoapReplan();
-            }
+            SyncTeamBlackboardMemberPositions();
         }
-        else if (_triggerGoapReplanAfterApply)
+
+        if (pattern != GoapDefenseLayoutPatternId.Baseline)
         {
+            InvalidateAllyDefensivePositionFacts();
+            yield return null;
+            TriggerAllyGoapReplan();
+            yield return null;
             TriggerAllyGoapReplan();
         }
+    }
+
+    private void ReapplyAllyTargetsAnchoredToEnemyOwner(GoapDefenseLayoutPatternId pattern)
+    {
+        AnimalFacade owner = GoapDefenseVerificationBallHelper.GetEnemyByIndex(_enemyBallOwnerIndex);
+        if (owner == null || !TryGetFieldContext(out GoapSupportLayoutFieldContext ctx))
+        {
+            return;
+        }
+
+        Vector3 anchor = owner.transform.position;
+        Dictionary<int, Vector3> allyTargets = GoapDefenseLayoutPatternLibrary.ComputeAllyTargets(
+            pattern,
+            ctx,
+            LayoutTuning,
+            anchor);
+        ApplyAllyTargets(allyTargets);
+        ApplySecondaryEnemyPositions(pattern, ctx, anchor);
+        LogLine($"ReapplyAllyTargets({pattern}) anchor={Fmt(anchor)} slot0={SlotPos(allyTargets, 0)}");
     }
 
     private bool TryApplyVerificationPatternLayout(GoapDefenseLayoutPatternId pattern)
@@ -380,6 +427,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             LayoutTuning);
         ApplyEnemyOwnerPosition(enemyOwnerTarget);
         ApplySecondaryEnemyPositions(pattern, ctx);
+        SyncTeamBlackboardMemberPositions();
+        InvalidateAllyDefensivePositionFacts();
 
         LogLine(
             $"ApplyVerificationPattern({pattern}) enemyOwner={Fmt(enemyOwnerTarget)} " +
@@ -402,7 +451,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             return;
         }
 
-        List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
+        List<string> lines = ReadProductionSelectionLines();
         GoapDefenseProductionSelectionEvaluationResult result = GoapDefenseProductionSelectionEvaluator.EvaluatePattern(
             pattern,
             expectation,
@@ -441,6 +490,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
             if (HasReadyProductionSelection(lines, expectation, resolveMode))
             {
+                _productionSelectionReadyLineCount = GoapActionVerificationSessionLog.CountLines();
                 yield break;
             }
 
@@ -449,6 +499,23 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         }
 
         LogLine($"WaitForProductionPlanCosts timeout={timeoutSeconds:F0}s");
+    }
+
+    private List<string> ReadProductionSelectionLines()
+    {
+        List<string> lines = GoapActionVerificationSessionLog.ReadLinesSince(_productionSelectionSummaryOffset);
+        if (_productionSelectionReadyLineCount <= _productionSelectionSummaryOffset)
+        {
+            return lines;
+        }
+
+        int maxCount = _productionSelectionReadyLineCount - _productionSelectionSummaryOffset;
+        if (lines.Count <= maxCount)
+        {
+            return lines;
+        }
+
+        return lines.GetRange(0, maxCount);
     }
 
     private bool HasReadyProductionSelection(
@@ -473,10 +540,16 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
                 continue;
             }
 
+            string expectedForReady = RequiresExpectedActionMatchForReady(_activeBatchPattern)
+                ? expected
+                : null;
+
             if (!GoapDefenseProductionSelectionEvaluator.IsSlotSelectionReady(
                     lines,
                     slot,
-                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot))
+                    GoapSupportVerificationAllyHelper.ResolvePlayerIdForSlot,
+                    resolveMode,
+                    expectedForReady))
             {
                 return false;
             }
@@ -516,6 +589,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             if (UsesAnyProductionSelection)
             {
                 _productionSelectionSummaryOffset = GoapActionVerificationSessionLog.CountLines();
+                _productionSelectionReadyLineCount = 0;
             }
 
             if (ShouldEvaluateRuntimePassDuringBatch)
@@ -819,20 +893,11 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     private void ApplySecondaryEnemyPositions(
         GoapDefenseLayoutPatternId pattern,
-        GoapSupportLayoutFieldContext ctx)
+        GoapSupportLayoutFieldContext ctx,
+        Vector3? enemyOwnerAnchor = null)
     {
         List<AnimalFacade> enemies = GoapDefenseVerificationBallHelper.GetFieldEnemies();
         if (enemies.Count <= 1)
-        {
-            return;
-        }
-
-        if (!GoapDefenseLayoutPatternLibrary.TryGetSecondaryEnemyTarget(
-                1,
-                pattern,
-                ctx,
-                LayoutTuning,
-                out Vector3 target))
         {
             return;
         }
@@ -843,9 +908,70 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             return;
         }
 
+        if (!GoapDefenseLayoutPatternLibrary.TryGetSecondaryEnemyTarget(
+                1,
+                pattern,
+                ctx,
+                LayoutTuning,
+                out Vector3 target,
+                enemyOwnerAnchor))
+        {
+            AnimalFacade owner = enemies[0];
+            if (owner == null)
+            {
+                return;
+            }
+
+            target = owner.transform.position;
+            target.y = secondary.transform.position.y;
+            secondary.transform.position = target;
+            LogLine($"ApplySecondaryEnemy({pattern}) index=1 collapsed=owner pos={Fmt(target)}");
+            return;
+        }
+
         target.y = secondary.transform.position.y;
         secondary.transform.position = target;
         LogLine($"ApplySecondaryEnemy({pattern}) index=1 pos={Fmt(target)}");
+    }
+
+    private static void SyncTeamBlackboardMemberPositions()
+    {
+        var teamFacade = TeamFacade.Instance;
+        var teamBB = teamFacade != null ? teamFacade.TeamBlackboard : null;
+        var regist = teamFacade != null ? teamFacade.TeamRegist : null;
+        if (teamBB == null || regist == null)
+        {
+            return;
+        }
+
+        List<Vector3> allyPositions = new();
+        foreach (AnimalFacade ally in regist.Allys)
+        {
+            if (ally != null)
+            {
+                allyPositions.Add(ally.transform.position);
+            }
+        }
+
+        List<Vector3> enemyPositions = new();
+        foreach (AnimalFacade enemy in regist.Enemies)
+        {
+            if (enemy != null)
+            {
+                enemyPositions.Add(enemy.transform.position);
+            }
+        }
+
+        teamBB.BasicInfo.Update(enemyPositions, allyPositions);
+
+        if (teamFacade.BallManager != null
+            && teamBB.BallInfo.BallOwnerID >= 0
+            && teamFacade.BallManager.TryResolveBallOwnerWorldPosition(
+                teamBB.BallInfo.BallOwnerID,
+                out Vector3 ownerPos))
+        {
+            teamBB.BallInfo.updateBallOwnerPosition(ownerPos);
+        }
     }
 
     private IEnumerator AssignBallToEnemyCoroutine(int enemyIndex)
@@ -870,6 +996,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
         _lastAssignBallOwnershipChanged = ownershipChanged;
         LogLine($"AssignEnemyBall(index={enemyIndex}) ok reason={reason}");
+        SyncTeamBlackboardMemberPositions();
     }
 
     private static bool IsBallAvailable()
@@ -884,20 +1011,64 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
     private static void TriggerAllyGoapReplan()
     {
-        var agents = FindObjectsByType<GoapAgent>(FindObjectsSortMode.None);
-        int count = 0;
-        foreach (GoapAgent agent in agents)
+        if (GoapBatchVerifyEnvironment.IsActive)
         {
-            if (agent == null)
+            var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+            squad?.RefreshLocalSquadRolesForBatchVerification();
+        }
+
+        int count = 0;
+        foreach (GoapSupportVerificationAllyHelper.AllySlot ally in GoapSupportVerificationAllyHelper.GetFieldAlliesBySlot())
+        {
+            if (ally.Facade == null)
             {
                 continue;
             }
 
-            agent.AbortCurrentPlan();
+            AnimalGoapBrainComponents goap = AnimalGoapBrainComponents.Resolve(ally.Facade);
+            var router = ally.Facade.GetComponent<AnimalControlBrainRouter>();
+            var assignment = ally.Facade.GetComponent<AnimalControlAssignment>();
+            if (router != null && assignment != null)
+            {
+                router.ApplyRole(assignment.Role);
+            }
+            else
+            {
+                goap.SetActive(true);
+            }
+
+            if (goap.Agent == null)
+            {
+                continue;
+            }
+
+            var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+            squad?.ApplyGoapPilotConfiguration(goap.Agent);
+            goap.Agent.ResetPlanningStateForVerification();
             count++;
         }
 
         GoapActionVerificationSessionLog.Append("GOAP_DEFENSE_SETUP", $"TriggerAllyGoapReplan agents={count}");
+    }
+
+    private static void InvalidateAllyDefensivePositionFacts()
+    {
+        foreach (AnimalFacade ally in GoapSupportVerificationAllyHelper.GetFieldAllies())
+        {
+            if (ally == null)
+            {
+                continue;
+            }
+
+            PlayerBlackboard bb = ally.GetComponentInChildren<PlayerBlackboard>();
+            if (bb == null)
+            {
+                continue;
+            }
+
+            bb.SetFact(new Fact(SymbolTag.Action.IS_IN_DEFENSIVE_POSITION, "true"), false);
+            bb.SetFact(new Fact(SymbolTag.Action.IS_IN_DEFENSIVE_POSITION, "false"), true);
+        }
     }
 
     private void ResetDebugLogSession(string banner)

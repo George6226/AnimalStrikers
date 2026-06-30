@@ -20,6 +20,9 @@ public static class GoapDefenseProductionSelectionExpectations
 
     public static readonly IGoapDefenseProductionSelectionExpectation DefenseDrive =
         new GoapDefenseDriveProductionSelectionExpectation();
+
+    public static readonly IGoapDefenseProductionSelectionExpectation DefenseCombined =
+        new GoapDefenseCombinedProductionSelectionExpectation();
 }
 
 /// <summary>
@@ -137,5 +140,80 @@ public sealed class GoapDefenseDriveProductionSelectionExpectation
             slot,
             out expectedAction,
             out shouldEvaluate);
+    }
+}
+
+/// <summary>
+/// Phase 7a 守備統合本番選出: 局面ごとにスロット別の本番勝者を期待（全候補コスト競争）。
+/// </summary>
+public sealed class GoapDefenseCombinedProductionSelectionExpectation
+    : IGoapDefenseProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        if (pattern == GoapDefenseLayoutPatternId.Baseline
+            || pattern == GoapDefenseLayoutPatternId.Custom)
+        {
+            return true;
+        }
+
+        if (slot < 0 || slot > 2)
+        {
+            return true;
+        }
+
+        switch (pattern)
+        {
+            case GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies:
+            case GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield:
+                if (slot == 2)
+                {
+                    return true;
+                }
+
+                shouldEvaluate = true;
+                expectedAction = "MoveToDefensivePosition";
+                return true;
+
+            case GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget:
+                if (slot == 0)
+                {
+                    return true;
+                }
+
+                shouldEvaluate = true;
+                expectedAction = "MoveToDefensivePosition";
+                return true;
+
+            case GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane:
+                if (slot != 0)
+                {
+                    return true;
+                }
+
+                shouldEvaluate = true;
+                expectedAction = "BlockPassLane";
+                return true;
+
+            case GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane:
+                if (slot != 1)
+                {
+                    return true;
+                }
+
+                shouldEvaluate = true;
+                expectedAction = "MoveToDefensivePosition";
+                return true;
+
+            default:
+                return true;
+        }
     }
 }
