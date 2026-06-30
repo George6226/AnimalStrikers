@@ -26,15 +26,16 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-defense` | 守備基本 #2-#3 | 約2分 |
 | `batch-defense-tactical` | 守備戦術 #4-#6 | 約2分 |
 | `batch-defense-combined` | 守備統合本番選出 #2-#6 | 約3分 |
+| `batch-defense-combined-drive` | 守備統合ドライブ #7-#8 | 約2分 |
 | `batch-defense-drive` | 守備ドライブ #7-#8 | 約2分 |
-| `batch` | 上記7バッチ連続 | 約15分 |
-| `all` | EditMode + 7バッチ（CI 相当） | 約14-18分 |
+| `batch` | 上記8バッチ連続 | 約17分 |
+| `all` | EditMode + 8バッチ（CI 相当） | 約16-20分 |
 
 設定の単一ソース: `scripts/ci/goap-ci-config.sh`
 
 ## 合格基準
 
-### EditMode（107 件）
+### EditMode（112 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -53,6 +54,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `defenseBaseline` | #2-#3 守備基本 | SELECTION 2/2 |
 | `defenseTactical` | #4-#6 守備戦術 | SELECTION 3/3 |
 | `defenseCombined` | #2-#6 守備統合本番選出 | SELECTION 5/5 |
+| `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `defenseDrive` | #7-#8 守備ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。

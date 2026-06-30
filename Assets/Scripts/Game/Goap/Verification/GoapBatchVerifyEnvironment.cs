@@ -52,6 +52,7 @@ public static class GoapBatchVerifyEnvironment
             GoapBatchVerifyProfile.DefenseTactical => "goap-batch-defense-tactical-result.txt",
             GoapBatchVerifyProfile.DefenseDrive => "goap-batch-defense-drive-result.txt",
             GoapBatchVerifyProfile.DefenseCombined => "goap-batch-defense-combined-result.txt",
+            GoapBatchVerifyProfile.DefenseCombinedDrive => "goap-batch-defense-combined-drive-result.txt",
             _ => "goap-batch-result.txt",
         };
 
@@ -64,6 +65,7 @@ public static class GoapBatchVerifyEnvironment
             GoapBatchVerifyProfile.DefenseTactical => "goap-batch-defense-tactical-verify.log",
             GoapBatchVerifyProfile.DefenseDrive => "goap-batch-defense-drive-verify.log",
             GoapBatchVerifyProfile.DefenseCombined => "goap-batch-defense-combined-verify.log",
+            GoapBatchVerifyProfile.DefenseCombinedDrive => "goap-batch-defense-combined-drive-verify.log",
             _ => "goap-batch-verify.log",
         };
 
@@ -174,6 +176,12 @@ public static class GoapBatchVerifyEnvironment
             || string.Equals(token, "defense-combined", StringComparison.OrdinalIgnoreCase))
         {
             return GoapBatchVerifyProfile.DefenseCombined;
+        }
+
+        if (string.Equals(token, "defenseCombinedDrive", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(token, "defense-combined-drive", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoapBatchVerifyProfile.DefenseCombinedDrive;
         }
 
         if (Enum.TryParse(token, ignoreCase: true, out GoapBatchVerifyProfile parsed))

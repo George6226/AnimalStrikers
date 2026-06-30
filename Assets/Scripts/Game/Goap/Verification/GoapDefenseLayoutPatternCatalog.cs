@@ -58,4 +58,8 @@ public static class GoapDefenseLayoutPatternCatalog
     /// <summary>Phase 7a 守備統合本番選出: #2〜#6（全候補コスト競争）。</summary>
     public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedSuite() =>
         BuildRange(2, 6);
+
+    /// <summary>Phase 7b 守備統合ドライブ: #7〜#8（全候補 + 敵保持ドライブ追従）。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedDriveSuite() =>
+        BuildRange(7, 8);
 }
