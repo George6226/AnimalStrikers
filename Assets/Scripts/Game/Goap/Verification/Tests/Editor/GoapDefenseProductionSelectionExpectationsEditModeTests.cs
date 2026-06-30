@@ -68,6 +68,30 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         }
     }
 
+    private static IEnumerable<TestCaseData> DefenseCombinedDriveCases()
+    {
+        foreach (GoapDefenseLayoutPatternId pattern in GoapDefenseLayoutPatternCatalog.BuildDefenseCombinedDriveSuite())
+        {
+            int number = GoapDefenseLayoutPatternCatalog.GetNumber(pattern);
+            for (int slot = 0; slot <= 2; slot++)
+            {
+                if (!GoapDefenseProductionSelectionExpectations.DefenseCombinedDrive.TryGetExpectation(
+                        pattern,
+                        slot,
+                        out string expected,
+                        out bool shouldEvaluate)
+                    || !shouldEvaluate
+                    || string.IsNullOrEmpty(expected))
+                {
+                    continue;
+                }
+
+                yield return new TestCaseData(pattern, slot, expected)
+                    .SetName($"DefenseCombinedDrive_#{number:D2}_slot{slot}_{expected}");
+            }
+        }
+    }
+
     private static IEnumerable<TestCaseData> DefenseDriveCases()
     {
         foreach (GoapDefenseLayoutPatternId pattern in GoapDefenseLayoutPatternCatalog.BuildDefenseDriveSuite())
@@ -132,6 +156,23 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
     }
 
+    [TestCaseSource(nameof(DefenseCombinedDriveCases))]
+    public void DefenseCombinedDrive_MatchesExpectedAction(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        string expectedAction)
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.DefenseCombinedDrive.TryGetExpectation(
+            pattern,
+            slot,
+            out string action,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
+        Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
+        Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
     [TestCaseSource(nameof(DefenseDriveCases))]
     public void DefenseDrive_MatchesExpectedAction(
         GoapDefenseLayoutPatternId pattern,
@@ -153,6 +194,19 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
     public void DefenseCombined_BaselinePattern_SkipsEvaluation()
     {
         bool ok = GoapDefenseProductionSelectionExpectations.DefenseCombined.TryGetExpectation(
+            GoapDefenseLayoutPatternId.Baseline,
+            0,
+            out _,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok);
+        Assert.IsFalse(shouldEvaluate, "Baseline should be skipped");
+    }
+
+    [Test]
+    public void DefenseCombinedDrive_BaselinePattern_SkipsEvaluation()
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.DefenseCombinedDrive.TryGetExpectation(
             GoapDefenseLayoutPatternId.Baseline,
             0,
             out _,

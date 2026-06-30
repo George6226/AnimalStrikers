@@ -23,6 +23,9 @@ public static class GoapDefenseProductionSelectionExpectations
 
     public static readonly IGoapDefenseProductionSelectionExpectation DefenseCombined =
         new GoapDefenseCombinedProductionSelectionExpectation();
+
+    public static readonly IGoapDefenseProductionSelectionExpectation DefenseCombinedDrive =
+        new GoapDefenseCombinedDriveProductionSelectionExpectation();
 }
 
 /// <summary>
@@ -215,5 +218,42 @@ public sealed class GoapDefenseCombinedProductionSelectionExpectation
             default:
                 return true;
         }
+    }
+}
+
+/// <summary>
+/// Phase 7b 守備統合ドライブ: #7/#8 は静止統合（#2/#3）と同じ本番勝者を期待（全候補コスト競争）。
+/// </summary>
+public sealed class GoapDefenseCombinedDriveProductionSelectionExpectation
+    : IGoapDefenseProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        GoapDefenseLayoutPatternId basePattern = pattern switch
+        {
+            GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward =>
+                GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies,
+            GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward =>
+                GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield,
+            _ => pattern,
+        };
+
+        if (basePattern == pattern)
+        {
+            return true;
+        }
+
+        return GoapDefenseProductionSelectionExpectations.DefenseCombined.TryGetExpectation(
+            basePattern,
+            slot,
+            out expectedAction,
+            out shouldEvaluate);
     }
 }

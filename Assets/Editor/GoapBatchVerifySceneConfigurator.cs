@@ -22,10 +22,11 @@ public static class GoapBatchVerifySceneConfigurator
         var defenseTactical = EnsureDefenseTacticalSetup(combined);
         var defenseDrive = EnsureDefenseDriveSetup(combined);
         var defenseCombined = EnsureDefenseCombinedSetup(combined);
+        var defenseCombinedDrive = EnsureDefenseCombinedDriveSetup(combined);
 
         if (combined == null && wingDrive == null && cfDrive == null
             && defenseBaseline == null && defenseTactical == null && defenseDrive == null
-            && defenseCombined == null)
+            && defenseCombined == null && defenseCombinedDrive == null)
         {
             Debug.LogError("[GOAP_BATCH] no Goap verification setup found in scene");
             return;
@@ -38,6 +39,7 @@ public static class GoapBatchVerifySceneConfigurator
         ConfigureDefenseSetup(defenseTactical, profile == GoapBatchVerifyProfile.DefenseTactical);
         ConfigureDefenseSetup(defenseDrive, profile == GoapBatchVerifyProfile.DefenseDrive);
         ConfigureDefenseSetup(defenseCombined, profile == GoapBatchVerifyProfile.DefenseCombined);
+        ConfigureDefenseSetup(defenseCombinedDrive, profile == GoapBatchVerifyProfile.DefenseCombinedDrive);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log(
@@ -48,7 +50,8 @@ public static class GoapBatchVerifySceneConfigurator
             $"defenseBaseline={(defenseBaseline != null && profile == GoapBatchVerifyProfile.DefenseBaseline)} " +
             $"defenseTactical={(defenseTactical != null && profile == GoapBatchVerifyProfile.DefenseTactical)} " +
             $"defenseDrive={(defenseDrive != null && profile == GoapBatchVerifyProfile.DefenseDrive)} " +
-            $"defenseCombined={(defenseCombined != null && profile == GoapBatchVerifyProfile.DefenseCombined)}");
+            $"defenseCombined={(defenseCombined != null && profile == GoapBatchVerifyProfile.DefenseCombined)} " +
+            $"defenseCombinedDrive={(defenseCombinedDrive != null && profile == GoapBatchVerifyProfile.DefenseCombinedDrive)}");
     }
 
     private static GoapCombinedDefenseBaselineDebugSetup EnsureDefenseBaselineSetup(
@@ -164,6 +167,37 @@ public static class GoapBatchVerifySceneConfigurator
         SetFloat(serialized, "_batchSettleSecondsAfterPatternApply", 6f);
         serialized.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log("[GOAP_BATCH] added GoapCombinedDefenseRegressionDebugSetup to scene");
+        return defense;
+    }
+
+    private static GoapCombinedDefenseRegressionDriveDebugSetup EnsureDefenseCombinedDriveSetup(
+        GoapCombinedSupportRegressionDebugSetup combined)
+    {
+        var defense = Object.FindFirstObjectByType<GoapCombinedDefenseRegressionDriveDebugSetup>(FindObjectsInactive.Include);
+        if (defense != null)
+        {
+            return defense;
+        }
+
+        if (combined == null)
+        {
+            return null;
+        }
+
+        defense = combined.gameObject.AddComponent<GoapCombinedDefenseRegressionDriveDebugSetup>();
+        var serialized = new SerializedObject(defense);
+        SetBool(serialized, "_runBatchVerificationOnStart", true);
+        SetBool(serialized, "_verifyProductionSelection", false);
+        SetBool(serialized, "_verifyProductionSelectionDuringDrive", true);
+        SetBool(serialized, "_verifyRuntimeFollowDuringBatch", true);
+        SetBool(serialized, "_enableEnemyOwnerAutoDrive", true);
+        SetBool(serialized, "_restrictCandidatesToActionUnderTest", false);
+        SetBool(serialized, "_verificationOnlyDefenseAction", false);
+        SetBool(serialized, "_assignBallToEnemyOnApply", true);
+        SetInt(serialized, "_batchPatternIndexStart", 7);
+        SetInt(serialized, "_batchPatternIndexEnd", 8);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[GOAP_BATCH] added GoapCombinedDefenseRegressionDriveDebugSetup to scene");
         return defense;
     }
 

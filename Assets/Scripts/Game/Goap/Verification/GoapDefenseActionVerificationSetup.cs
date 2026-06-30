@@ -32,6 +32,10 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         GoapDefenseLayoutPatternId pattern) =>
         ProductionSelectionResolveModeAtApply;
 
+    protected virtual GoapProductionSelectionResolveMode ResolveDriveProductionSelectionModeForPattern(
+        GoapDefenseLayoutPatternId pattern) =>
+        GoapProductionSelectionResolveMode.LastPlanCosts;
+
     [Header("検証モード")]
     [Tooltip("ON=DefensivePositioning の候補を ActionUnderTest のみにする（単体動作検証）")]
     [SerializeField] private bool _verificationOnlyDefenseAction = true;
@@ -290,16 +294,18 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
                     if (UsesProductionSelectionDuringDrive)
                     {
+                        GoapProductionSelectionResolveMode driveResolveMode =
+                            ResolveDriveProductionSelectionModeForPattern(pattern);
                         yield return WaitForProductionPlanCostsCoroutine(
                             ProductionSelectionPlanCostsTimeoutSeconds,
                             DriveProductionSelectionExpectation,
-                            GoapProductionSelectionResolveMode.LastPlanCosts);
+                            driveResolveMode);
                         EvaluateProductionSelectionForPattern(
                             pattern,
                             index + 1,
                             total,
                             DriveProductionSelectionExpectation,
-                            GoapProductionSelectionResolveMode.LastPlanCosts,
+                            driveResolveMode,
                             "drive");
                     }
 
