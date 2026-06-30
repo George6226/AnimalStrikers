@@ -27,9 +27,9 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-defense-tactical` | 守備戦術 #4-#6 | 約2分 |
 | `batch-defense-combined` | 守備統合本番選出 #2-#6 | 約3分 |
 | `batch-defense-combined-drive` | 守備統合ドライブ #7-#8 | 約2分 |
-| `batch-defense-drive` | 守備ドライブ #7-#8 | 約2分 |
-| `batch` | 上記8バッチ連続 | 約17分 |
-| `all` | EditMode + 8バッチ（CI 相当） | 約16-20分 |
+| `batch-defense-drive` | 守備ドライブ #7-#8（Phase 6 MTD単体・任意） | 約2分 |
+| `batch` | 上記7バッチ連続 | 約15分 |
+| `all` | EditMode + 7バッチ（CI 相当） | 約15-18分 |
 
 設定の単一ソース: `scripts/ci/goap-ci-config.sh`
 
@@ -55,7 +55,9 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `defenseTactical` | #4-#6 守備戦術 | SELECTION 3/3 |
 | `defenseCombined` | #2-#6 守備統合本番選出 | SELECTION 5/5 |
 | `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
-| `defenseDrive` | #7-#8 守備ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
+| `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
+
+`mode=all` / `batch` では `defenseCombinedDrive` が #7/#8 のドライブ検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。
 
@@ -109,6 +111,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `107` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `112` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `2400` | バッチの timeout 秒 |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |

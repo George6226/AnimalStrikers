@@ -37,9 +37,9 @@ goap_ci_print_usage() {
   echo "  batch-defense-tactical  defenseTactical 守備戦術のみ" >&2
   echo "  batch-defense-combined  defenseCombined 守備統合本番選出のみ" >&2
   echo "  batch-defense-combined-drive  defenseCombinedDrive 守備統合ドライブのみ" >&2
-  echo "  batch-defense-drive     defenseDrive 守備ドライブのみ" >&2
-  echo "  batch           上記8バッチ連続" >&2
-  echo "  all             EditMode + 8バッチ（CI 相当・約16-20分）" >&2
+  echo "  batch-defense-drive     defenseDrive 守備ドライブのみ（Phase 6 MTD単体・任意）" >&2
+  echo "  batch           上記7バッチ連続（defenseDrive は含まない）" >&2
+  echo "  all             EditMode + 7バッチ（CI 相当・約15-18分）" >&2
 }
 
 goap_ci_mode_valid() {
@@ -71,6 +71,9 @@ goap_ci_batch_profiles_for_mode() {
     IFS='|' read -r token _ _ _ _ <<< "${entry}"
     case "${mode}" in
       batch|all)
+        # defenseDrive (#7/#8 MTD単体) は defenseCombinedDrive と重複。
+        # Docker 連続実行時に 8 本目でハング→timeout(124) する事例があるため all/batch から除外。
+        [[ "${token}" == "defenseDrive" ]] && continue
         echo "${token}"
         ;;
       batch-combined)
