@@ -26,6 +26,14 @@ public class SquadControlController : MonoBehaviour
     [SerializeField] private List<GoapGoalSO> _goapPilotGoals = new List<GoapGoalSO>();
     [SerializeField] private List<GoapActionSO> _goapPilotActions = new List<GoapActionSO>();
 
+    [Header("Phase M0: メイン NPC GOAP 検証")]
+    [Tooltip("ON=Human操作を止め slot0 をメインNPC GOAP、slot1/2 をサブNPC GOAP として検証する")]
+    [SerializeField] private bool _mainNpcGoapVerifyMode;
+    [Tooltip("メイン NPC として GOAP を動かす編成スロット（検証中は 0=CF 固定推奨）")]
+    [SerializeField] private int _mainNpcFormationSlot;
+    [SerializeField] private List<GoapGoalSO> _goapMainNpcGoals = new List<GoapGoalSO>();
+    [SerializeField] private List<GoapActionSO> _goapMainNpcActions = new List<GoapActionSO>();
+
     [Header("段階4 役割分担（2体が重ならない）")]
     [SerializeField] private bool _enableStage4RoleDifferentiation = true;
 
@@ -51,9 +59,11 @@ public class SquadControlController : MonoBehaviour
 
     public int HumanFormationSlot => _humanFormationSlot;
     public int GoapPilotFormationSlot => _goapPilotFormationSlot;
+    public bool MainNpcGoapVerifyModeActive => _mainNpcGoapVerifyMode;
 
 #if UNITY_EDITOR
     private const string DefensiveGoalAssetPath = "Assets/Scripts/Game/Goap/Goals/Goals/DefensivePositioningGoalSO.asset";
+    private const string TeamBallSupportGoalAssetPath = "Assets/Scripts/Game/Goap/Goals/Goals/TeamBallSupportGoalSO.asset";
     private const string MarkOpponentActionAssetPath = "Assets/Scripts/Game/Goap/GoapActions/GoapActions/DefenseActions/MarkOpponentActionSO.asset";
     private const string BlockPassLaneActionAssetPath = "Assets/Scripts/Game/Goap/GoapActions/GoapActions/DefenseActions/BlockPassLaneActionSO.asset";
     private const string BlockShotLaneActionAssetPath = "Assets/Scripts/Game/Goap/GoapActions/GoapActions/DefenseActions/BlockShotLaneActionSO.asset";
@@ -64,6 +74,7 @@ public class SquadControlController : MonoBehaviour
     private void Reset()
     {
         EnsurePilotAssetsAssigned();
+        EnsureMainNpcAssetsAssigned();
     }
 #endif
 
@@ -71,7 +82,9 @@ public class SquadControlController : MonoBehaviour
     {
 #if UNITY_EDITOR
         EnsurePilotAssetsAssigned();
+        EnsureMainNpcAssetsAssigned();
 #endif
+        SyncMainNpcVerifyEnvironment();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -94,7 +107,7 @@ public class SquadControlController : MonoBehaviour
             _printedValidationBootLog = true;
             Debug.Log($"[Stage2/Monitor] started enabled={_enableStage2ValidationLog} delay={_validationStartDelay:F1}s " +
                       $"stage3AllNpcs={_goapAllTeammateFieldNpcs} stage4Roles={_enableStage4RoleDifferentiation} " +
-                      $"pilotSlot={_goapPilotFormationSlot}");
+                      $"pilotSlot={_goapPilotFormationSlot} mainNpcVerify={_mainNpcGoapVerifyMode} mainSlot={_mainNpcFormationSlot}");
         }
 
         if (!_enableStage2ValidationLog)
@@ -125,6 +138,11 @@ public class SquadControlController : MonoBehaviour
 
     private void OnValidate()
     {
+#if UNITY_EDITOR
+        EnsurePilotAssetsAssigned();
+        EnsureMainNpcAssetsAssigned();
+#endif
+        SyncMainNpcVerifyEnvironment();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -176,7 +194,7 @@ public class SquadControlController : MonoBehaviour
             return false;
         }
 
-        if (_goapPilotGoals == null || _goapPilotGoals.Count == 0)
+        if (!_mainNpcGoapVerifyMode && (_goapPilotGoals == null || _goapPilotGoals.Count == 0))
         {
             return false;
         }
@@ -191,6 +209,11 @@ public class SquadControlController : MonoBehaviour
         {
             return assignment.Role == AnimalControlRole.TeammateNpc
                 || assignment.Role == AnimalControlRole.Human;
+        }
+
+        if (GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return assignment.Role == AnimalControlRole.TeammateNpc;
         }
 
         if (assignment.Role != AnimalControlRole.TeammateNpc)
@@ -215,15 +238,32 @@ public class SquadControlController : MonoBehaviour
     public bool ShouldUseGoapPilotFor(AnimalFacade facade) => ShouldUseGoapFor(facade);
 
     /// <summary>段階2: GoapAgent にゴール・アクションを注入（1回だけ）。</summary>
-    public void ApplyGoapPilotConfiguration(GoapAgent agent)
+    public void ApplyGoapPilotConfiguration(GoapAgent agent, AnimalFacade facade = null)
     {
-        if (agent == null || _goapPilotGoals == null || _goapPilotGoals.Count == 0)
+        if (agent == null)
         {
             return;
         }
 
-        agent.ConfigurePilot(_goapPilotGoals, _goapPilotActions, _goapPlanningInterval);
+        GoapNpcTier tier = facade != null ? ResolveNpcTier(facade) : GoapNpcTier.Sub;
+        IReadOnlyList<GoapGoalSO> goals = tier == GoapNpcTier.Main ? _goapMainNpcGoals : _goapPilotGoals;
+        IReadOnlyList<GoapActionSO> actions = tier == GoapNpcTier.Main ? _goapMainNpcActions : _goapPilotActions;
+
+        if (!_mainNpcGoapVerifyMode && tier == GoapNpcTier.Sub
+            && (goals == null || goals.Count == 0))
+        {
+            return;
+        }
+
+        agent.ConfigurePilot(
+            goals ?? new List<GoapGoalSO>(),
+            actions ?? new List<GoapActionSO>(),
+            _goapPlanningInterval,
+            tier);
     }
+
+    public GoapNpcTier ResolveNpcTier(AnimalFacade facade) =>
+        GoapMainNpcVerifyEnvironment.ResolveTier(facade);
 
     public AnimalFacade GetGoapPilotFacade()
     {
@@ -469,6 +509,34 @@ public class SquadControlController : MonoBehaviour
         }
     }
 
+    private void EnsureMainNpcAssetsAssigned()
+    {
+        if (_goapMainNpcGoals == null)
+        {
+            _goapMainNpcGoals = new List<GoapGoalSO>();
+        }
+
+        if (_goapMainNpcActions == null)
+        {
+            _goapMainNpcActions = new List<GoapActionSO>();
+        }
+
+        _goapMainNpcGoals.RemoveAll(g => g == null);
+        _goapMainNpcActions.RemoveAll(a => a == null);
+
+        if (_goapMainNpcGoals.Count == 0)
+        {
+            AddIfNotNull(_goapMainNpcGoals, UnityEditor.AssetDatabase.LoadAssetAtPath<GoapGoalSO>(TeamBallSupportGoalAssetPath));
+        }
+
+        if (_goapMainNpcActions.Count == 0)
+        {
+            AddIfNotNull(_goapMainNpcActions, UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(GetOpenActionAssetPath));
+            AddIfNotNull(_goapMainNpcActions, UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(CreateSupportAngleActionAssetPath));
+            AddIfNotNull(_goapMainNpcActions, UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(MakeRunBehindActionAssetPath));
+        }
+    }
+
     private static void AddIfNotNull<T>(List<T> list, T value) where T : class
     {
         if (value != null && !list.Contains(value))
@@ -558,7 +626,7 @@ public class SquadControlController : MonoBehaviour
     /// </summary>
     public void SetActiveHumanPlayer(AnimalFacade activeHuman)
     {
-        if (GoapBatchVerifyEnvironment.IsActive)
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive)
         {
             return;
         }
@@ -614,6 +682,42 @@ public class SquadControlController : MonoBehaviour
         RefreshLocalSquadRoles();
     }
 
+    /// <summary>Phase M0: Human 操作を止め slot0=Main / slot1-2=Sub GOAP 検証ロールへ切り替える。</summary>
+    public void RefreshLocalSquadRolesForMainNpcVerify()
+    {
+        if (!_mainNpcGoapVerifyMode)
+        {
+            return;
+        }
+
+        ResetGoapPilotConfigurations();
+        RefreshLocalSquadRoles();
+    }
+
+    private void SyncMainNpcVerifyEnvironment()
+    {
+        GoapMainNpcVerifyEnvironment.Sync(_mainNpcGoapVerifyMode, _mainNpcFormationSlot);
+        if (_mainNpcGoapVerifyMode && Application.isPlaying)
+        {
+            RefreshLocalSquadRolesForMainNpcVerify();
+        }
+    }
+
+    private void ResetGoapPilotConfigurations()
+    {
+        _goapConfiguredFacades.Clear();
+        foreach (var facade in _pendingLocalAllies)
+        {
+            if (facade == null)
+            {
+                continue;
+            }
+
+            var router = facade.GetComponent<AnimalControlBrainRouter>();
+            router?.ResetGoapConfiguration();
+        }
+    }
+
     private void RefreshLocalSquadRoles()
     {
         foreach (var facade in _pendingLocalAllies.ToList())
@@ -624,12 +728,22 @@ public class SquadControlController : MonoBehaviour
                 continue;
             }
 
-            AnimalControlRole role = GoapBatchVerifyEnvironment.IsActive && !facade.IsGK()
+            AnimalControlRole role = ShouldForceTeammateNpcForGoapVerify(facade)
                 ? AnimalControlRole.TeammateNpc
                 : ResolveRole(facade);
             ApplyRole(facade, role);
             TryConfigureGoapPilot(facade);
         }
+    }
+
+    private static bool ShouldForceTeammateNpcForGoapVerify(AnimalFacade facade)
+    {
+        if (facade == null || facade.IsGK())
+        {
+            return false;
+        }
+
+        return GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive;
     }
 
     private AnimalControlRole ResolveRole(AnimalFacade facade)
@@ -658,7 +772,7 @@ public class SquadControlController : MonoBehaviour
             return;
         }
 
-        ApplyGoapPilotConfiguration(goap);
+        ApplyGoapPilotConfiguration(goap, facade);
         _goapConfiguredFacades.Add(facade);
     }
 

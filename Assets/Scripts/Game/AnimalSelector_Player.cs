@@ -14,6 +14,11 @@ public class AnimalSelector_Player : AnimalSelector_Base
 
     public void Update()
     {
+        if (GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
         var teamFacade = TeamFacade.Instance;
         var ballManager = teamFacade != null ? teamFacade.BallManager : null;
         var state = ballManager != null ? ballManager.State : null;
@@ -71,6 +76,11 @@ public class AnimalSelector_Player : AnimalSelector_Base
 
     protected override void OnSelectAnimalChanged(AnimalFacade newFacade)
     {
+        if (GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
         var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
         squad?.SetActiveHumanPlayer(newFacade);
     }

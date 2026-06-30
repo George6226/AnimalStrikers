@@ -74,6 +74,7 @@ public class GoapAgent : MonoBehaviour
     private bool _ballOwnerLayoutInitialized;
     private Vector3 _lastTrackedBallOwnerPosition;
     private int _lastTrackedBallOwnerId;
+    private GoapNpcTier _npcTier = GoapNpcTier.Sub;
     [Header("Failure Cooldown")]
     [SerializeField] private float _baseFailureCooldown = 0.2f;
     [SerializeField] private float _maxFailureCooldown = 1.2f;
@@ -634,10 +635,10 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        if (GoapBatchVerifyEnvironment.IsActive)
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive)
         {
-            var squadDuringBatch = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
-            return squadDuringBatch == null || squadDuringBatch.ShouldUseGoapFor(facade);
+            var squadDuringVerify = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+            return squadDuringVerify == null || squadDuringVerify.ShouldUseGoapFor(facade);
         }
 
         if (IsActiveHumanSelectedPlayer(facade))
@@ -674,7 +675,7 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        if (GoapBatchVerifyEnvironment.IsActive)
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive)
         {
             return false;
         }
@@ -844,7 +845,7 @@ public class GoapAgent : MonoBehaviour
         // DebugLogger.Log($"[{this.name}(GoapAgent)] 選択されたゴール: '{bestGoal.GoalName}' のプラン生成を開始");
         
         // 現在の状態を更新する(推論用)/選択されたゴールに対してプランを生成
-        var goalActions = GoapTeammateNpcCatalog.FilterActionsForGoal(bestGoal, _availableActions);
+        var goalActions = FilterActionsForGoal(bestGoal, _availableActions);
         if (goalActions == null || goalActions.Count == 0)
         {
             SetPlanningFailure("EmptyActions", $"goal={bestGoal.GoalName}, scopedActions=0");
@@ -906,7 +907,7 @@ public class GoapAgent : MonoBehaviour
         }
 
         string missingFacts = BuildMissingFactsSummary(bestGoal);
-        int scopedCount = GoapTeammateNpcCatalog.FilterActionsForGoal(bestGoal, _availableActions)?.Count ?? 0;
+        int scopedCount = FilterActionsForGoal(bestGoal, _availableActions)?.Count ?? 0;
         SetPlanningFailure("NoPlanFromPlanner", $"goal={bestGoal.GoalName}, plannerPlans=0, missingFacts={missingFacts}, actions={scopedCount}");
         return (null, bestGoal);
     }
@@ -979,7 +980,7 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        var goalActions = GoapTeammateNpcCatalog.FilterActionsForGoal(goal, _availableActions);
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
         if (!TeammateNpcSupportPlanning.TryBuildForcedTacticalSupportPlan(
                 _playerBlackboard, goalActions, out var forcedPlan)
             || forcedPlan == null
@@ -1011,7 +1012,7 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        var goalActions = GoapTeammateNpcCatalog.FilterActionsForGoal(goal, _availableActions);
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
         if (!TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(
                 _playerBlackboard, goalActions, out var forcedPlan)
             || forcedPlan == null
@@ -1302,16 +1303,30 @@ public class GoapAgent : MonoBehaviour
             || (_currentPlan != null && _currentPlan.Count > 0));
 
     /// <summary>段階2パイロット用: ゴール・アクション・再計画間隔を注入する。</summary>
-    public void ConfigurePilot(IReadOnlyList<GoapGoalSO> goals, IReadOnlyList<GoapActionSO> actions, float planningInterval)
+    public void ConfigurePilot(
+        IReadOnlyList<GoapGoalSO> goals,
+        IReadOnlyList<GoapActionSO> actions,
+        float planningInterval,
+        GoapNpcTier npcTier = GoapNpcTier.Sub)
     {
+        _npcTier = npcTier;
+
         if (goals != null && goals.Count > 0)
         {
             _availableGoals = goals.Where(g => g != null).ToList();
+        }
+        else if (goals != null)
+        {
+            _availableGoals = new List<GoapGoalSO>();
         }
 
         if (actions != null && actions.Count > 0)
         {
             _availableActions = actions.Where(a => a != null).ToList();
+        }
+        else if (actions != null)
+        {
+            _availableActions = new List<GoapActionSO>();
         }
 
         EnsurePilotFallbackSet();
@@ -1324,9 +1339,17 @@ public class GoapAgent : MonoBehaviour
         _sameFailureStreak = 0;
         _nextAllowedReplanTime = 0f;
         _ballContextInitialized = false;
-        _lastPlanSummary = $"Configured(goals={_availableGoals.Count}, actions={_availableActions.Count}, interval={_planningInterval:F1})";
+        _lastPlanSummary =
+            $"Configured(tier={_npcTier}, goals={_availableGoals.Count}, actions={_availableActions.Count}, interval={_planningInterval:F1})";
         AbortCurrentPlan();
     }
+
+    public GoapNpcTier DebugNpcTier => _npcTier;
+
+    private List<GoapActionSO> FilterActionsForGoal(GoapGoalSO goal, List<GoapActionSO> actions) =>
+        _npcTier == GoapNpcTier.Main
+            ? GoapMainNpcCatalog.FilterActionsForGoal(goal, actions)
+            : GoapTeammateNpcCatalog.FilterActionsForGoal(goal, actions);
 
     private static bool IsMovementActionStaleReject(GoapActionRuntime action)
     {
@@ -1359,7 +1382,12 @@ public class GoapAgent : MonoBehaviour
             _availableActions = new List<GoapActionSO>();
         }
 
-        // 味方NPC: 移動のみの GOAP セット（パス/シュート系は除外）
+        if (_npcTier == GoapNpcTier.Main)
+        {
+            GoapMainNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
+            return;
+        }
+
         GoapTeammateNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
     }
 

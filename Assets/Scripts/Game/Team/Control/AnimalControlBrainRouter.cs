@@ -46,10 +46,15 @@ public class AnimalControlBrainRouter : MonoBehaviour
     public void ApplyRole(AnimalControlRole role)
     {
         bool useGoap = role == AnimalControlRole.TeammateNpc && ShouldUseGoapPilot();
-        if (GoapBatchVerifyEnvironment.IsActive && _facade != null)
+        if ((GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive) && _facade != null)
         {
             var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
             useGoap = squad != null && squad.ShouldUseGoapFor(_facade);
+        }
+
+        if (GoapMainNpcVerifyEnvironment.RequiresBootstrap)
+        {
+            useGoap = false;
         }
 
         if (useGoap)
@@ -58,6 +63,11 @@ public class AnimalControlBrainRouter : MonoBehaviour
         }
 
         _goap.SetActive(useGoap);
+    }
+
+    public void ResetGoapConfiguration()
+    {
+        _goapConfigured = false;
     }
 
     private bool ShouldUseGoapPilot()
@@ -79,7 +89,7 @@ public class AnimalControlBrainRouter : MonoBehaviour
             return;
         }
 
-        squad.ApplyGoapPilotConfiguration(_goap.Agent);
+        squad.ApplyGoapPilotConfiguration(_goap.Agent, _facade);
         _goapConfigured = true;
     }
 }
