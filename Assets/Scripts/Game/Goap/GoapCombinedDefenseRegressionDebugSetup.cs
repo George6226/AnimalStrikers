@@ -29,16 +29,14 @@ public class GoapCombinedDefenseRegressionDebugSetup : GoapDefenseActionVerifica
 
     protected override GoapProductionSelectionResolveMode ResolveProductionSelectionModeForPattern(
         GoapDefenseLayoutPatternId pattern) =>
-        pattern is GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane
-            or GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane
+        pattern == GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane
             ? GoapProductionSelectionResolveMode.LastPlanCosts
-            : GoapProductionSelectionResolveMode.FirstPlanCosts;
+            : GoapProductionSelectionResolveMode.MinCostFirstPlanCosts;
 
     protected override float ProductionSelectionPlanCostsTimeoutSeconds => 80f;
 
     protected override bool RequiresExpectedActionMatchForReady(GoapDefenseLayoutPatternId pattern) =>
-        pattern is GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane
-            or GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane;
+        pattern is GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane;
 
     protected override void ApplyCompanionVerificationState(GoapDefenseLayoutPatternId pattern)
     {

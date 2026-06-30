@@ -113,9 +113,12 @@ public static class GoapDefenseProductionSelectionEvaluator
             && !string.IsNullOrEmpty(action)
             && !action.StartsWith("empty", StringComparison.Ordinal))
         {
-            source = resolveMode == GoapProductionSelectionResolveMode.LastPlanCosts
-                ? "PlanCosts:last"
-                : "PlanCosts:first";
+            source = resolveMode switch
+            {
+                GoapProductionSelectionResolveMode.LastPlanCosts => "PlanCosts:last",
+                GoapProductionSelectionResolveMode.MinCostFirstPlanCosts => "PlanCosts:min-first",
+                _ => "PlanCosts:first",
+            };
             return true;
         }
 

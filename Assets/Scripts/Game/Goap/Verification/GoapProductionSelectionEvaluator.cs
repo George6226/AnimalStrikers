@@ -7,6 +7,8 @@ public enum GoapProductionSelectionResolveMode
     FirstPlanCosts,
     /// <summary>観測ウィンドウ内の最新 PlanCosts（ドライブ中本番選出検証）。</summary>
     LastPlanCosts,
+    /// <summary>最初の PlanCosts 行の actionCosts 最小コスト（#6 等の再プラン前スナップショット）。</summary>
+    MinCostFirstPlanCosts,
     /// <summary>最新の ActionStart を優先（旧挙動）。</summary>
     LastActionStart,
 }
@@ -125,6 +127,11 @@ public static class GoapProductionSelectionEvaluator
         if (resolveMode == GoapProductionSelectionResolveMode.LastPlanCosts)
         {
             return TryResolveLastPlanCosts(lines, slot, playerId, out action, out source);
+        }
+
+        if (resolveMode == GoapProductionSelectionResolveMode.MinCostFirstPlanCosts)
+        {
+            return TryResolveMinCostFirstPlanCosts(lines, slot, playerId, out action, out source);
         }
 
         for (int i = lines.Count - 1; i >= 0; i--)
@@ -301,6 +308,122 @@ public static class GoapProductionSelectionEvaluator
         }
 
         return false;
+    }
+
+    private static bool TryResolveMinCostFirstPlanCosts(
+        IList<string> lines,
+        int slot,
+        int? playerId,
+        out string action,
+        out string source)
+    {
+        action = null;
+        source = null;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]") || !line.Contains("PlanCosts("))
+            {
+                continue;
+            }
+
+            if (!line.Contains($"slot={slot},") && !line.Contains($"slot={slot} "))
+            {
+                continue;
+            }
+
+            if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
+            {
+                continue;
+            }
+
+            if (TryParseMinCostAction(line, out string candidate))
+            {
+                action = candidate;
+                source = "PlanCosts:min-first";
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryParseMinCostAction(string line, out string action)
+    {
+        action = null;
+        const string marker = "actionCosts=";
+        int start = line.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += marker.Length;
+        int end = line.IndexOf(", planCandidates=", start, StringComparison.Ordinal);
+        if (end < 0)
+        {
+            end = line.IndexOf(')', start);
+        }
+
+        if (end <= start)
+        {
+            return false;
+        }
+
+        string costs = line.Substring(start, end - start);
+        float bestCost = float.MaxValue;
+        string bestAction = null;
+        foreach (string token in costs.Split(','))
+        {
+            int colon = token.LastIndexOf(':');
+            if (colon <= 0 || colon >= token.Length - 1)
+            {
+                continue;
+            }
+
+            string name = token.Substring(0, colon).Trim();
+            if (!float.TryParse(token.Substring(colon + 1), out float cost))
+            {
+                continue;
+            }
+
+            if (cost < bestCost
+                || (Math.Abs(cost - bestCost) < 0.001f
+                    && ActionTieRank(name) < ActionTieRank(bestAction)))
+            {
+                bestCost = cost;
+                bestAction = name;
+            }
+        }
+
+        action = bestAction;
+        return !string.IsNullOrEmpty(action);
+    }
+
+    private static int ActionTieRank(string actionName)
+    {
+        if (string.Equals(actionName, "MoveToDefensivePosition", StringComparison.Ordinal))
+        {
+            return 0;
+        }
+
+        if (string.Equals(actionName, "MarkOpponent", StringComparison.Ordinal))
+        {
+            return 1;
+        }
+
+        if (string.Equals(actionName, "BlockShotLane", StringComparison.Ordinal))
+        {
+            return 2;
+        }
+
+        if (string.Equals(actionName, "BlockPassLane", StringComparison.Ordinal))
+        {
+            return 3;
+        }
+
+        return 10;
     }
 
     private static string ExtractSelectedActionFromPlanCosts(string line)

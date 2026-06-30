@@ -305,7 +305,7 @@ public static class TeammateNpcDefensePlanning
         return ComputePassLaneBlockUrgencyFromGeometry(geo, fieldLen);
     }
 
-    /// <summary>パスレーン遮断の主担当（味方中最も urgency が高い）か。</summary>
+    /// <summary>パスレーン遮断の主担当（レーン上で最も近い、urgency 0.75+ の味方）か。</summary>
     public static bool IsPrimaryPassLaneBlocker(PlayerBlackboard bb)
     {
         float selfUrgency = ComputePassLaneBlockUrgency(bb);
@@ -320,6 +320,13 @@ public static class TeammateNpcDefensePlanning
             return true;
         }
 
+        if (!TryComputePassLaneInterceptDistance(bb.PhysicalState.Position, teamBB, out float selfDist))
+        {
+            return true;
+        }
+
+        float fieldLen = teamBB.FieldInfo.FieldLength;
+        float margin = fieldLen * 0.025f;
         Vector3 selfPos = bb.PhysicalState.Position;
         foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
         {
@@ -328,14 +335,91 @@ public static class TeammateNpcDefensePlanning
                 continue;
             }
 
-            float allyUrgency = ComputePassLaneBlockUrgencyAt(allyPos, teamBB);
-            if (allyUrgency > selfUrgency + 0.02f)
+            if (ComputePassLaneBlockUrgencyAt(allyPos, teamBB) < 0.75f)
+            {
+                continue;
+            }
+
+            if (TryComputePassLaneInterceptDistance(allyPos, teamBB, out float allyDist)
+                && allyDist + margin < selfDist)
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private static bool TryComputePassLaneInterceptDistance(
+        Vector3 playerPos,
+        TeamBlackboard teamBB,
+        out float distance)
+    {
+        distance = float.MaxValue;
+        if (!TryEvaluatePassLaneGeometryAt(playerPos, teamBB, out PassLaneGeometry geo))
+        {
+            return false;
+        }
+
+        Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
+        Vector3 passTarget = default;
+        float passTargetDist = float.MaxValue;
+        float markThreshold = teamBB.FieldInfo.FieldLength * 0.15f;
+        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
+        {
+            if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
+            {
+                continue;
+            }
+
+            bool isMarked = false;
+            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            {
+                if (Vector3.Distance(allyPos, playerPos) < 0.1f)
+                {
+                    continue;
+                }
+
+                if (Vector3.Distance(allyPos, enemyPos) <= markThreshold)
+                {
+                    isMarked = true;
+                    break;
+                }
+            }
+
+            if (isMarked)
+            {
+                continue;
+            }
+
+            float distFromOwner = Vector3.Distance(enemyPos, ownerPos);
+            if (distFromOwner < passTargetDist)
+            {
+                passTargetDist = distFromOwner;
+                passTarget = enemyPos;
+            }
+        }
+
+        if (passTargetDist >= float.MaxValue * 0.5f)
+        {
+            return false;
+        }
+
+        Vector3 passDir = passTarget - ownerPos;
+        passDir.y = 0f;
+        if (passDir.sqrMagnitude < 0.01f)
+        {
+            return false;
+        }
+
+        float laneLength = passDir.magnitude;
+        passDir /= laneLength;
+        Vector3 ownerToPlayer = playerPos - ownerPos;
+        ownerToPlayer.y = 0f;
+        float along = Mathf.Clamp(Vector3.Dot(ownerToPlayer, passDir), 0f, laneLength);
+        Vector3 closest = ownerPos + passDir * along;
+        distance = Vector3.Distance(playerPos, closest);
+        return geo.LaneAlign > 0.1f;
     }
 
     /// <summary>0〜1。高いほど BlockPassLane が MTD より適切。</summary>
@@ -354,6 +438,12 @@ public static class TeammateNpcDefensePlanning
     /// <summary>パスレーン遮断が優先なら MTD に委譲ペナルティを付与（0.1 下限の同点化を防ぐ）。</summary>
     public static float ComputePassLaneDelegationPenalty(PlayerBlackboard bb)
     {
-        return ComputePassLaneBlockUrgency(bb) * 0.6f;
+        float urgency = ComputePassLaneBlockUrgency(bb);
+        if (urgency < 0.75f)
+        {
+            return 0f;
+        }
+
+        return urgency * 0.9f;
     }
 }

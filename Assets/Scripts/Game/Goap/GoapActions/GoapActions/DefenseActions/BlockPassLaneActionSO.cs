@@ -173,14 +173,28 @@ public class BlockPassLaneActionSO : GoapActionSO
             }
         }
 
+        if (shotDangerScore >= 0.45f && laneAlign < 0.3f)
+        {
+            totalAdjustment += 1.4f;
+        }
+
         float blockUrgency = TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(bb);
-        if (blockUrgency < 0.75f)
+        if (shotDangerScore >= 0.45f && blockUrgency < 0.95f)
+        {
+            totalAdjustment += 1.35f;
+        }
+
+        if (blockUrgency < 0.88f)
         {
             totalAdjustment += 1.25f;
         }
         else if (!TeammateNpcDefensePlanning.IsPrimaryPassLaneBlocker(bb))
         {
-            totalAdjustment += 1.75f;
+            totalAdjustment += 0.95f;
+        }
+        else if (blockUrgency >= 0.85f)
+        {
+            totalAdjustment -= 0.45f;
         }
 
         return totalAdjustment;
