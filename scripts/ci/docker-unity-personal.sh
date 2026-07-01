@@ -26,8 +26,38 @@ unity_docker_write_license_file() {
   echo "${license_file}"
 }
 
+unity_docker_prepare_environment() {
+  export HOME="${HOME:-/root}"
+  mkdir -p \
+    "${HOME}/.cache/unity3d" \
+    "${HOME}/.local/share/unity3d/Unity" \
+    "${HOME}/.config/unity3d"
+}
+
 unity_docker_activate_personal() {
   local log_file="${1:-/project/Logs/ci-unity-activate.log}"
+  unity_docker_prepare_environment
+  local attempt
+  for attempt in 1 2 3; do
+    if unity_docker_activate_personal_once "${log_file}" "${attempt}"; then
+      return 0
+    fi
+
+    if [[ "${attempt}" -lt 3 ]]; then
+      echo "[goap-ci] license activation attempt ${attempt} failed; retrying in 15s" >&2
+      unity_docker_remove_license_file
+      sleep 15
+    fi
+  done
+
+  echo "[goap-ci] license activation failed after 3 attempts; see ${log_file}" >&2
+  unity_docker_print_log_tail "${log_file}"
+  return 1
+}
+
+unity_docker_activate_personal_once() {
+  local log_file="${1:-/project/Logs/ci-unity-activate.log}"
+  local attempt="${2:-1}"
   local -a cmd=(unity-editor -batchmode -nographics -quit -logFile "${log_file}")
   local wrote_license="false"
 
@@ -53,10 +83,10 @@ unity_docker_activate_personal() {
     return 2
   fi
 
-  echo "[goap-ci] activating Unity Personal (timeout 180s)"
+  echo "[goap-ci] activating Unity Personal (timeout 180s, attempt=${attempt})"
   timeout 180 "${cmd[@]}"
 
-  if grep -q "aborting activation\|License activation has failed\|serial invalid\|No valid Unity Editor license" "${log_file}" 2>/dev/null; then
+  if grep -q "aborting activation\|License activation has failed\|serial invalid\|No valid Unity Editor license\|Failed to activate entitlement license\|Failed to activate ULF license\|Access token is unavailable" "${log_file}" 2>/dev/null; then
     echo "[goap-ci] license activation failed; see ${log_file}" >&2
     tail -30 "${log_file}" >&2 || true
     return 1
