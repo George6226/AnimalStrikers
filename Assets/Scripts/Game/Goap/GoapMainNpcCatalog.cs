@@ -4,26 +4,36 @@ using Game.Goap.Goals;
 using UnityEngine;
 
 /// <summary>
-/// メイン NPC 向け GOAP（攻撃判断・ボール追跡・Phase M1 パス/シュート）。
+/// メイン NPC 向け GOAP（M1: パス/シュート、M2: パス後サポート・ルーズボール追跡）。
 /// </summary>
 public static class GoapMainNpcCatalog
 {
     public static bool IsAllowedGoal(GoapGoalSO goal)
     {
         return goal is FreeBallRecoveryGoalSO
-            || goal is BallPossessionAttackGoalSO;
+            || goal is BallPossessionAttackGoalSO
+            || goal is TeamBallSupportGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
     {
         return action is MoveToFreeBallActionSO
             || action is PassToTeammateActionSO
-            || action is ShootAtGoalActionSO;
+            || action is ShootAtGoalActionSO
+            || IsTeamBallSupportAction(action);
     }
 
     public static bool IsBallPossessionAttackAction(GoapActionSO action)
     {
         return action is PassToTeammateActionSO or ShootAtGoalActionSO;
+    }
+
+    public static bool IsTeamBallSupportAction(GoapActionSO action)
+    {
+        return action is MoveToSupportPositionActionSO
+            or GetOpenActionSO
+            or CreateSupportAngleActionSO
+            or MakeRunBehindActionSO;
     }
 
     public static List<GoapActionSO> FilterActionsForGoal(GoapGoalSO goal, List<GoapActionSO> actions)
@@ -36,6 +46,11 @@ public static class GoapMainNpcCatalog
         if (goal is BallPossessionAttackGoalSO)
         {
             return actions.Where(IsBallPossessionAttackAction).ToList();
+        }
+
+        if (goal is TeamBallSupportGoalSO)
+        {
+            return actions.Where(IsTeamBallSupportAction).ToList();
         }
 
         if (goal is FreeBallRecoveryGoalSO)
@@ -62,9 +77,14 @@ public static class GoapMainNpcCatalog
         actions.RemoveAll(a => a == null || !IsAllowedAction(a));
 
         EnsureGoal<FreeBallRecoveryGoalSO>(goals);
+        EnsureGoal<TeamBallSupportGoalSO>(goals);
         EnsureGoal<BallPossessionAttackGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
+        EnsureAction<MoveToSupportPositionActionSO>(actions);
+        EnsureAction<GetOpenActionSO>(actions);
+        EnsureAction<CreateSupportAngleActionSO>(actions);
+        EnsureAction<MakeRunBehindActionSO>(actions);
         EnsureAction<PassToTeammateActionSO>(actions);
         EnsureAction<ShootAtGoalActionSO>(actions);
 

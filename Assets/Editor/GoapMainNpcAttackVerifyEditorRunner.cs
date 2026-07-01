@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// CLI: Unity -goapMainNpcAttackVerify で M1 Main NPC Pass/Shoot 検証 Play を実行する。
+/// CLI: Unity -goapMainNpcAttackVerify で M1/M2 Main NPC Pass/Shoot + パス後サポート検証 Play を実行する。
 /// </summary>
 public static class GoapMainNpcAttackVerifyEditorRunner
 {
@@ -18,7 +18,6 @@ public static class GoapMainNpcAttackVerifyEditorRunner
     private const string StartedMarkerFileName = "goap-main-npc-attack-started.marker";
 
     private static bool _handlersRegistered;
-    private static bool _playRequested;
     private static bool _shutdownRequested;
     private static double _playEnteredAt;
     private static string _summaryPath;
@@ -69,7 +68,6 @@ public static class GoapMainNpcAttackVerifyEditorRunner
                 EditorSceneManager.OpenScene(ScenePath);
             }
 
-            _playRequested = true;
             Debug.Log("[GOAP_M1_ATTACK_RUNNER] entering play mode");
             EditorApplication.EnterPlaymode();
         }
@@ -153,8 +151,12 @@ public static class GoapMainNpcAttackVerifyEditorRunner
     {
         if (state == PlayModeStateChange.EnteredPlayMode)
         {
-            _playEnteredAt = EditorApplication.timeSinceStartup;
-            Debug.Log("[GOAP_M1_ATTACK_RUNNER] entered play mode");
+            if (!_shutdownRequested)
+            {
+                _playEnteredAt = EditorApplication.timeSinceStartup;
+                Debug.Log("[GOAP_M1_ATTACK_RUNNER] entered play mode");
+            }
+
             return;
         }
 
@@ -177,11 +179,6 @@ public static class GoapMainNpcAttackVerifyEditorRunner
         {
             Debug.LogError("[GOAP_M1_ATTACK_RUNNER] timeout");
             CompleteRun(false, "timeout");
-            if (EditorApplication.isPlaying)
-            {
-                EditorApplication.isPlaying = false;
-            }
-
             return;
         }
 
@@ -199,10 +196,9 @@ public static class GoapMainNpcAttackVerifyEditorRunner
         if (summary.Contains("ActionStart(action=PassToTeammate", StringComparison.Ordinal)
             || summary.Contains("ActionStart(action=ShootAtGoal", StringComparison.Ordinal))
         {
-            CompleteRun(true, "main_npc_attack_action_started");
-            if (EditorApplication.isPlaying)
+            if (MainNpcPostPassPlanning.VerifyMainNpcPostPassSupportStarted(summary))
             {
-                EditorApplication.isPlaying = false;
+                CompleteRun(true, "main_npc_post_pass_support_started");
             }
         }
     }
@@ -213,6 +209,7 @@ public static class GoapMainNpcAttackVerifyEditorRunner
 
         if (TryConsumePendingExit(out int exitCode))
         {
+            UnregisterHandlers();
             Debug.Log($"[GOAP_M1_ATTACK_RUNNER] exiting after play mode ended (code={exitCode})");
             EditorApplication.delayCall += () => EditorApplication.Exit(exitCode);
         }
@@ -244,15 +241,28 @@ public static class GoapMainNpcAttackVerifyEditorRunner
         }
 
         _shutdownRequested = true;
-        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.update -= OnUpdate;
-        _handlersRegistered = false;
 
-        if (!EditorApplication.isPlaying)
+        if (EditorApplication.isPlaying)
         {
-            CleanupMarkerFiles();
-            EditorApplication.Exit(exitCode);
+            EditorApplication.isPlaying = false;
+            return;
         }
+
+        UnregisterHandlers();
+        CleanupMarkerFiles();
+        EditorApplication.Exit(exitCode);
+    }
+
+    private static void UnregisterHandlers()
+    {
+        if (!_handlersRegistered)
+        {
+            return;
+        }
+
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        _handlersRegistered = false;
     }
 
     private static void ResetLogsForNewRun()
