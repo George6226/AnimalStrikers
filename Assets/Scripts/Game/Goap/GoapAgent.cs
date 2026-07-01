@@ -720,7 +720,8 @@ public class GoapAgent : MonoBehaviour
             var resolvedPlan = bestPlan.plan;
             if (resolvedPlan.Count == 0
                 && (TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan)
-                    || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)))
+                    || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)
+                    || TryConvertEmptyPlanToForcedMainAttack(bestPlan.goal, ref resolvedPlan)))
             {
                 bestPlan.plan = resolvedPlan;
             }
@@ -942,7 +943,9 @@ public class GoapAgent : MonoBehaviour
             
             DebugLogger.Log($"[{this.name}(GoapAgent)] プラン: {string.Join(" -> ", plan.Select(a => a.ActionName))} コスト: {totalCost:F2}");
 
-            if (totalCost < lowestCost)
+            if (totalCost < lowestCost
+                || (Mathf.Abs(totalCost - lowestCost) < 0.001f
+                    && ShouldPreferDefensePlanOnCostTie(plan, bestPlan)))
             {
                 lowestCost = totalCost;
                 bestPlan = plan;
@@ -957,7 +960,8 @@ public class GoapAgent : MonoBehaviour
 
         if (emptyPlan != null
             && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
-            && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard))
+            && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
+            && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1027,6 +1031,38 @@ public class GoapAgent : MonoBehaviour
         return true;
     }
 
+    private bool TryConvertEmptyPlanToForcedMainAttack(GoapGoalSO goal, ref Queue<GoapActionSO> plan)
+    {
+        if (plan == null || plan.Count > 0 || goal == null)
+        {
+            return false;
+        }
+
+        if (goal is not BallPossessionAttackGoalSO)
+        {
+            return false;
+        }
+
+        if (!MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
+        {
+            return false;
+        }
+
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
+        if (!MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                _playerBlackboard, goalActions, out var forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedMainAttackPlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
+        return true;
+    }
+
     private static bool TryBuildForcedTacticalPlanForGoal(
         PlayerBlackboard bb,
         List<GoapActionSO> goalActions,
@@ -1037,7 +1073,12 @@ public class GoapAgent : MonoBehaviour
             return true;
         }
 
-        return TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan);
+        if (TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan))
+        {
+            return true;
+        }
+
+        return MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, goalActions, out plan);
     }
 
     /// <summary>
@@ -1354,6 +1395,48 @@ public class GoapAgent : MonoBehaviour
     private static bool IsMovementActionStaleReject(GoapActionRuntime action)
     {
         return GoapTeammateNpcCatalog.IsTacticalMoveRuntime(action);
+    }
+
+    /// <summary>パスレーン遮断が急なとき、同コストなら MTD より専用守備アクションを優先する。</summary>
+    private bool ShouldPreferDefensePlanOnCostTie(Queue<GoapActionSO> candidate, Queue<GoapActionSO> currentBest)
+    {
+        if (candidate == null || candidate.Count == 0 || currentBest == null || currentBest.Count == 0)
+        {
+            return false;
+        }
+
+        if (TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(_playerBlackboard) < 0.75f)
+        {
+            return false;
+        }
+
+        return DefenseActionCostTieRank(candidate.Peek()) < DefenseActionCostTieRank(currentBest.Peek());
+    }
+
+    private static int DefenseActionCostTieRank(GoapActionSO action)
+    {
+        string name = action != null ? action.ActionName : string.Empty;
+        if (name == "BlockPassLane")
+        {
+            return 0;
+        }
+
+        if (name == "MarkOpponent")
+        {
+            return 1;
+        }
+
+        if (name == "BlockShotLane")
+        {
+            return 2;
+        }
+
+        if (name == "MoveToDefensivePosition")
+        {
+            return 3;
+        }
+
+        return 10;
     }
 
     private static string GetRuntimeDebugName(GoapActionSO actionSO)

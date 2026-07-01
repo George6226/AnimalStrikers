@@ -4,23 +4,26 @@ using Game.Goap.Goals;
 using UnityEngine;
 
 /// <summary>
-/// メイン NPC 向け GOAP（攻撃判断・ボール追跡。パス/シュートは Phase M1 以降で追加）。
+/// メイン NPC 向け GOAP（攻撃判断・ボール追跡・Phase M1 パス/シュート）。
 /// </summary>
 public static class GoapMainNpcCatalog
 {
     public static bool IsAllowedGoal(GoapGoalSO goal)
     {
         return goal is FreeBallRecoveryGoalSO
-            || goal is TeamBallSupportGoalSO;
+            || goal is BallPossessionAttackGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
     {
         return action is MoveToFreeBallActionSO
-            || action is MoveToSupportPositionActionSO
-            || action is GetOpenActionSO
-            || action is CreateSupportAngleActionSO
-            || action is MakeRunBehindActionSO;
+            || action is PassToTeammateActionSO
+            || action is ShootAtGoalActionSO;
+    }
+
+    public static bool IsBallPossessionAttackAction(GoapActionSO action)
+    {
+        return action is PassToTeammateActionSO or ShootAtGoalActionSO;
     }
 
     public static List<GoapActionSO> FilterActionsForGoal(GoapGoalSO goal, List<GoapActionSO> actions)
@@ -30,15 +33,9 @@ public static class GoapMainNpcCatalog
             return actions ?? new List<GoapActionSO>();
         }
 
-        if (goal is TeamBallSupportGoalSO)
+        if (goal is BallPossessionAttackGoalSO)
         {
-            if (TeammateNpcSupportPlanning.VerificationOnlySupportAction != GoapSupportActionUnderTest.None)
-            {
-                string onlyName = TeammateNpcSupportPlanning.VerificationOnlySupportAction.ToActionName();
-                return actions.Where(a => a.ActionName == onlyName).ToList();
-            }
-
-            return actions.Where(GoapTeammateNpcCatalog.IsSupportAttackAction).ToList();
+            return actions.Where(IsBallPossessionAttackAction).ToList();
         }
 
         if (goal is FreeBallRecoveryGoalSO)
@@ -65,13 +62,11 @@ public static class GoapMainNpcCatalog
         actions.RemoveAll(a => a == null || !IsAllowedAction(a));
 
         EnsureGoal<FreeBallRecoveryGoalSO>(goals);
-        EnsureGoal<TeamBallSupportGoalSO>(goals);
+        EnsureGoal<BallPossessionAttackGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
-        EnsureAction<MoveToSupportPositionActionSO>(actions);
-        EnsureAction<GetOpenActionSO>(actions);
-        EnsureAction<CreateSupportAngleActionSO>(actions);
-        EnsureAction<MakeRunBehindActionSO>(actions);
+        EnsureAction<PassToTeammateActionSO>(actions);
+        EnsureAction<ShootAtGoalActionSO>(actions);
 
         foreach (GoapActionSO action in actions)
         {
