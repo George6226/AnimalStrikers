@@ -171,6 +171,28 @@ public sealed class GoapProductionSelectionExpectationsEditModeTests
         Assert.AreEqual(shouldMatch, matched, $"{actualAction} vs {expectedAction}");
     }
 
+    [Test]
+    public void DriveRegression_LastPlanCosts_IgnoresTrailingMoveToSupportPosition()
+    {
+        var lines = new List<string>
+        {
+            "[GOAP_SUMMARY] [Goap#-1000|owner=Gorilla(Clone),playerId=1002] PlanCosts(goal=TeamBallSupport, slot=1, actionCosts=CreateSupportAngle:0.10, selected=CreateSupportAngle:0.10)",
+            "[GOAP_SUMMARY] [Goap#-3256|owner=Boar(Clone),playerId=1003] PlanCosts(goal=TeamBallSupport, slot=2, actionCosts=CreateSupportAngle:0.10,GetOpen:1.11, selected=CreateSupportAngle:0.10)",
+            "[GOAP_SUMMARY] [Goap#-3256|owner=Boar(Clone),playerId=1003] PlanCosts(goal=TeamBallSupport, slot=2, actionCosts=MoveToSupportPosition:1.69,CreateSupportAngle:2.63,GetOpen:3.59, selected=MoveToSupportPosition:1.69)",
+        };
+
+        var result = GoapProductionSelectionEvaluator.EvaluatePattern(
+            GoapSupportLayoutPatternId.CfOwner_NearCorrectLanes_DriveForward,
+            GoapProductionSelectionExpectations.Drive,
+            lines,
+            slot => slot == 2 ? 1003 : null,
+            GoapProductionSelectionResolveMode.LastPlanCosts);
+
+        Assert.IsTrue(result.PatternPass);
+        Assert.AreEqual(2, result.PassCount);
+        Assert.That(result.DetailText, Does.Contain("CreateSupportAngle(PlanCosts:last-matching)"));
+    }
+
     private static bool MatchesExpectedAction(string expectedAction, string actualAction)
     {
         if (string.IsNullOrEmpty(expectedAction) || string.IsNullOrEmpty(actualAction))
