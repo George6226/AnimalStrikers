@@ -154,14 +154,17 @@ public sealed class GoapProductionSelectionExpectationsEditModeTests
     [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "GetOpen", true)]
     [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "CreateSupportAngle", true)]
     [TestCase(GoapSupportLayoutPatternId.CfOwner_AtCorrectLanes_DriveForwardBack, "MoveToSupportPosition", false)]
+    [TestCase(GoapSupportLayoutPatternId.LwOwner_WingHold_DriveForward, "GetOpen", true)]
+    [TestCase(GoapSupportLayoutPatternId.LwOwner_WingHold_DriveForward, "CreateSupportAngle", true)]
     public void DriveRegression_FlexibleWingSelection_AcceptsGetOpenOrCsa(
         GoapSupportLayoutPatternId pattern,
         string actualAction,
         bool shouldMatch)
     {
+        int slot = pattern == GoapSupportLayoutPatternId.LwOwner_WingHold_DriveForward ? 1 : 1;
         Assert.IsTrue(GoapProductionSelectionExpectations.Drive.TryGetExpectation(
             pattern,
-            1,
+            slot,
             out string expectedAction,
             out bool shouldEvaluate));
         Assert.IsTrue(shouldEvaluate);

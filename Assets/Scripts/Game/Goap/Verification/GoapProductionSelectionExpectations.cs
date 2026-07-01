@@ -212,7 +212,7 @@ public sealed class GoapCombinedSupportRegressionExpectation : IGoapProductionSe
 /// <summary>
 /// ドライブ本番選出: #13〜#18 の保持者移動中の最新 PlanCosts。
 /// #13〜#16: 翼=GetOpen または CreateSupportAngle（Docker CI でも翼ごとに選出が分かれうる）
-/// #17/#18: 翼保持と同様 slot0=MTS + 非保持翼=CSA
+/// #17/#18: 翼保持と同様 slot0=MTS + 非保持翼=GetOpen または CSA（ドライブ終盤の再プランを許容）
 /// </summary>
 public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSelectionExpectation
 {
@@ -263,7 +263,7 @@ public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSel
         }
 
         shouldEvaluate = true;
-        expectedAction = slot == 0 ? "MoveToSupportPosition" : "CreateSupportAngle";
+        expectedAction = slot == 0 ? "MoveToSupportPosition" : "GetOpen|CreateSupportAngle";
         return true;
     }
 }
