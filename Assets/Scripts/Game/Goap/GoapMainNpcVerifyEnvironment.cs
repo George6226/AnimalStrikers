@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -5,9 +6,25 @@ using UnityEngine;
 /// </summary>
 public static class GoapMainNpcVerifyEnvironment
 {
+    private const string CliFlag = "-goapMainNpcAttackVerify";
+
+    private static bool? _cliActive;
     private static bool _isActive;
     private static int _mainFormationSlot;
     private static bool _bootstrapComplete;
+
+    public static bool IsCliActive
+    {
+        get
+        {
+            if (!_cliActive.HasValue)
+            {
+                _cliActive = HasCliFlag();
+            }
+
+            return _cliActive.Value;
+        }
+    }
 
     public static bool IsActive => _isActive;
     public static int MainFormationSlot => _mainFormationSlot;
@@ -52,5 +69,18 @@ public static class GoapMainNpcVerifyEnvironment
             ? formationSlot.Index
             : -1;
         return slot == _mainFormationSlot ? GoapNpcTier.Main : GoapNpcTier.Sub;
+    }
+
+    private static bool HasCliFlag()
+    {
+        foreach (string arg in Environment.GetCommandLineArgs())
+        {
+            if (string.Equals(arg, CliFlag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

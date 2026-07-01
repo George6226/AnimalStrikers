@@ -23,24 +23,27 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-combined` | 静止本番選出 #2-#12 | 約2分 |
 | `batch-wing` | 翼ドライブ #17/#18 | 約2分 |
 | `batch-cf-drive` | CFドライブ #13-#16 | 約3分 |
+| `batch-main-npc-attack` | Main NPC 攻撃+パス後サポート (M1/M2) | 約2-3分 |
 | `batch-defense` | 守備基本 #2-#3 | 約2分 |
 | `batch-defense-tactical` | 守備戦術 #4-#6 | 約2分 |
 | `batch-defense-combined` | 守備統合本番選出 #2-#6 | 約3分 |
 | `batch-defense-combined-drive` | 守備統合ドライブ #7-#8 | 約2分 |
 | `batch-defense-drive` | 守備ドライブ #7-#8（Phase 6 MTD単体・任意） | 約2分 |
-| `batch` | 上記7バッチ連続 | 約15分 |
-| `all` | EditMode + 7バッチ（CI 相当） | 約15-18分 |
+| `batch` | 上記8バッチ連続 | 約16分 |
+| `all` | EditMode + 8バッチ（CI 相当） | 約16-20分 |
 
 設定の単一ソース: `scripts/ci/goap-ci-config.sh`
 
 ## 合格基準
 
-### EditMode（112 件）
+### EditMode（124 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
 - `GoapProductionSelectionExpectationsEditModeTests`
 - `GoapDefenseProductionSelectionExpectationsEditModeTests`
+- `GoapMainNpcCatalogEditModeTests`
+- `MainNpcPostPassPlanningEditModeTests`
 
 ### バッチ検証
 
@@ -51,13 +54,14 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `combined` | #2-#12 静止本番選出 | 11/11 |
 | `wingDrive` | #17/#18 翼ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `cfDrive` | #13-#16 CFドライブ | SELECTION 4/4 + RUNTIME 4/4 |
+| `mainNpcAttack` | Main NPC Pass/Shoot + パス後サポート | `PASS:` in `goap-main-npc-attack-result.txt` |
 | `defenseBaseline` | #2-#3 守備基本 | SELECTION 2/2 |
 | `defenseTactical` | #4-#6 守備戦術 | SELECTION 3/3 |
 | `defenseCombined` | #2-#6 守備統合本番選出 | SELECTION 5/5 |
 | `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
 
-`mode=all` / `batch` では `defenseCombinedDrive` が #7/#8 のドライブ検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
+`mode=all` / `batch` では `defenseCombinedDrive` が #7/#8 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。
 
@@ -111,6 +115,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `112` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `124` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `2400` | バッチの timeout 秒 |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |

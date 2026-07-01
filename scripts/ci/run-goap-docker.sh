@@ -111,7 +111,7 @@ done < <(goap_ci_batch_profiles_for_mode "\${MODE}")
 
 for token in "\${batch_tokens[@]}"; do
   goap_ci_resolve_batch_profile "\${token}"
-  goap_ci_clear_batch_markers /project/Logs
+  goap_ci_clear_profile_markers /project/Logs "${GOAP_PROFILE_TOKEN}"
   set +e
   run_batch_profile "\${GOAP_PROFILE_FLAG}" "\${GOAP_PROFILE_LOG_FILE}"
   batch_exit=\$?
