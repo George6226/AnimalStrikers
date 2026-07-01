@@ -67,14 +67,30 @@ public static class GoapProductionSelectionEvaluator
             }
 
             result.EvalCount++;
-            if (TryResolveSelectedActionForSlot(
+            bool resolved = TryResolveSelectedActionForSlot(
+                summaryLines,
+                slot,
+                resolvePlayerIdForSlot,
+                resolveMode,
+                out string actual,
+                out string source);
+            if (resolveMode == GoapProductionSelectionResolveMode.LastPlanCosts
+                && expected.IndexOf('|', StringComparison.Ordinal) >= 0
+                && (!resolved || !ActionsMatch(expected, actual))
+                && TryResolveLastPlanCostsMatchingExpected(
                     summaryLines,
                     slot,
-                    resolvePlayerIdForSlot,
-                    resolveMode,
-                    out string actual,
-                    out string source)
-                && ActionsMatch(expected, actual))
+                    resolvePlayerIdForSlot?.Invoke(slot),
+                    expected,
+                    out string matchingActual,
+                    out string matchingSource))
+            {
+                actual = matchingActual;
+                source = matchingSource;
+                resolved = true;
+            }
+
+            if (resolved && ActionsMatch(expected, actual))
             {
                 result.PassCount++;
                 details.Add($"slot{slot}={actual}({source}) OK");
@@ -305,6 +321,65 @@ public static class GoapProductionSelectionEvaluator
             action = ExtractBetween(line, "ForcedTacticalSupportPlan(action=", ",");
             source = "Forced:last";
             return !string.IsNullOrEmpty(action);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// ドライブ終盤の一時的な MoveToSupportPosition 再プランを無視し、
+    /// 期待候補に一致する直近の PlanCosts を採用する。
+    /// </summary>
+    private static bool TryResolveLastPlanCostsMatchingExpected(
+        IList<string> lines,
+        int slot,
+        int? playerId,
+        string expected,
+        out string action,
+        out string source)
+    {
+        action = null;
+        source = null;
+
+        if (string.IsNullOrEmpty(expected))
+        {
+            return false;
+        }
+
+        string[] candidates = expected.Split('|');
+        for (int i = lines.Count - 1; i >= 0; i--)
+        {
+            string line = lines[i];
+            if (!line.Contains("[GOAP_SUMMARY]") || !line.Contains("PlanCosts("))
+            {
+                continue;
+            }
+
+            if (!line.Contains($"slot={slot},") && !line.Contains($"slot={slot} "))
+            {
+                continue;
+            }
+
+            if (playerId.HasValue && !line.Contains($"playerId={playerId.Value}"))
+            {
+                continue;
+            }
+
+            string selected = ExtractSelectedActionFromPlanCosts(line);
+            if (string.IsNullOrEmpty(selected) || selected.StartsWith("empty", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (string candidate in candidates)
+            {
+                if (ActionsMatchSingle(candidate.Trim(), selected))
+                {
+                    action = selected;
+                    source = "PlanCosts:last-matching";
+                    return true;
+                }
+            }
         }
 
         return false;

@@ -92,7 +92,7 @@ public static class GoapDefenseLayoutPatternLibrary
 
             case GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane:
                 map[0] = ownGoal + ctx.Right * (ctx.FieldWidth * 0.12f);
-                map[1] = ctx.FieldCenter;
+                map[1] = ownGoal + ctx.ToGoal * (ctx.FieldLength * 0.08f);
                 map[2] = ctx.FieldCenter - ctx.Right * wingLane;
                 break;
         }

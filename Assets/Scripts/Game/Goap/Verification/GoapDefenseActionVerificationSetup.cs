@@ -32,6 +32,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         GoapDefenseLayoutPatternId pattern) =>
         ProductionSelectionResolveModeAtApply;
 
+    protected virtual bool SuppressAllyBallPickupDuringBatch => false;
+
     protected virtual GoapProductionSelectionResolveMode ResolveDriveProductionSelectionModeForPattern(
         GoapDefenseLayoutPatternId pattern) =>
         GoapProductionSelectionResolveMode.LastPlanCosts;
@@ -239,6 +241,9 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             GoapDiagnosticLog.WriteBanner(
                 $"BATCH_START range={_batchPatternIndexStart}-{_batchPatternIndexEnd} count={total}");
 
+            GoapDefenseVerificationBallHelper.SuppressAllyBallPickup =
+                _assignBallToEnemyOnApply && SuppressAllyBallPickupDuringBatch;
+
             yield return WaitForGameStateCoroutine(
                 GoapBatchVerifyEnvironment.ResolveTimeout(_batchWaitGameStateTimeoutSeconds, 180f));
             if (!IsGameState())
@@ -265,7 +270,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
                 if (_batchSettleSecondsAfterPatternApply > 0f && UsesProductionSelectionAtApply)
                 {
-                    yield return new WaitForSeconds(_batchSettleSecondsAfterPatternApply);
+                    yield return SettleAfterPatternApplyCoroutine(pattern);
                 }
 
                 if (UsesProductionSelectionAtApply)
@@ -338,6 +343,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         finally
         {
             StopActiveEnemyDrive();
+            GoapDefenseVerificationBallHelper.SuppressAllyBallPickup = false;
             TeammateNpcDefensePlanning.SetVerificationOnlyDefenseAction(GoapDefenseActionUnderTest.None);
 #if UNITY_EDITOR
             if (_stopPlayModeWhenBatchEnds && GoapBatchVerifyEnvironment.IsActive)
@@ -381,6 +387,25 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             TriggerAllyGoapReplan();
             yield return null;
             TriggerAllyGoapReplan();
+        }
+    }
+
+    private IEnumerator SettleAfterPatternApplyCoroutine(GoapDefenseLayoutPatternId pattern)
+    {
+        int enemyBallOwner = GoapDefenseLayoutPatternLibrary.GetEnemyBallOwnerIndex(pattern);
+        float elapsed = 0f;
+        while (elapsed < _batchSettleSecondsAfterPatternApply)
+        {
+            if (_assignBallToEnemyOnApply)
+            {
+                GoapDefenseVerificationBallHelper.TryAssignBallToEnemyIndex(
+                    enemyBallOwner,
+                    out _,
+                    out _);
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
         }
     }
 

@@ -45,7 +45,14 @@ public class AnimalCollider_Body : MonoBehaviour
             }
             else
             {
-                // 共通処理に委譲
+                var avatar = _animalFacade != null ? _animalFacade.GetAvatar() : null;
+                if (GoapDefenseVerificationBallHelper.SuppressAllyBallPickup
+                    && avatar != null
+                    && !avatar.tag.Equals(ConstData.ENEMY_TAG))
+                {
+                    return;
+                }
+
                 AcquireBallInternal(hBall);
             }
         }

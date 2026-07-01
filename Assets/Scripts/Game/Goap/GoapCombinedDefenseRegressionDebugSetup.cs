@@ -24,6 +24,8 @@ public class GoapCombinedDefenseRegressionDebugSetup : GoapDefenseActionVerifica
     protected override string ProductionSelectionVerificationBanner =>
         "Defense combined production selection (MTD + Mark + BlockPass + BlockShot)";
 
+    protected override bool SuppressAllyBallPickupDuringBatch => true;
+
     protected override GoapProductionSelectionResolveMode ProductionSelectionResolveModeAtApply =>
         GoapProductionSelectionResolveMode.LastPlanCosts;
 
