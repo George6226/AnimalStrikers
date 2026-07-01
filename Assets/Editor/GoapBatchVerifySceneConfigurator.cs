@@ -246,6 +246,10 @@ public static class GoapBatchVerifySceneConfigurator
         if (bootstrap != null)
         {
             bootstrap.enabled = false;
+            var serialized = new SerializedObject(bootstrap);
+            SetBool(serialized, "_enabled", false);
+            SetInt(serialized, "_ballTarget", (int)GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }
 

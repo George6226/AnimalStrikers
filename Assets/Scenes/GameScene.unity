@@ -6085,7 +6085,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: cb3980885922548babe53513ac69f311, type: 2}
   - {fileID: 11400000, guid: 2db41c10d91b04096af9e920192d1f47, type: 2}
   - {fileID: 11400000, guid: e91027066e9ce4eae9c2627fc5a4a46c, type: 2}
-  _mainNpcGoapVerifyMode: 1
+  _mainNpcGoapVerifyMode: 0
   _mainNpcFormationSlot: 0
   _goapMainNpcGoals:
   - {fileID: 11400000, guid: f1e2d3c4b5a64d8790e1f2a3b4c5d6e7, type: 2}
@@ -8513,7 +8513,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GoapMainNpcVerifyBootstrap
   _enabled: 1
   _requireMainNpcVerifyMode: 1
-  _ballTarget: 1
+  _ballTarget: 0
   _enemyBallOwnerIndex: 0
   _applyEnemyLayoutOnStart: 1
   _enemyLayouts: {fileID: 1158135302}

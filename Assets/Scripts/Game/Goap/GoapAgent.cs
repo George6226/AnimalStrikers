@@ -943,7 +943,9 @@ public class GoapAgent : MonoBehaviour
             
             DebugLogger.Log($"[{this.name}(GoapAgent)] プラン: {string.Join(" -> ", plan.Select(a => a.ActionName))} コスト: {totalCost:F2}");
 
-            if (totalCost < lowestCost)
+            if (totalCost < lowestCost
+                || (Mathf.Abs(totalCost - lowestCost) < 0.001f
+                    && ShouldPreferDefensePlanOnCostTie(plan, bestPlan)))
             {
                 lowestCost = totalCost;
                 bestPlan = plan;
@@ -1393,6 +1395,48 @@ public class GoapAgent : MonoBehaviour
     private static bool IsMovementActionStaleReject(GoapActionRuntime action)
     {
         return GoapTeammateNpcCatalog.IsTacticalMoveRuntime(action);
+    }
+
+    /// <summary>パスレーン遮断が急なとき、同コストなら MTD より専用守備アクションを優先する。</summary>
+    private bool ShouldPreferDefensePlanOnCostTie(Queue<GoapActionSO> candidate, Queue<GoapActionSO> currentBest)
+    {
+        if (candidate == null || candidate.Count == 0 || currentBest == null || currentBest.Count == 0)
+        {
+            return false;
+        }
+
+        if (TeammateNpcDefensePlanning.ComputePassLaneBlockUrgency(_playerBlackboard) < 0.75f)
+        {
+            return false;
+        }
+
+        return DefenseActionCostTieRank(candidate.Peek()) < DefenseActionCostTieRank(currentBest.Peek());
+    }
+
+    private static int DefenseActionCostTieRank(GoapActionSO action)
+    {
+        string name = action != null ? action.ActionName : string.Empty;
+        if (name == "BlockPassLane")
+        {
+            return 0;
+        }
+
+        if (name == "MarkOpponent")
+        {
+            return 1;
+        }
+
+        if (name == "BlockShotLane")
+        {
+            return 2;
+        }
+
+        if (name == "MoveToDefensivePosition")
+        {
+            return 3;
+        }
+
+        return 10;
     }
 
     private static string GetRuntimeDebugName(GoapActionSO actionSO)
