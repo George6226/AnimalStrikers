@@ -8320,7 +8320,7 @@ MonoBehaviour:
   _overlapMicroForwardRatio: 0.02
   _wingSideOwnerLateralRatio: 0.16
   _behindOwnerBackOffsetRatio: 0.08
-  _runBatchVerificationOnStart: 0
+  _runBatchVerificationOnStart: 1
   _batchHoldSecondsPerPattern: 12
   _batchWaitGameStateTimeoutSeconds: 120
   _batchSettleSecondsAfterGameState: 2
