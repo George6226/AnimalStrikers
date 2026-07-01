@@ -3,6 +3,10 @@ using UnityEngine;
 
 public static class GoapDefenseVerificationBallHelper
 {
+    /// <summary>
+    /// 守備バッチ検証中は味方のトリガー拾いを抑止（#6 中央配置で敵ボールを奪うと TeamBallSupport に化ける）。
+    /// </summary>
+    public static bool SuppressAllyBallPickup { get; set; }
     public static List<AnimalFacade> GetFieldEnemies()
     {
         var result = new List<AnimalFacade>();
