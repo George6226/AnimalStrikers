@@ -23,6 +23,8 @@ public class GoapCombinedDefenseTacticalDebugSetup : GoapDefenseActionVerificati
     protected override string ProductionSelectionVerificationBanner =>
         "Defense tactical production selection (Mark/BlockPass/BlockShot)";
 
+    protected override bool SuppressAllyBallPickupDuringBatch => true;
+
     protected override GoapDefenseActionUnderTest ResolveDefenseActionFilterForPattern(
         GoapDefenseLayoutPatternId pattern)
     {

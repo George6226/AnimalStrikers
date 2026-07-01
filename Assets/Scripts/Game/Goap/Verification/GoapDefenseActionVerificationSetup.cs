@@ -32,6 +32,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
         GoapDefenseLayoutPatternId pattern) =>
         ProductionSelectionResolveModeAtApply;
 
+    protected virtual bool SuppressAllyBallPickupDuringBatch => false;
+
     protected virtual GoapProductionSelectionResolveMode ResolveDriveProductionSelectionModeForPattern(
         GoapDefenseLayoutPatternId pattern) =>
         GoapProductionSelectionResolveMode.LastPlanCosts;
@@ -239,7 +241,8 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             GoapDiagnosticLog.WriteBanner(
                 $"BATCH_START range={_batchPatternIndexStart}-{_batchPatternIndexEnd} count={total}");
 
-            GoapDefenseVerificationBallHelper.SuppressAllyBallPickup = _assignBallToEnemyOnApply;
+            GoapDefenseVerificationBallHelper.SuppressAllyBallPickup =
+                _assignBallToEnemyOnApply && SuppressAllyBallPickupDuringBatch;
 
             yield return WaitForGameStateCoroutine(
                 GoapBatchVerifyEnvironment.ResolveTimeout(_batchWaitGameStateTimeoutSeconds, 180f));
