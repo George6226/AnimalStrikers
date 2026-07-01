@@ -720,7 +720,8 @@ public class GoapAgent : MonoBehaviour
             var resolvedPlan = bestPlan.plan;
             if (resolvedPlan.Count == 0
                 && (TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan)
-                    || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)))
+                    || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)
+                    || TryConvertEmptyPlanToForcedMainAttack(bestPlan.goal, ref resolvedPlan)))
             {
                 bestPlan.plan = resolvedPlan;
             }
@@ -957,7 +958,8 @@ public class GoapAgent : MonoBehaviour
 
         if (emptyPlan != null
             && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
-            && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard))
+            && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
+            && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1027,6 +1029,38 @@ public class GoapAgent : MonoBehaviour
         return true;
     }
 
+    private bool TryConvertEmptyPlanToForcedMainAttack(GoapGoalSO goal, ref Queue<GoapActionSO> plan)
+    {
+        if (plan == null || plan.Count > 0 || goal == null)
+        {
+            return false;
+        }
+
+        if (goal is not BallPossessionAttackGoalSO)
+        {
+            return false;
+        }
+
+        if (!MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
+        {
+            return false;
+        }
+
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
+        if (!MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                _playerBlackboard, goalActions, out var forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedMainAttackPlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
+        return true;
+    }
+
     private static bool TryBuildForcedTacticalPlanForGoal(
         PlayerBlackboard bb,
         List<GoapActionSO> goalActions,
@@ -1037,7 +1071,12 @@ public class GoapAgent : MonoBehaviour
             return true;
         }
 
-        return TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan);
+        if (TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan))
+        {
+            return true;
+        }
+
+        return MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, goalActions, out plan);
     }
 
     /// <summary>

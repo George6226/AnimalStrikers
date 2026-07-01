@@ -44,11 +44,21 @@ public class AnimalAction_Pass : AnimalAction_Base
         pass();
     }
 
-    // パスをおこなす
+    // パスをおこなう
     public void pass()
     {
+        pass(null);
+    }
+
+    public void pass(AnimalFacade explicitTarget)
+    {
         // 一番近くの味方を検索する
-        AnimalFacade ally = _animalPassSearch != null ? _animalPassSearch.FindAllyForPass(_myFacade) : null;
+        AnimalFacade ally = explicitTarget;
+        if (ally == null)
+        {
+            ally = _animalPassSearch != null ? _animalPassSearch.FindAllyForPass(_myFacade) : null;
+        }
+
         if (ally == null){
             Debug.Log("[AnimalAction_Pass]:パス相手がいない");
             return;

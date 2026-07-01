@@ -2,7 +2,19 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Phase M0: Main NPC 検証 Play 開始時に敵へボールを渡し、守備 GOAP 検証をすぐ始められるようにする。
+/// Phase M1: Main NPC 検証 Bootstrap のボール付与先。
+/// </summary>
+public enum GoapMainNpcVerifyBootstrapBallTarget
+{
+    /// <summary>M0: 敵へボール → サブ守備 GOAP 検証。</summary>
+    EnemyForDefenseVerify = 0,
+
+    /// <summary>M1: slot0 メイン NPC へボール → Pass/Shoot GOAP 検証。</summary>
+    MainNpcForAttackVerify = 1,
+}
+
+/// <summary>
+/// Phase M0/M1: Main NPC 検証 Play 開始時にボールを配置し GOAP 検証をすぐ始められるようにする。
 /// </summary>
 [DefaultExecutionOrder(-50)]
 public class GoapMainNpcVerifyBootstrap : MonoBehaviour
@@ -12,6 +24,8 @@ public class GoapMainNpcVerifyBootstrap : MonoBehaviour
     [SerializeField] private bool _enabled = true;
     [Tooltip("OFF のときは SquadControl の Main Npc Goap Verify Mode が ON のときだけ動く")]
     [SerializeField] private bool _requireMainNpcVerifyMode = true;
+    [SerializeField] private GoapMainNpcVerifyBootstrapBallTarget _ballTarget =
+        GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify;
     [SerializeField] private int _enemyBallOwnerIndex;
     [SerializeField] private bool _applyEnemyLayoutOnStart = true;
     [SerializeField] private GoapEnemyPositionDebugPatterns _enemyLayouts;
@@ -98,26 +112,37 @@ public class GoapMainNpcVerifyBootstrap : MonoBehaviour
         }
 
         float enemyElapsed = 0f;
-        while (enemyElapsed < _spawnWaitTimeoutSeconds && CountFieldEnemies() <= _enemyBallOwnerIndex)
+        if (_ballTarget == GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify)
         {
-            enemyElapsed += 0.25f;
-            yield return new WaitForSeconds(0.25f);
+            while (enemyElapsed < _spawnWaitTimeoutSeconds && CountFieldEnemies() <= _enemyBallOwnerIndex)
+            {
+                enemyElapsed += 0.25f;
+                yield return new WaitForSeconds(0.25f);
+            }
+
+            if (CountFieldEnemies() <= _enemyBallOwnerIndex)
+            {
+                Log($"aborted: fieldEnemies={CountFieldEnemies()} index={_enemyBallOwnerIndex} (timeout={_spawnWaitTimeoutSeconds:F0}s)");
+                FinishBootstrap();
+                yield break;
+            }
         }
 
-        if (CountFieldEnemies() <= _enemyBallOwnerIndex)
-        {
-            Log($"aborted: fieldEnemies={CountFieldEnemies()} index={_enemyBallOwnerIndex} (timeout={_spawnWaitTimeoutSeconds:F0}s)");
-            FinishBootstrap();
-            yield break;
-        }
-
-        if (_applyEnemyLayoutOnStart)
+        if (_ballTarget == GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify
+            && _applyEnemyLayoutOnStart)
         {
             ApplyEnemyLayout();
             SyncTeamBlackboardMemberPositions();
         }
 
-        yield return AssignBallToEnemyCoroutine();
+        if (_ballTarget == GoapMainNpcVerifyBootstrapBallTarget.MainNpcForAttackVerify)
+        {
+            yield return AssignBallToMainNpcCoroutine();
+        }
+        else
+        {
+            yield return AssignBallToEnemyCoroutine();
+        }
 
         if (_settleSecondsAfterAssign > 0f)
         {
@@ -126,7 +151,8 @@ public class GoapMainNpcVerifyBootstrap : MonoBehaviour
 
         SyncTeamBlackboardMemberPositions();
 
-        if (_invalidateDefensivePositionFacts)
+        if (_invalidateDefensivePositionFacts
+            && _ballTarget == GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify)
         {
             InvalidateAllyDefensivePositionFacts();
         }
@@ -207,6 +233,41 @@ public class GoapMainNpcVerifyBootstrap : MonoBehaviour
 
         Log($"AssignEnemyBall(index={_enemyBallOwnerIndex}) ok reason={reason} changed={ownershipChanged}");
         SyncTeamBlackboardMemberPositions();
+    }
+
+    private IEnumerator AssignBallToMainNpcCoroutine()
+    {
+        float elapsed = 0f;
+        while (elapsed < _ballAssignTimeoutSeconds && !IsBallAvailable())
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!IsBallAvailable())
+        {
+            Log("AssignMainNpcBall failed: ball_unavailable");
+            yield break;
+        }
+
+        int slot = ResolveMainNpcFormationSlot();
+        if (!GoapDefenseVerificationBallHelper.TryAssignBallToAllyFormationSlot(
+                slot,
+                out string reason,
+                out bool ownershipChanged))
+        {
+            Log($"AssignMainNpcBall(slot={slot}) failed: {reason}");
+            yield break;
+        }
+
+        Log($"AssignMainNpcBall(slot={slot}) ok reason={reason} changed={ownershipChanged}");
+        SyncTeamBlackboardMemberPositions();
+    }
+
+    private int ResolveMainNpcFormationSlot()
+    {
+        var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
+        return squad != null ? squad.MainNpcFormationSlot : 0;
     }
 
     private static void TriggerAllyGoapReplan()

@@ -88,4 +88,70 @@ public static class GoapDefenseVerificationBallHelper
         reason = $"enemy viewId={ownerViewId}";
         return true;
     }
+
+    public static AnimalFacade GetAllyByFormationSlot(int slot)
+    {
+        foreach (GoapSupportVerificationAllyHelper.AllySlot ally in GoapSupportVerificationAllyHelper.GetFieldAlliesBySlot())
+        {
+            if (ally.Slot == slot)
+            {
+                return ally.Facade;
+            }
+        }
+
+        return null;
+    }
+
+    public static bool TryAssignBallToAllyFormationSlot(int slot, out string reason, out bool ownershipChanged)
+    {
+        ownershipChanged = false;
+        reason = "unknown";
+
+        var teamFacade = TeamFacade.Instance;
+        if (teamFacade == null || teamFacade.BallManager == null)
+        {
+            reason = "BallManager_unavailable";
+            return false;
+        }
+
+        if (teamFacade.BallManager.Ball == null)
+        {
+            reason = "Ball_null";
+            return false;
+        }
+
+        AnimalFacade owner = GetAllyByFormationSlot(slot);
+        if (owner == null)
+        {
+            reason = $"allySlot{slot}_not_found";
+            return false;
+        }
+
+        PhotonAvatarContainerChild avatar = owner.GetAvatar();
+        if (avatar == null)
+        {
+            reason = "avatar_null";
+            return false;
+        }
+
+        int ownerViewId = avatar.ViewID;
+        if (teamFacade.BallManager.isHoldBall(ownerViewId)
+            && teamFacade.BallManager.State.BallState == BallManager_State.BALL_STATE.HOLD
+            && teamFacade.TeamBlackboard != null
+            && teamFacade.TeamBlackboard.BallInfo.TeamHasBall)
+        {
+            reason = $"already_ally_owned viewId={ownerViewId}";
+            return true;
+        }
+
+        if (!teamFacade.BallManager.changeOwnership(ownerViewId, BallManager_State.BALL_STATE.HOLD))
+        {
+            reason = "changeOwnership_failed";
+            return false;
+        }
+
+        ownershipChanged = true;
+        reason = $"ally viewId={ownerViewId} slot={slot}";
+        return true;
+    }
 }

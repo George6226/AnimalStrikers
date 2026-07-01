@@ -167,12 +167,22 @@ public class AStarPlanner
     // ゴール条件が満たされているか?(単一のゴール条件)
     bool IsGoalSatisfied(PlayerBlackboard playerBlackboard, GoapCondition goal)
     {
-        // PlayerBlackboardからゴール条件の現在の値を取得
+        // true/false デュアルキー Fact は "true" 側の意味値で比較する。
+        // "false" キーだけ見ると、hasBall=true のとき hasBall=false ゴールが誤って達成扱いになる。
+        var semanticFact = new Fact(goal.Tag, "true");
+        var semanticValue = playerBlackboard.GetFact(semanticFact);
+        if (semanticValue.HasValue)
+        {
+            DebugLogger.Log(
+                $"[{_agentName}(AStarPlanner)] ゴール '{goal.Tag}' の現在の値: {semanticValue.Value}, 期待値: {goal.ExpectedValue}");
+            return semanticValue.Value == goal.ExpectedValue;
+        }
+
         var factObj = new Fact(goal.Tag, goal.ExpectedValue.ToString().ToLower());
         var currentValue = playerBlackboard.GetFact(factObj);
 
         DebugLogger.Log($"[{_agentName}(AStarPlanner)] ゴール '{goal.Tag}' の現在の値: {currentValue}, 期待値: {goal.ExpectedValue}");
-        
+
         return currentValue == goal.ExpectedValue;
     }
 
