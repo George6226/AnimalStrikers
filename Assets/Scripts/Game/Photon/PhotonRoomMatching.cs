@@ -118,14 +118,15 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
                 return;
             }
 
-            PhotonNetwork.CreateRoom(
+            PhotonNetwork.JoinOrCreateRoom(
                 "GoapBatchVerify",
                 new RoomOptions
                 {
                     MaxPlayers = MAX_PLAYERS,
                     IsVisible = false,
                     IsOpen = false,
-                });
+                },
+                null);
             return;
         }
 

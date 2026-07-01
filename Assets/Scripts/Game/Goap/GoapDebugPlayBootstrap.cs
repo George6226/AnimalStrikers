@@ -120,40 +120,25 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         Log("batch verify: starting offline Photon session");
 
-        PhotonNetwork.OfflineMode = true;
         PhotonNetwork.IsMessageQueueRunning = true;
-        PhotonNetwork.ConnectUsingSettings();
-
-        float connectElapsed = 0f;
-        while (connectElapsed < ConnectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
+        var serverSettings = PhotonNetwork.PhotonServerSettings;
+        if (serverSettings == null)
         {
-            connectElapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        if (!PhotonNetwork.IsConnectedAndReady)
-        {
-            Log($"batch verify spawn aborted: Photon offline connect failed after {ConnectTimeoutSeconds:F0}s");
+            Log("batch verify spawn aborted: PhotonServerSettings missing");
             yield break;
         }
 
-        if (!PhotonNetwork.InRoom)
+        if (!PhotonNetwork.ConnectUsingSettings(serverSettings.AppSettings, startInOfflineMode: true))
         {
-            PhotonNetwork.CreateRoom(
-                "GoapBatchVerify",
-                new RoomOptions
-                {
-                    MaxPlayers = 2,
-                    IsVisible = false,
-                    IsOpen = false,
-                });
+            Log("batch verify spawn aborted: offline ConnectUsingSettings failed");
+            yield break;
+        }
 
-            float joinElapsed = 0f;
-            while (joinElapsed < SpawnWaitTimeoutSeconds && !PhotonNetwork.InRoom)
-            {
-                joinElapsed += _spawnCheckIntervalSeconds;
-                yield return new WaitForSeconds(_spawnCheckIntervalSeconds);
-            }
+        float joinElapsed = 0f;
+        while (joinElapsed < SpawnWaitTimeoutSeconds && !PhotonNetwork.InRoom)
+        {
+            joinElapsed += _spawnCheckIntervalSeconds;
+            yield return new WaitForSeconds(_spawnCheckIntervalSeconds);
         }
 
         if (!PhotonNetwork.InRoom)
