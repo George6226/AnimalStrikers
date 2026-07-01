@@ -40,6 +40,7 @@ public static class GoapBatchVerifySceneConfigurator
         ConfigureDefenseSetup(defenseDrive, profile == GoapBatchVerifyProfile.DefenseDrive);
         ConfigureDefenseSetup(defenseCombined, profile == GoapBatchVerifyProfile.DefenseCombined);
         ConfigureDefenseSetup(defenseCombinedDrive, profile == GoapBatchVerifyProfile.DefenseCombinedDrive);
+        ConfigureMainNpcVerifyForBatch();
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log(
@@ -220,6 +221,32 @@ public static class GoapBatchVerifySceneConfigurator
         }
 
         setup.enabled = active;
+
+        var serialized = new SerializedObject(setup);
+        SetBool(serialized, "_runBatchVerificationOnStart", active);
+        if (active)
+        {
+            SetBool(serialized, "_applyInitialLayoutOnStart", false);
+        }
+
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void ConfigureMainNpcVerifyForBatch()
+    {
+        var squad = Object.FindFirstObjectByType<SquadControlController>(FindObjectsInactive.Include);
+        if (squad != null)
+        {
+            var serialized = new SerializedObject(squad);
+            SetBool(serialized, "_mainNpcGoapVerifyMode", false);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        var bootstrap = Object.FindFirstObjectByType<GoapMainNpcVerifyBootstrap>(FindObjectsInactive.Include);
+        if (bootstrap != null)
+        {
+            bootstrap.enabled = false;
+        }
     }
 
     private static void ConfigureDefenseSetup(GoapDefenseActionVerificationSetup setup, bool active)

@@ -6076,9 +6076,23 @@ MonoBehaviour:
   _goapPilotFormationSlot: 1
   _goapPlanningInterval: 5
   _goapPilotGoals:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: f295affa4e26048b78c73eec1886d403, type: 2}
+  - {fileID: 11400000, guid: 286173aa9e044959b9c474b4f9c6ef79, type: 2}
   _goapPilotActions:
+  - {fileID: 11400000, guid: b7ad3b4f8e38446958f6f507a0ba1aed, type: 2}
+  - {fileID: 11400000, guid: 1558bab9f683c4e53a57dc769216603b, type: 2}
+  - {fileID: 11400000, guid: 0580905de755c404c8e8977df7e7534b, type: 2}
+  - {fileID: 11400000, guid: cb3980885922548babe53513ac69f311, type: 2}
   - {fileID: 11400000, guid: 2db41c10d91b04096af9e920192d1f47, type: 2}
+  - {fileID: 11400000, guid: e91027066e9ce4eae9c2627fc5a4a46c, type: 2}
+  _mainNpcGoapVerifyMode: 1
+  _mainNpcFormationSlot: 0
+  _goapMainNpcGoals:
+  - {fileID: 11400000, guid: 286173aa9e044959b9c474b4f9c6ef79, type: 2}
+  _goapMainNpcActions:
+  - {fileID: 11400000, guid: cb3980885922548babe53513ac69f311, type: 2}
+  - {fileID: 11400000, guid: 2db41c10d91b04096af9e920192d1f47, type: 2}
+  - {fileID: 11400000, guid: e91027066e9ce4eae9c2627fc5a4a46c, type: 2}
   _enableStage4RoleDifferentiation: 1
   _enableStage2ValidationLog: 0
   _validationStartDelay: 2
@@ -8192,6 +8206,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1987654321}
   - component: {fileID: 1987654327}
+  - component: {fileID: 1987654330}
   m_Layer: 0
   m_Name: GoapDebug
   m_TagString: Untagged
@@ -8257,7 +8272,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1987654324}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b7e2d4f6a8c9401e9f3b2a1d0c8e7f6a, type: 3}
   m_Name: 
@@ -8270,7 +8285,7 @@ MonoBehaviour:
   _assignBallToOwnerOnApply: 1
   _ballOwnerFormationSlot: 0
   _initialVerificationPattern: 2
-  _applyInitialLayoutOnStart: 1
+  _applyInitialLayoutOnStart: 0
   _initialApplyTimeoutSeconds: 90
   _customSlotPlacements:
   - Slot: 0
@@ -8485,6 +8500,29 @@ MonoBehaviour:
   _connectTimeoutSeconds: 30
   _spawnWaitTimeoutSeconds: 90
   _spawnCheckIntervalSeconds: 0.25
+--- !u!114 &1987654330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1987654320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c1b38ebaad242ffb9946ced6dea4b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GoapMainNpcVerifyBootstrap
+  _enabled: 1
+  _requireMainNpcVerifyMode: 1
+  _enemyBallOwnerIndex: 0
+  _applyEnemyLayoutOnStart: 1
+  _enemyLayouts: {fileID: 1158135302}
+  _enemyLayout: 5
+  _spawnWaitTimeoutSeconds: 90
+  _ballAssignTimeoutSeconds: 10
+  _settleSecondsAfterAssign: 1.5
+  _invalidateDefensivePositionFacts: 1
+  _triggerGoapReplanAfterAssign: 1
 --- !u!1 &2018197203
 GameObject:
   m_ObjectHideFlags: 3

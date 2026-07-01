@@ -265,9 +265,24 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
         return goal != action && (goal.Length + action.Length) > 18;
     }
 
-    /// <summary>1行目: ロール + ポジション（例: NPC·LW）</summary>
+    /// <summary>1行目: ロール + ポジション（例: NPC·LW / MAIN·CF）</summary>
     private string GetIdentityLine(AnimalControlRole role)
     {
+        if (GoapMainNpcVerifyEnvironment.IsActive && role == AnimalControlRole.TeammateNpc)
+        {
+            var facade = GetComponent<AnimalFacade>();
+            string tierTag = GoapMainNpcVerifyEnvironment.ResolveTier(facade) == GoapNpcTier.Main
+                ? "MAIN"
+                : "SUB";
+            string position = GetPositionTag();
+            if (string.IsNullOrEmpty(position) || position == tierTag)
+            {
+                return tierTag;
+            }
+
+            return $"{tierTag}·{position}";
+        }
+
         string roleTag = role switch
         {
             AnimalControlRole.Human => "YOU",
@@ -276,13 +291,13 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
             _ => "?",
         };
 
-        string position = GetPositionTag();
-        if (string.IsNullOrEmpty(position) || position == roleTag)
+        string positionTag = GetPositionTag();
+        if (string.IsNullOrEmpty(positionTag) || positionTag == roleTag)
         {
             return roleTag;
         }
 
-        return $"{roleTag}·{position}";
+        return $"{roleTag}·{positionTag}";
     }
 
     private string GetPositionTag()
