@@ -960,6 +960,7 @@ public class GoapAgent : MonoBehaviour
 
         if (emptyPlan != null
             && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
+            && !MainNpcPostPassPlanning.NeedsPostPassSupportMovement(_playerBlackboard)
             && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
             && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
         {
@@ -979,7 +980,8 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        if (!TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard))
+        if (!TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
+            && !MainNpcPostPassPlanning.NeedsPostPassSupportMovement(_playerBlackboard))
         {
             return false;
         }
@@ -994,7 +996,10 @@ public class GoapAgent : MonoBehaviour
         }
 
         plan = forcedPlan;
-        LogSummary("ForcedTacticalSupportPlan(action=" +
+        string reasonTag = MainNpcPostPassPlanning.NeedsPostPassSupportMovement(_playerBlackboard)
+            ? "ForcedMainPostPassSupportPlan"
+            : "ForcedTacticalSupportPlan";
+        LogSummary($"{reasonTag}(action=" +
             (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
         return true;
     }

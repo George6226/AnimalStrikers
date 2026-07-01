@@ -66,6 +66,8 @@ public class SquadControlController : MonoBehaviour
     private const string DefensiveGoalAssetPath = "Assets/Scripts/Game/Goap/Goals/Goals/DefensivePositioningGoalSO.asset";
     private const string BallPossessionAttackGoalAssetPath =
         "Assets/Scripts/Game/Goap/Goals/Goals/BallPossessionAttackGoalSO.asset";
+    private const string TeamBallSupportGoalAssetPath =
+        "Assets/Scripts/Game/Goap/Goals/Goals/TeamBallSupportGoalSO.asset";
     private const string MarkOpponentActionAssetPath = "Assets/Scripts/Game/Goap/GoapActions/GoapActions/DefenseActions/MarkOpponentActionSO.asset";
     private const string PassToTeammateActionAssetPath =
         "Assets/Scripts/Game/Goap/GoapActions/GoapActions/AttackActions/PassToTeammateActionSO.asset";
@@ -535,6 +537,9 @@ public class SquadControlController : MonoBehaviour
             AddIfNotNull(
                 _goapMainNpcGoals,
                 UnityEditor.AssetDatabase.LoadAssetAtPath<GoapGoalSO>(BallPossessionAttackGoalAssetPath));
+            AddIfNotNull(
+                _goapMainNpcGoals,
+                UnityEditor.AssetDatabase.LoadAssetAtPath<GoapGoalSO>(TeamBallSupportGoalAssetPath));
         }
 
         if (_goapMainNpcActions.Count == 0)
@@ -545,6 +550,15 @@ public class SquadControlController : MonoBehaviour
             AddIfNotNull(
                 _goapMainNpcActions,
                 UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(ShootAtGoalActionAssetPath));
+            AddIfNotNull(
+                _goapMainNpcActions,
+                UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(GetOpenActionAssetPath));
+            AddIfNotNull(
+                _goapMainNpcActions,
+                UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(CreateSupportAngleActionAssetPath));
+            AddIfNotNull(
+                _goapMainNpcActions,
+                UnityEditor.AssetDatabase.LoadAssetAtPath<GoapActionSO>(MakeRunBehindActionAssetPath));
         }
     }
 

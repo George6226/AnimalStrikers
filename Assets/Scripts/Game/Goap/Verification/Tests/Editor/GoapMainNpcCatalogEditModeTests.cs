@@ -7,7 +7,7 @@ using UnityEngine;
 public sealed class GoapMainNpcCatalogEditModeTests
 {
     [Test]
-    public void NormalizeLists_AddsAttackGoalsOnly()
+    public void NormalizeLists_AddsM2GoalsAndActions()
     {
         var goals = new List<GoapGoalSO>();
         var actions = new List<GoapActionSO>();
@@ -17,7 +17,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(goals, Has.All.Matches<GoapGoalSO>(GoapMainNpcCatalog.IsAllowedGoal));
         Assert.That(goals.Exists(g => g is BallPossessionAttackGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is FreeBallRecoveryGoalSO), Is.True);
-        Assert.That(goals.Exists(g => g is TeamBallSupportGoalSO), Is.False);
+        Assert.That(goals.Exists(g => g is TeamBallSupportGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is DefensivePositioningGoalSO), Is.False);
     }
 
@@ -35,6 +35,35 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is ShootAtGoalActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is GetOpenActionSO), Is.False);
+    }
+
+    [Test]
+    public void FilterActionsForGoal_TeamBallSupport_UsesSupportActionsOnly()
+    {
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapMainNpcCatalog.NormalizeLists(goals, actions);
+
+        var goal = goals.Find(g => g is TeamBallSupportGoalSO);
+        var filtered = GoapMainNpcCatalog.FilterActionsForGoal(goal, actions);
+
+        Assert.That(filtered, Has.All.Matches<GoapActionSO>(GoapMainNpcCatalog.IsTeamBallSupportAction));
+        Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.False);
+        Assert.That(filtered.Exists(a => a is GetOpenActionSO || a is CreateSupportAngleActionSO), Is.True);
+    }
+
+    [Test]
+    public void FilterActionsForGoal_FreeBallRecovery_UsesMoveToFreeBallOnly()
+    {
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapMainNpcCatalog.NormalizeLists(goals, actions);
+
+        var goal = goals.Find(g => g is FreeBallRecoveryGoalSO);
+        var filtered = GoapMainNpcCatalog.FilterActionsForGoal(goal, actions);
+
+        Assert.That(filtered, Has.Count.EqualTo(1));
+        Assert.That(filtered[0], Is.InstanceOf<MoveToFreeBallActionSO>());
     }
 
     [Test]
