@@ -28,6 +28,12 @@ public class GoapMainNpcVerifyBootstrap : MonoBehaviour
 
     private void OnEnable()
     {
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            GoapMainNpcVerifyEnvironment.MarkBootstrapComplete();
+            return;
+        }
+
         Log("component enabled");
         GoapDebugPlayBootstrap.SpawnReady += HandleSpawnReady;
         TryStartBootstrap();

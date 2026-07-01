@@ -696,8 +696,9 @@ public class SquadControlController : MonoBehaviour
 
     private void SyncMainNpcVerifyEnvironment()
     {
-        GoapMainNpcVerifyEnvironment.Sync(_mainNpcGoapVerifyMode, _mainNpcFormationSlot);
-        if (_mainNpcGoapVerifyMode && Application.isPlaying)
+        bool mainNpcVerifyActive = _mainNpcGoapVerifyMode && !GoapBatchVerifyEnvironment.IsActive;
+        GoapMainNpcVerifyEnvironment.Sync(mainNpcVerifyActive, _mainNpcFormationSlot);
+        if (mainNpcVerifyActive && Application.isPlaying)
         {
             RefreshLocalSquadRolesForMainNpcVerify();
         }

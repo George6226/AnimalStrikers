@@ -16,12 +16,22 @@ public static class GoapMainNpcVerifyEnvironment
 
     public static void Sync(bool active, int mainFormationSlot)
     {
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            active = false;
+        }
+
         bool wasActive = _isActive;
         _isActive = active;
         _mainFormationSlot = Mathf.Clamp(mainFormationSlot, 0, 2);
         if (!active || !wasActive)
         {
             _bootstrapComplete = false;
+        }
+
+        if (GoapBatchVerifyEnvironment.IsActive)
+        {
+            _bootstrapComplete = true;
         }
     }
 
