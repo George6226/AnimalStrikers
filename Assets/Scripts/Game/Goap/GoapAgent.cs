@@ -1114,8 +1114,31 @@ public class GoapAgent : MonoBehaviour
         string plansPart = BuildPlanCandidatesCostPart(plans, selectedPlan);
         string selectedPath = FormatPlanPath(selectedPlan);
         float selectedCost = ComputePlanTotalCost(selectedPlan);
+        string defenseDiagPart = BuildDefenseOverextensionDiagnosticPart(goal);
         LogSummary(
-            $"PlanCosts(goal={goalName}, slot={slot}, {overlapPart}{actionsPart}, {plansPart}, selected={selectedPath}:{selectedCost:F2})");
+            $"PlanCosts(goal={goalName}, slot={slot}, {defenseDiagPart}{overlapPart}{actionsPart}, {plansPart}, selected={selectedPath}:{selectedCost:F2})");
+    }
+
+    private string BuildDefenseOverextensionDiagnosticPart(GoapGoalSO goal)
+    {
+        if (goal == null
+            || goal.GoalName != "DefensivePositioning"
+            || _playerBlackboard == null)
+        {
+            return string.Empty;
+        }
+
+        TeammateNpcDefensePlanning.DefensiveRetreatOverextensionDiagnostic diagnostic =
+            TeammateNpcDefensePlanning.GetRetreatOverextensionDiagnostic(_playerBlackboard);
+        if (!diagnostic.HasSample)
+        {
+            return string.Empty;
+        }
+
+        return "defenseDiag="
+            + $"urgency:{diagnostic.RetreatUrgency:F2},"
+            + $"ahead:{diagnostic.AheadRatio:F2},"
+            + $"sigAhead:{diagnostic.IsSignificantlyAhead}, ";
     }
 
     /// <summary>TeamBallSupport 時: アクション別予測位置の重なりコスト（B の検証用）。</summary>
