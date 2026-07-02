@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Phase 7a 守備統合本番選出: MoveToDefensive + Mark + BlockPass + BlockShot がコスト競争。
-/// _batchPatternIndexStart/End = #2〜#6（5パターン）。verificationOnly=OFF。
+/// Phase 7a 守備統合本番選出: MTD + Mark + BlockPass + BlockShot + Retreat がコスト競争。
+/// バッチパターンは #2〜#6 + #9（6パターン）。verificationOnly=OFF。
 /// </summary>
 public class GoapCombinedDefenseRegressionDebugSetup : GoapDefenseActionVerificationSetup
 {
@@ -19,12 +20,15 @@ public class GoapCombinedDefenseRegressionDebugSetup : GoapDefenseActionVerifica
         GoapDefenseProductionSelectionExpectations.DefenseCombined;
 
     protected override string BatchVerificationBanner =>
-        "Defense combined production selection regression (#2-#6)";
+        "Defense combined production selection regression (#2-#6,#9)";
 
     protected override string ProductionSelectionVerificationBanner =>
-        "Defense combined production selection (MTD + Mark + BlockPass + BlockShot)";
+        "Defense combined production selection (MTD + Mark + BlockPass + BlockShot + Retreat)";
 
     protected override bool SuppressAllyBallPickupDuringBatch => true;
+
+    protected override List<GoapDefenseLayoutPatternId> BuildBatchPatternList() =>
+        GoapDefenseLayoutPatternCatalog.BuildDefenseCombinedSuite();
 
     protected override GoapProductionSelectionResolveMode ProductionSelectionResolveModeAtApply =>
         GoapProductionSelectionResolveMode.LastPlanCosts;
@@ -58,7 +62,8 @@ public class GoapCombinedDefenseRegressionDebugSetup : GoapDefenseActionVerifica
             GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies
                 or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield
                 or GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget
-                or GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane =>
+                or GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane
+                or GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine =>
                 GoapEnemyPositionDebugPatterns.LayoutPattern.PressBallOwner,
             GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane =>
                 GoapEnemyPositionDebugPatterns.LayoutPattern.DefensiveLine,

@@ -67,9 +67,10 @@ public class BlockShotLaneActionSO : GoapActionSO
         float normalizedDistance = Mathf.Clamp01(distanceToGoal / fieldLen);
         float dangerScore = 1f - normalizedDistance;
         const float minDangerForShotBlock = 0.52f;
+        float overextensionPenalty = TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
         if (dangerScore < minDangerForShotBlock)
         {
-            return 0.9f;
+            return 0.9f + overextensionPenalty;
         }
 
         float totalAdjustment = 0f;
@@ -106,7 +107,9 @@ public class BlockShotLaneActionSO : GoapActionSO
         float normalizedPlayerDistance = Mathf.Clamp01(playerDistanceToGoal / fieldLen);
         float proximityScore = 1f - normalizedPlayerDistance; // ゴール前で1.0、フィールド端で0.0
         totalAdjustment -= proximityScore * 0.5f; // 最大-0.5のコスト減（少し）
-        
+
+        totalAdjustment += overextensionPenalty;
+
         return totalAdjustment;
     }
 }

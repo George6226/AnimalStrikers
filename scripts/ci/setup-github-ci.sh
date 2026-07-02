@@ -67,7 +67,7 @@ cat <<EOF
    | cfDrive | CFドライブ #13-#16（SELECTION+RUNTIME 4/4） |
    | defenseBaseline | 守備基本 #2-#3（SELECTION 2/2） |
    | defenseTactical | 守備戦術 #4-#6,#9（SELECTION 4/4） |
-   | defenseCombined | 守備統合 #2-#6（SELECTION 5/5） |
+   | defenseCombined | 守備統合 #2-#6,#9（SELECTION 6/6） |
    | defenseCombinedDrive | 守備統合ドライブ #7-#8（SELECTION+RUNTIME 2/2） |
    | mainNpcAttack | Main NPC Pass/Shoot + パス後サポート（result.txt に PASS:） |
 

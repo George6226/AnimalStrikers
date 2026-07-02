@@ -197,6 +197,8 @@ public class BlockPassLaneActionSO : GoapActionSO
             totalAdjustment -= 0.45f;
         }
 
+        totalAdjustment += TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
+
         return totalAdjustment;
     }
 }
