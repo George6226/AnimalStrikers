@@ -11,6 +11,7 @@ public class AnimalControlBrainRouter : MonoBehaviour
     private AnimalFacade _facade;
     private AnimalGoapBrainComponents _goap;
     private bool _goapConfigured;
+    private bool _productionGoapActive;
 
     private void Awake()
     {
@@ -51,6 +52,14 @@ public class AnimalControlBrainRouter : MonoBehaviour
             var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
             useGoap = squad != null && squad.ShouldUseGoapFor(_facade);
         }
+        else if (GoapMainNpcProductionEnvironment.IsActive
+            && role == AnimalControlRole.Human
+            && _facade != null
+            && GoapMainNpcProductionEnvironment.IsProductionMainPlayer(_facade))
+        {
+            useGoap = false;
+            _productionGoapActive = false;
+        }
 
         if (GoapMainNpcVerifyEnvironment.RequiresBootstrap)
         {
@@ -63,6 +72,40 @@ public class AnimalControlBrainRouter : MonoBehaviour
         }
 
         _goap.SetActive(useGoap);
+    }
+
+    private void LateUpdate()
+    {
+        RefreshProductionMainNpcGoap();
+    }
+
+    private void RefreshProductionMainNpcGoap()
+    {
+        if (!GoapMainNpcProductionEnvironment.IsActive
+            || _facade == null
+            || _assignment == null
+            || !_assignment.IsHumanControlled)
+        {
+            _productionGoapActive = false;
+            return;
+        }
+
+        bool wantGoap = GoapMainNpcProductionEnvironment.ShouldEnableGoap(_goap.Blackboard, _facade);
+        if (wantGoap == _productionGoapActive)
+        {
+            return;
+        }
+
+        _productionGoapActive = wantGoap;
+        if (wantGoap)
+        {
+            _goapConfigured = false;
+            TryConfigureGoapPilot();
+            _goap.SetActive(true);
+            return;
+        }
+
+        _goap.SetActive(false);
     }
 
     public void ResetGoapConfiguration()

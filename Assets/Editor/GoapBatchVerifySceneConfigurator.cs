@@ -239,6 +239,7 @@ public static class GoapBatchVerifySceneConfigurator
         {
             var serialized = new SerializedObject(squad);
             SetBool(serialized, "_mainNpcGoapVerifyMode", false);
+            SetBool(serialized, "_enableMainNpcGoapInProduction", false);
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

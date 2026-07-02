@@ -67,6 +67,50 @@ public sealed class GoapMainNpcCatalogEditModeTests
     }
 
     [Test]
+    public void RestrictToOffBallProduction_RemovesM1GoalsAndActions()
+    {
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapMainNpcCatalog.NormalizeLists(goals, actions);
+
+        GoapMainNpcCatalog.RestrictToOffBallProduction(goals, actions);
+
+        Assert.That(goals.Exists(g => g is BallPossessionAttackGoalSO), Is.False);
+        Assert.That(goals.Exists(g => g is TeamBallSupportGoalSO), Is.True);
+        Assert.That(goals.Exists(g => g is FreeBallRecoveryGoalSO), Is.True);
+        Assert.That(actions.Exists(a => a is PassToTeammateActionSO), Is.False);
+        Assert.That(actions.Exists(a => a is MoveToSupportPositionActionSO), Is.True);
+    }
+
+    [Test]
+    public void ProductionEnvironment_ResolvesMainTierForHumanOnly()
+    {
+        GoapMainNpcProductionEnvironment.Sync(true);
+        var humanGo = new GameObject("human");
+        var npcGo = new GameObject("npc");
+        var humanAssignment = humanGo.AddComponent<AnimalControlAssignment>();
+        humanGo.AddComponent<AnimalFacade>();
+        npcGo.AddComponent<AnimalFacade>();
+
+        try
+        {
+            humanAssignment.SetRole(AnimalControlRole.Human);
+            Assert.That(GoapMainNpcProductionEnvironment.ResolveTier(humanGo.GetComponent<AnimalFacade>()),
+                Is.EqualTo(GoapNpcTier.Main));
+            Assert.That(GoapMainNpcProductionEnvironment.ResolveTier(npcGo.GetComponent<AnimalFacade>()),
+                Is.EqualTo(GoapNpcTier.Sub));
+            Assert.That(GoapMainNpcProductionEnvironment.IsProductionMainPlayer(humanGo.GetComponent<AnimalFacade>()),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(humanGo);
+            Object.DestroyImmediate(npcGo);
+            GoapMainNpcProductionEnvironment.Sync(false);
+        }
+    }
+
+    [Test]
     public void ResolveTier_MainNpcVerifyMode_UsesConfiguredSlot()
     {
         GoapMainNpcVerifyEnvironment.Sync(true, 0);

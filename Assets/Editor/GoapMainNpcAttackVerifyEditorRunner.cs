@@ -82,6 +82,7 @@ public static class GoapMainNpcAttackVerifyEditorRunner
         {
             var serialized = new SerializedObject(squad);
             SetBool(serialized, "_mainNpcGoapVerifyMode", true);
+            SetBool(serialized, "_enableMainNpcGoapInProduction", false);
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
