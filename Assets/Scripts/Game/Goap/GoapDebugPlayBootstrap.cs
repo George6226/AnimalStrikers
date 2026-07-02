@@ -21,10 +21,17 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
     [SerializeField] private float _spawnCheckIntervalSeconds = 0.25f;
 
     private float ConnectTimeoutSeconds =>
-        GoapBatchVerifyEnvironment.ResolveTimeout(_connectTimeoutSeconds, 60f);
+        UsesAutomatedVerifySpawn()
+            ? GoapBatchVerifyEnvironment.ResolveTimeout(_connectTimeoutSeconds, 60f)
+            : _connectTimeoutSeconds;
 
     private float SpawnWaitTimeoutSeconds =>
-        GoapBatchVerifyEnvironment.ResolveTimeout(_spawnWaitTimeoutSeconds, 180f);
+        UsesAutomatedVerifySpawn()
+            ? GoapBatchVerifyEnvironment.ResolveTimeout(_spawnWaitTimeoutSeconds, 180f)
+            : _spawnWaitTimeoutSeconds;
+
+    private static bool UsesAutomatedVerifySpawn() =>
+        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive;
 
     private bool _completed;
 
@@ -45,7 +52,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             _avatarCreator = FindFirstObjectByType<PhotonAvatarCreator>();
         }
 
-        if (GoapBatchVerifyEnvironment.IsActive)
+        if (UsesAutomatedVerifySpawn())
         {
             yield return EnsureBatchVerifySpawnCoroutine();
             yield break;

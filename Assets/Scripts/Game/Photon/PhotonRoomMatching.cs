@@ -27,7 +27,7 @@ public class PhotonRoomMatching : MonoBehaviourPunCallbacks
 
     private void Start()
     {
-        if (GoapBatchVerifyEnvironment.IsActive)
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
         {
             Debug.Log("[PhotonRoomMatching] batch verify: matching skipped (GoapDebugPlayBootstrap owns spawn)");
             return;

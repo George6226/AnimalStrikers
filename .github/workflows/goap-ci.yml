@@ -21,6 +21,7 @@ on:
           - batch-combined
           - batch-wing
           - batch-cf-drive
+          - batch-main-npc-attack
           - batch-defense
           - batch-defense-tactical
           - batch-defense-combined
@@ -77,6 +78,7 @@ jobs:
             Logs/goap-batch-defense-combined-verify.log
             Logs/goap-batch-defense-combined-drive-verify.log
             Logs/goap-batch-defense-drive-verify.log
+            Logs/goap-main-npc-attack-verify.log
             Logs/goap-batch-result.txt
             Logs/goap-batch-wing-result.txt
             Logs/goap-batch-cf-drive-result.txt
@@ -85,6 +87,7 @@ jobs:
             Logs/goap-batch-defense-combined-result.txt
             Logs/goap-batch-defense-combined-drive-result.txt
             Logs/goap-batch-defense-drive-result.txt
+            Logs/goap-main-npc-attack-result.txt
             Logs/ci-unity-activate.log
             Logs/GoapDiag_latest.txt
             Logs/GoapDiag_wing_latest.txt

@@ -74,7 +74,15 @@ describe_batch_phase() {
   fi
 
   if [[ -f "${SUMMARY_LOG}" ]]; then
-    if grep -q "waiting for GAME state" "${SUMMARY_LOG}" 2>/dev/null; then
+    if grep -q "GOAP_M1_ATTACK_RUNNER armed" "${SUMMARY_LOG}" 2>/dev/null; then
+      if grep -q "main_npc_post_pass_support_started\|ActionStart(action=PassToTeammate" "${SUMMARY_LOG}" 2>/dev/null; then
+        phase="Main NPC: Pass/Shoot 実行済み → サポート確認"
+      elif grep -q "bootstrap complete" "${SUMMARY_LOG}" 2>/dev/null; then
+        phase="Main NPC: bootstrap 完了・Pass/Shoot 待ち"
+      else
+        phase="Main NPC: Play モード・スポーン/bootstrap 待ち"
+      fi
+    elif grep -q "waiting for GAME state" "${SUMMARY_LOG}" 2>/dev/null; then
       phase="キックオフ(GAME state)待ち"
     elif grep -q "RunBatchVerification start" "${SUMMARY_LOG}" 2>/dev/null \
       && ! grep -q "BATCH_BEGIN" "${SUMMARY_LOG}" 2>/dev/null; then
@@ -137,7 +145,7 @@ run_batch_verify() {
   unity_bin="$(resolve_unity)"
 
   rm -f "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}"
-  goap_ci_clear_batch_markers "${LOG_DIR}"
+  goap_ci_clear_profile_markers "${LOG_DIR}" "${GOAP_PROFILE_TOKEN}"
 
   echo "[goap-ci] === Batch verify (${GOAP_PROFILE_LABEL}) ==="
   echo "[goap-ci] ${GOAP_PROFILE_FLAG} (${LOG_DIR}/${GOAP_PROFILE_LOG_FILE})"
