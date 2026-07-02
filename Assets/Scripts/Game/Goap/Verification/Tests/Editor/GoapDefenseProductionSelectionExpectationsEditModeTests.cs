@@ -28,6 +28,7 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
                 GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget => "MarkOpponent",
                 GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane => "BlockPassLane",
                 GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane => "BlockShotLane",
+                GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine => "RetreatToDefensiveLine",
                 _ => null,
             };
 

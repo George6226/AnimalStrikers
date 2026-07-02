@@ -95,6 +95,16 @@ public static class GoapDefenseLayoutPatternLibrary
                 map[1] = ownGoal + ctx.ToGoal * (ctx.FieldLength * 0.08f);
                 map[2] = ctx.FieldCenter - ctx.Right * wingLane;
                 break;
+
+            case GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine:
+                map[0] = ctx.FieldCenter + ctx.ToGoal * (ctx.FieldLength * 0.18f);
+                map[1] = ctx.FieldCenter
+                    + ctx.ToGoal * (ctx.FieldLength * 0.15f)
+                    + ctx.Right * wingLane;
+                map[2] = ctx.FieldCenter
+                    + ctx.ToGoal * (ctx.FieldLength * 0.15f)
+                    - ctx.Right * wingLane;
+                break;
         }
 
         return map;

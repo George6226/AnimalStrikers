@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Phase 5b 守備戦術: MarkOpponent / BlockPassLane / BlockShotLane の単体選出を検証。
-/// _batchPatternIndexStart/End = #4〜#6（3パターン）。
+/// Phase 5b 守備戦術: MarkOpponent / BlockPassLane / BlockShotLane / RetreatToDefensiveLine の単体選出を検証。
+/// バッチパターンは #4〜#6 + #9（4パターン）。
 /// </summary>
 public class GoapCombinedDefenseTacticalDebugSetup : GoapDefenseActionVerificationSetup
 {
@@ -21,9 +22,12 @@ public class GoapCombinedDefenseTacticalDebugSetup : GoapDefenseActionVerificati
     protected override string BatchVerificationBanner => "Defense tactical batch verification";
 
     protected override string ProductionSelectionVerificationBanner =>
-        "Defense tactical production selection (Mark/BlockPass/BlockShot)";
+        "Defense tactical production selection (Mark/BlockPass/BlockShot/Retreat)";
 
     protected override bool SuppressAllyBallPickupDuringBatch => true;
+
+    protected override List<GoapDefenseLayoutPatternId> BuildBatchPatternList() =>
+        GoapDefenseLayoutPatternCatalog.BuildDefenseTacticalSuite();
 
     protected override GoapDefenseActionUnderTest ResolveDefenseActionFilterForPattern(
         GoapDefenseLayoutPatternId pattern)
@@ -38,6 +42,8 @@ public class GoapCombinedDefenseTacticalDebugSetup : GoapDefenseActionVerificati
             GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget => GoapDefenseActionUnderTest.MarkOpponent,
             GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane => GoapDefenseActionUnderTest.BlockPassLane,
             GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane => GoapDefenseActionUnderTest.BlockShotLane,
+            GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine =>
+                GoapDefenseActionUnderTest.RetreatToDefensiveLine,
             _ => GoapDefenseActionUnderTest.None,
         };
     }
@@ -58,7 +64,8 @@ public class GoapCombinedDefenseTacticalDebugSetup : GoapDefenseActionVerificati
         GoapEnemyPositionDebugPatterns.LayoutPattern layout = pattern switch
         {
             GoapDefenseLayoutPatternId.EnemyOwner_MarkFreeTarget
-                or GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane =>
+                or GoapDefenseLayoutPatternId.EnemyOwner_BlockPassLane
+                or GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine =>
                 GoapEnemyPositionDebugPatterns.LayoutPattern.PressBallOwner,
             GoapDefenseLayoutPatternId.EnemyOwner_BlockShotLane =>
                 GoapEnemyPositionDebugPatterns.LayoutPattern.DefensiveLine,
