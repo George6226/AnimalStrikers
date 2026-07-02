@@ -270,7 +270,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
 
                 if (_batchSettleSecondsAfterPatternApply > 0f && UsesProductionSelectionAtApply)
                 {
-                    yield return SettleAfterPatternApplyCoroutine(pattern);
+                    yield return new WaitForSeconds(_batchSettleSecondsAfterPatternApply);
                 }
 
                 if (UsesProductionSelectionAtApply)
@@ -387,25 +387,6 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             TriggerAllyGoapReplan();
             yield return null;
             TriggerAllyGoapReplan();
-        }
-    }
-
-    private IEnumerator SettleAfterPatternApplyCoroutine(GoapDefenseLayoutPatternId pattern)
-    {
-        int enemyBallOwner = GoapDefenseLayoutPatternLibrary.GetEnemyBallOwnerIndex(pattern);
-        float elapsed = 0f;
-        while (elapsed < _batchSettleSecondsAfterPatternApply)
-        {
-            if (_assignBallToEnemyOnApply)
-            {
-                GoapDefenseVerificationBallHelper.TryAssignBallToEnemyIndex(
-                    enemyBallOwner,
-                    out _,
-                    out _);
-            }
-
-            elapsed += Time.deltaTime;
-            yield return null;
         }
     }
 
