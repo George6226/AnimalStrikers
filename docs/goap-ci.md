@@ -36,7 +36,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 
 ## 合格基準
 
-### EditMode（131 件）
+### EditMode（134 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -57,7 +57,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `cfDrive` | #13-#16 CFドライブ | SELECTION 4/4 + RUNTIME 4/4 |
 | `mainNpcAttack` | Main NPC Pass/Shoot + パス後サポート | `PASS:` in `goap-main-npc-attack-result.txt` |
 | `defenseBaseline` | #2-#3 守備基本 | SELECTION 2/2 |
-| `defenseTactical` | #4-#6 守備戦術 | SELECTION 3/3 |
+| `defenseTactical` | #4-#6,#9 守備戦術 | SELECTION 4/4 |
 | `defenseCombined` | #2-#6 守備統合本番選出 | SELECTION 5/5 |
 | `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
@@ -123,6 +123,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `131` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `134` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `2400` | バッチの timeout 秒 |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |

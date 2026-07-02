@@ -196,6 +196,9 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     {
     }
 
+    protected virtual List<GoapDefenseLayoutPatternId> BuildBatchPatternList() =>
+        GoapDefenseLayoutPatternCatalog.BuildRange(_batchPatternIndexStart, _batchPatternIndexEnd);
+
     private IEnumerator RunBatchVerificationWhenReady()
     {
         try
@@ -221,9 +224,7 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
             _runtimePassPassCount = 0;
             _runtimePassEvalCount = 0;
 
-            List<GoapDefenseLayoutPatternId> patterns = GoapDefenseLayoutPatternCatalog.BuildRange(
-                _batchPatternIndexStart,
-                _batchPatternIndexEnd);
+            List<GoapDefenseLayoutPatternId> patterns = BuildBatchPatternList();
             int total = patterns.Count;
             if (total == 0)
             {
