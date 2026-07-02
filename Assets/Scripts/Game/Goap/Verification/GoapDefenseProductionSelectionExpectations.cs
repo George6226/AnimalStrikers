@@ -216,6 +216,11 @@ public sealed class GoapDefenseCombinedProductionSelectionExpectation
                 expectedAction = "MoveToDefensivePosition";
                 return true;
 
+            case GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine:
+                shouldEvaluate = true;
+                expectedAction = "RetreatToDefensiveLine";
+                return true;
+
             default:
                 return true;
         }

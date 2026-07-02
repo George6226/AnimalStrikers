@@ -105,6 +105,8 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
             adjustment -= 0.7f;
         }
 
+        adjustment += TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
+
         return adjustment;
     }
 }

@@ -62,7 +62,36 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return 0f;
 
-        float fieldLen = teamBB.FieldInfo.FieldLength;
+        if (!TeammateNpcDefensePlanning.TrySampleDefensiveRetreatLine(
+                bb,
+                _retreatDepthRatio,
+                _centralBias,
+                out TeammateNpcDefensePlanning.DefensiveRetreatLineSample line))
+        {
+            return 0f;
+        }
+
+        float fieldLen = line.FieldLength;
+        if (line.GoalSide > fieldLen * 0.02f)
+        {
+            // ラインより自陣側にいるならリトリート不要
+            return 1.65f;
+        }
+
+        if (line.GoalSide >= -fieldLen * 0.02f)
+        {
+            return 0.45f;
+        }
+
+        float retreatUrgency = TeammateNpcDefensePlanning.ComputeSevereRetreatOverextensionUrgency(
+            bb,
+            _retreatDepthRatio,
+            _centralBias);
+        if (retreatUrgency >= 0.40f)
+        {
+            return -Mathf.Lerp(1.55f, 2.45f, retreatUrgency);
+        }
+
         Vector3 ballOwner = teamBB.BallInfo.BallOwnerPosition;
         float distToOwner = Vector3.Distance(bb.PhysicalState.Position, ballOwner);
         if (distToOwner <= fieldLen * 0.25f)
@@ -75,31 +104,7 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
             return 2.5f;
         }
 
-        float depth = fieldLen * _retreatDepthRatio;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
-        Vector3 center = teamBB.FieldInfo.FieldCenter;
-        Vector3 ball = teamBB.BallInfo.BallPosition;
-
-        Vector3 linePoint = Vector3.Lerp(center, new Vector3(center.x, center.y, ownGoal.z + depth * Mathf.Sign(center.z - ownGoal.z)), _centralBias);
-        // ボール側に少し寄せる
-        Vector3 toBallLateral = Vector3.ProjectOnPlane(ball - linePoint, Vector3.up);
-        linePoint += Vector3.ClampMagnitude(toBallLateral, teamBB.FieldInfo.FieldWidth * 0.15f) * (1f - _centralBias);
-
-        Vector3 playerPos = bb.PhysicalState.Position;
-        Vector3 fromLineToGoal = ownGoal - linePoint;
-        float goalSide = Vector3.Dot(playerPos - linePoint, fromLineToGoal.normalized);
-        if (goalSide > fieldLen * 0.02f)
-        {
-            // ラインより自陣側にいるならリトリート不要
-            return 1.65f;
-        }
-
-        if (goalSide >= -fieldLen * 0.02f)
-        {
-            return 0.45f;
-        }
-
-        float d = Vector3.Distance(playerPos, linePoint);
+        float d = line.AheadOfLineDistance;
         return -Mathf.Clamp(d / Mathf.Max(fieldLen * 0.5f, 0.01f), 0f, 1f) * 2.0f;
     }
 

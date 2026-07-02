@@ -59,6 +59,7 @@ public class MarkOpponentActionSO : GoapActionSO
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return 0f;
 
+        float overextensionPenalty = TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
@@ -95,7 +96,7 @@ public class MarkOpponentActionSO : GoapActionSO
         // フリー状態の敵がいない場合はデフォルトコスト
         if (freeEnemies.Count == 0)
         {
-            return 0f;
+            return overextensionPenalty;
         }
         
         // 最も近いフリー状態の敵を探す
@@ -116,22 +117,22 @@ public class MarkOpponentActionSO : GoapActionSO
         float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
         if (shotDangerScore >= 0.45f && minDistance > idealDistance * 0.85f)
         {
-            return 0.75f;
+            return 0.75f + overextensionPenalty;
         }
 
         if (distToOwner <= fieldLen * 0.22f && minDistance > distToOwner * 1.1f)
         {
-            return 1.15f;
+            return 1.15f + overextensionPenalty;
         }
 
         // 距離が近いほどコストを下げる
         if (minDistance <= idealDistance * 0.55f)
         {
-            return -1.85f;
+            return -1.85f + overextensionPenalty;
         }
 
         float score = 1f - Mathf.Clamp01(minDistance / Mathf.Max(idealDistance * 2f, 0.01f));
-        return -score * 1.55f;
+        return -score * 1.55f + overextensionPenalty;
     }
 }
 

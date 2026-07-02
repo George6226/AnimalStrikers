@@ -63,9 +63,17 @@ public static class GoapDefenseLayoutPatternCatalog
     public static List<GoapDefenseLayoutPatternId> BuildDefenseDriveSuite() =>
         BuildRange(7, 8);
 
-    /// <summary>Phase 7a 守備統合本番選出: #2〜#6（全候補コスト競争）。</summary>
-    public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedSuite() =>
-        BuildRange(2, 6);
+    /// <summary>Phase 7a 守備統合本番選出: #2〜#6 + #9（全候補コスト競争）。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedSuite()
+    {
+        var list = BuildRange(2, 6);
+        if (TryGetByNumber(9, out GoapDefenseLayoutPatternId retreat))
+        {
+            list.Add(retreat);
+        }
+
+        return list;
+    }
 
     /// <summary>Phase 7b 守備統合ドライブ: #7〜#8（全候補 + 敵保持ドライブ追従）。</summary>
     public static List<GoapDefenseLayoutPatternId> BuildDefenseCombinedDriveSuite() =>

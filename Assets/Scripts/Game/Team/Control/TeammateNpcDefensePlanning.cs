@@ -446,4 +446,137 @@ public static class TeammateNpcDefensePlanning
 
         return urgency * 0.9f;
     }
+
+    public readonly struct DefensiveRetreatLineSample
+    {
+        public float GoalSide { get; }
+        public float FieldLength { get; }
+
+        public DefensiveRetreatLineSample(float goalSide, float fieldLength)
+        {
+            GoalSide = goalSide;
+            FieldLength = fieldLength;
+        }
+
+        public float AheadOfLineDistance => GoalSide < 0f ? -GoalSide : 0f;
+
+        public bool IsAheadOfLine() => GoalSide < -FieldLength * 0.02f;
+
+        public bool IsSignificantlyAhead() => GoalSide < -FieldLength * 0.04f;
+
+        public float AheadRatio(float referenceSpanRatio = 0.35f) =>
+            Mathf.Clamp(AheadOfLineDistance / Mathf.Max(FieldLength * referenceSpanRatio, 0.01f), 0f, 1f);
+    }
+
+    /// <summary>RetreatToDefensiveLine と同じ幾何で、プレイヤーが守備ラインより敵陣側にいる度合いを返す。</summary>
+    public static bool TrySampleDefensiveRetreatLine(
+        PlayerBlackboard bb,
+        float retreatDepthRatio,
+        float centralBias,
+        out DefensiveRetreatLineSample sample)
+    {
+        sample = default;
+        if (bb == null)
+        {
+            return false;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null)
+        {
+            return false;
+        }
+
+        float fieldLen = teamBB.FieldInfo.FieldLength;
+        float depth = fieldLen * retreatDepthRatio;
+        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 center = teamBB.FieldInfo.FieldCenter;
+        Vector3 ball = teamBB.BallInfo.BallPosition;
+
+        Vector3 linePoint = Vector3.Lerp(
+            center,
+            new Vector3(center.x, center.y, ownGoal.z + depth * Mathf.Sign(center.z - ownGoal.z)),
+            centralBias);
+        Vector3 toBallLateral = Vector3.ProjectOnPlane(ball - linePoint, Vector3.up);
+        linePoint += Vector3.ClampMagnitude(toBallLateral, teamBB.FieldInfo.FieldWidth * 0.15f)
+            * (1f - centralBias);
+
+        Vector3 playerPos = bb.PhysicalState.Position;
+        Vector3 fromLineToGoal = ownGoal - linePoint;
+        if (fromLineToGoal.sqrMagnitude < 0.01f)
+        {
+            return false;
+        }
+
+        float goalSide = Vector3.Dot(playerPos - linePoint, fromLineToGoal.normalized);
+        sample = new DefensiveRetreatLineSample(goalSide, fieldLen);
+        return true;
+    }
+
+    public static float ComputeOverextendedDefensePenalty(
+        PlayerBlackboard bb,
+        float retreatDepthRatio = 0.28f,
+        float centralBias = 0.6f,
+        float minUrgency = 0.45f,
+        float maxPenalty = 2.15f)
+    {
+        float urgency = ComputeSevereRetreatOverextensionUrgency(bb, retreatDepthRatio, centralBias);
+        if (urgency < minUrgency)
+        {
+            return 0f;
+        }
+
+        float t = (urgency - minUrgency) / Mathf.Max(1f - minUrgency, 0.01f);
+        return t * maxPenalty;
+    }
+
+    /// <summary>
+    /// 守備ラインより前にいるが、保持者へのプレッシャー位置でもない「戻るべき」局面の緊急度（0〜1）。
+    /// </summary>
+    public static float ComputeSevereRetreatOverextensionUrgency(
+        PlayerBlackboard bb,
+        float retreatDepthRatio = 0.28f,
+        float centralBias = 0.6f)
+    {
+        if (!TrySampleDefensiveRetreatLine(bb, retreatDepthRatio, centralBias, out DefensiveRetreatLineSample line)
+            || !line.IsSignificantlyAhead())
+        {
+            return 0f;
+        }
+
+        float aheadRatio = line.AheadRatio();
+        if (aheadRatio < 0.55f)
+        {
+            return 0f;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null)
+        {
+            return 0f;
+        }
+
+        float fieldLen = line.FieldLength;
+        Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
+        Vector3 playerPos = bb.PhysicalState.Position;
+        float distToOwner = Vector3.Distance(playerPos, ownerPos);
+        float optimalPressDistance = fieldLen * 0.12f;
+        float pressMisalignment = Mathf.Clamp01(
+            Mathf.Abs(distToOwner - optimalPressDistance) / Mathf.Max(optimalPressDistance * 1.2f, 0.01f));
+
+        if (distToOwner <= fieldLen * 0.16f)
+        {
+            pressMisalignment *= 0.35f;
+        }
+
+        float urgency = aheadRatio * pressMisalignment;
+        float lateralOffset = Mathf.Abs(playerPos.x - ownerPos.x);
+        float lateralRatio = lateralOffset / Mathf.Max(teamBB.FieldInfo.FieldWidth * 0.5f, 0.01f);
+        if (aheadRatio >= 0.75f && lateralRatio >= 0.22f)
+        {
+            urgency = Mathf.Max(urgency, aheadRatio * 0.58f);
+        }
+
+        return urgency;
+    }
 }
