@@ -61,7 +61,11 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
 | `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
 
-`mode=all` / `batch` では `defenseCombinedDrive` が #7/#8 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
+`mode=all` / `batch` の実行順（`goap-ci-config.sh` の定義順）:
+
+1. `combined` → 2. `wingDrive` → 3. `cfDrive` → 4. `defenseBaseline` → 5. `defenseTactical` → 6. `defenseCombined` → 7. `defenseCombinedDrive` → 8. `mainNpcAttack`
+
+`defenseCombinedDrive` が #7/#8 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。
 
@@ -88,8 +92,11 @@ Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `Go
 |---------|------|
 | `goap-editmode-results.xml` | EditMode 合否 |
 | `goap-batch-*-verify.log` | Unity バッチ実行ログ |
+| `goap-main-npc-attack-verify.log` | Main NPC Play 検証ログ |
 | `goap-batch-*-result.txt` | `PASS:` / `FAIL:` 行 |
+| `goap-main-npc-attack-result.txt` | Main NPC 合否（`PASS:` / `FAIL:`） |
 | `GoapDiag_*_latest.txt` | `BATCH_*`, `SELECTION_*`, `RUNTIME_*` マーカー |
+| `GoapSummary_latest.txt` | Main NPC 検証サマリ（`GOAP_M1_ATTACK_RUNNER` 等） |
 | `ci-unity-activate.log` | ライセンス有効化 |
 
 ## スクリプト構成

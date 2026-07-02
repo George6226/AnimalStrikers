@@ -65,9 +65,15 @@ cat <<EOF
    | combined | 本番選出 #2-#12（11/11） |
    | wingDrive | 翼ドライブ #17/#18（SELECTION+RUNTIME 2/2） |
    | cfDrive | CFドライブ #13-#16（SELECTION+RUNTIME 4/4） |
+   | defenseBaseline | 守備基本 #2-#3（SELECTION 2/2） |
+   | defenseTactical | 守備戦術 #4-#6（SELECTION 3/3） |
+   | defenseCombined | 守備統合 #2-#6（SELECTION 5/5） |
+   | defenseCombinedDrive | 守備統合ドライブ #7-#8（SELECTION+RUNTIME 2/2） |
+   | mainNpcAttack | Main NPC Pass/Shoot + パス後サポート（result.txt に PASS:） |
 
    部分実行:
    ./scripts/ci/run-goap-docker.sh editmode
+   ./scripts/ci/run-goap-docker.sh batch-main-npc-attack
    ./scripts/ci/run-goap-docker.sh batch-cf-drive
 
    詳細: docs/goap-ci.md
