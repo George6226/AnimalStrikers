@@ -38,6 +38,9 @@ if goap_ci_mode_runs_batch "${MODE}"; then
     rm -f "${LOG_DIR}/${result}"
   done
   goap_ci_clear_batch_markers "${LOG_DIR}"
+  rm -f \
+    "${LOG_DIR}/goap-main-npc-attack-pending-exit.txt" \
+    "${LOG_DIR}/goap-main-npc-attack-started.marker"
 fi
 
 docker_env=( -e UNITY_EMAIL -e UNITY_PASSWORD )
@@ -111,7 +114,7 @@ done < <(goap_ci_batch_profiles_for_mode "\${MODE}")
 
 for token in "\${batch_tokens[@]}"; do
   goap_ci_resolve_batch_profile "\${token}"
-  goap_ci_clear_profile_markers /project/Logs "${GOAP_PROFILE_TOKEN}"
+  goap_ci_clear_profile_markers /project/Logs "\${token}"
   set +e
   run_batch_profile "\${GOAP_PROFILE_FLAG}" "\${GOAP_PROFILE_LOG_FILE}"
   batch_exit=\$?
