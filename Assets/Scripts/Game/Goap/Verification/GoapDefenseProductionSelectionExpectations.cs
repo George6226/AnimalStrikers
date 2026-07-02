@@ -242,6 +242,15 @@ public sealed class GoapDefenseCombinedDriveProductionSelectionExpectation
         expectedAction = null;
         shouldEvaluate = false;
 
+        if (pattern == GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine)
+        {
+            return GoapDefenseProductionSelectionExpectations.DefenseCombined.TryGetExpectation(
+                pattern,
+                slot,
+                out expectedAction,
+                out shouldEvaluate);
+        }
+
         GoapDefenseLayoutPatternId basePattern = pattern switch
         {
             GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward =>

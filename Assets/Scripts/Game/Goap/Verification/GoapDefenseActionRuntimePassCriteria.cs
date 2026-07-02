@@ -47,7 +47,7 @@ public sealed class GoapMoveToDefensivePositionRuntimePassCriteria : IGoapDefens
 }
 
 /// <summary>
-/// 敵保持ドライブ追従（#7/#8）: 全味方 slot が Defend Retarget 1回以上。
+/// 敵保持ドライブ追従（#7/#8/#9）: #7/#8 は Defend Retarget、#9 は RetreatLine Execute。
 /// </summary>
 public sealed class GoapEnemyOwnerDriveRuntimePassCriteria : IGoapDefenseActionRuntimePassCriteria
 {
@@ -59,6 +59,7 @@ public sealed class GoapEnemyOwnerDriveRuntimePassCriteria : IGoapDefenseActionR
     {
         slot = -1;
         return pattern == GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward
-            || pattern == GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward;
+            || pattern == GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward
+            || pattern == GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine;
     }
 }

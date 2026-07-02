@@ -19,7 +19,7 @@ public static class GoapDefenseActionRuntimePassEvaluator
 
         if (criteria.Action == GoapDefenseActionUnderTest.EnemyOwnerDriveFollow)
         {
-            return EvaluateEnemyOwnerDrive(pattern, diagLines, resolvePlayerIdForSlot, result);
+            return EvaluateEnemyOwnerDrive(pattern, diagLines, summaryLines, resolvePlayerIdForSlot, result);
         }
 
         if (!criteria.TryGetEvaluationSlot(pattern, out int slot))
@@ -46,9 +46,15 @@ public static class GoapDefenseActionRuntimePassEvaluator
     private static GoapDefenseActionRuntimePassResult EvaluateEnemyOwnerDrive(
         GoapDefenseLayoutPatternId pattern,
         IList<string> diagLines,
+        IList<string> summaryLines,
         Func<int, int?> resolvePlayerIdForSlot,
         GoapDefenseActionRuntimePassResult result)
     {
+        if (pattern == GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine)
+        {
+            return EvaluateRetreatDriveFollow(diagLines, summaryLines, resolvePlayerIdForSlot, result);
+        }
+
         if (pattern != GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward
             && pattern != GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward)
         {
@@ -165,6 +171,78 @@ public static class GoapDefenseActionRuntimePassEvaluator
         if (timedOut)
         {
             reasons.Add("timeout");
+        }
+
+        detail = $"slot{slot} NG: {string.Join(", ", reasons)}";
+        return false;
+    }
+
+    private static GoapDefenseActionRuntimePassResult EvaluateRetreatDriveFollow(
+        IList<string> diagLines,
+        IList<string> summaryLines,
+        Func<int, int?> resolvePlayerIdForSlot,
+        GoapDefenseActionRuntimePassResult result)
+    {
+        result.ShouldEvaluate = true;
+        int passCount = 0;
+        int evalCount = 0;
+        var details = new List<string>();
+
+        for (int slot = 0; slot <= 2; slot++)
+        {
+            evalCount++;
+            if (EvaluateRetreatDriveFollowSlot(slot, diagLines, summaryLines, resolvePlayerIdForSlot, out string detail))
+            {
+                passCount++;
+                details.Add(detail);
+            }
+            else
+            {
+                details.Add(detail);
+            }
+        }
+
+        result.PatternPass = passCount == evalCount;
+        result.DetailText = string.Join("; ", details);
+        return result;
+    }
+
+    private static bool EvaluateRetreatDriveFollowSlot(
+        int slot,
+        IList<string> diagLines,
+        IList<string> summaryLines,
+        Func<int, int?> resolvePlayerIdForSlot,
+        out string detail)
+    {
+        int? playerId = resolvePlayerIdForSlot?.Invoke(slot);
+        if (!playerId.HasValue)
+        {
+            detail = $"slot{slot} playerId unresolved NG";
+            return false;
+        }
+
+        bool actionStarted = TryFindSummaryActionStart(
+            summaryLines,
+            playerId.Value,
+            "RetreatToDefensiveLine",
+            out _);
+        bool executeStarted = TryFindDiagMessage(diagLines, playerId.Value, "RetreatLine", "Execute", out _);
+
+        if (actionStarted && executeStarted)
+        {
+            detail = $"slot{slot} RetreatLine Execute OK";
+            return true;
+        }
+
+        var reasons = new List<string>();
+        if (!actionStarted)
+        {
+            reasons.Add("no ActionStart");
+        }
+
+        if (!executeStarted)
+        {
+            reasons.Add("no RetreatLine Execute");
         }
 
         detail = $"slot{slot} NG: {string.Join(", ", reasons)}";
