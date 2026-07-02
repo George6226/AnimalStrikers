@@ -61,6 +61,20 @@ public static class GoapMainNpcCatalog
         return actions;
     }
 
+    /// <summary>本番 Main NPC（操作キャラ）向け: M2 のみ（BallPossessionAttack を除外）。</summary>
+    public static void RestrictToOffBallProduction(List<GoapGoalSO> goals, List<GoapActionSO> actions)
+    {
+        if (goals != null)
+        {
+            goals.RemoveAll(g => g is BallPossessionAttackGoalSO);
+        }
+
+        if (actions != null)
+        {
+            actions.RemoveAll(IsBallPossessionAttackAction);
+        }
+    }
+
     public static void NormalizeLists(List<GoapGoalSO> goals, List<GoapActionSO> actions)
     {
         if (goals == null)

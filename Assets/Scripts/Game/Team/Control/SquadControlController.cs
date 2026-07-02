@@ -34,6 +34,10 @@ public class SquadControlController : MonoBehaviour
     [SerializeField] private List<GoapGoalSO> _goapMainNpcGoals = new List<GoapGoalSO>();
     [SerializeField] private List<GoapActionSO> _goapMainNpcActions = new List<GoapActionSO>();
 
+    [Header("Phase M2: メイン NPC GOAP 本番")]
+    [Tooltip("ON=操作キャラがボール非保持時に M2（パス後サポート・ルーズボール）GOAP を動かす")]
+    [SerializeField] private bool _enableMainNpcGoapInProduction = true;
+
     [Header("段階4 役割分担（2体が重ならない）")]
     [SerializeField] private bool _enableStage4RoleDifferentiation = true;
 
@@ -61,6 +65,7 @@ public class SquadControlController : MonoBehaviour
     public int GoapPilotFormationSlot => _goapPilotFormationSlot;
     public bool MainNpcGoapVerifyModeActive => _mainNpcGoapVerifyMode;
     public int MainNpcFormationSlot => _mainNpcFormationSlot;
+    public bool MainNpcGoapProductionEnabled => _enableMainNpcGoapInProduction;
 
 #if UNITY_EDITOR
     private const string DefensiveGoalAssetPath = "Assets/Scripts/Game/Goap/Goals/Goals/DefensivePositioningGoalSO.asset";
@@ -93,6 +98,7 @@ public class SquadControlController : MonoBehaviour
         EnsureMainNpcAssetsAssigned();
 #endif
         SyncMainNpcVerifyEnvironment();
+        SyncMainNpcProductionEnvironment();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -151,6 +157,7 @@ public class SquadControlController : MonoBehaviour
         EnsureMainNpcAssetsAssigned();
 #endif
         SyncMainNpcVerifyEnvironment();
+        SyncMainNpcProductionEnvironment();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -224,6 +231,12 @@ public class SquadControlController : MonoBehaviour
             return assignment.Role == AnimalControlRole.TeammateNpc;
         }
 
+        if (GoapMainNpcProductionEnvironment.IsActive
+            && assignment.Role == AnimalControlRole.Human)
+        {
+            return true;
+        }
+
         if (assignment.Role != AnimalControlRole.TeammateNpc)
         {
             return false;
@@ -270,8 +283,20 @@ public class SquadControlController : MonoBehaviour
             tier);
     }
 
-    public GoapNpcTier ResolveNpcTier(AnimalFacade facade) =>
-        GoapMainNpcVerifyEnvironment.ResolveTier(facade);
+    public GoapNpcTier ResolveNpcTier(AnimalFacade facade)
+    {
+        if (GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return GoapMainNpcVerifyEnvironment.ResolveTier(facade);
+        }
+
+        if (GoapMainNpcProductionEnvironment.IsActive)
+        {
+            return GoapMainNpcProductionEnvironment.ResolveTier(facade);
+        }
+
+        return GoapNpcTier.Sub;
+    }
 
     public AnimalFacade GetGoapPilotFacade()
     {
@@ -693,6 +718,7 @@ public class SquadControlController : MonoBehaviour
         }
 
         _humanFormationSlot = slotIndex;
+        SyncMainNpcProductionEnvironment();
         RefreshLocalSquadRoles();
     }
 
@@ -723,10 +749,26 @@ public class SquadControlController : MonoBehaviour
     {
         bool mainNpcVerifyActive = _mainNpcGoapVerifyMode && !GoapBatchVerifyEnvironment.IsActive;
         GoapMainNpcVerifyEnvironment.Sync(mainNpcVerifyActive, _mainNpcFormationSlot);
+        if (mainNpcVerifyActive)
+        {
+            GoapMainNpcProductionEnvironment.Sync(false);
+        }
+
         if (mainNpcVerifyActive && Application.isPlaying)
         {
             RefreshLocalSquadRolesForMainNpcVerify();
         }
+    }
+
+    private void SyncMainNpcProductionEnvironment()
+    {
+        if (_mainNpcGoapVerifyMode || GoapBatchVerifyEnvironment.IsActive)
+        {
+            GoapMainNpcProductionEnvironment.Sync(false);
+            return;
+        }
+
+        GoapMainNpcProductionEnvironment.Sync(_enableMainNpcGoapInProduction);
     }
 
     private void ResetGoapPilotConfigurations()

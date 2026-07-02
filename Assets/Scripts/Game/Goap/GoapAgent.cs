@@ -641,6 +641,12 @@ public class GoapAgent : MonoBehaviour
             return squadDuringVerify == null || squadDuringVerify.ShouldUseGoapFor(facade);
         }
 
+        if (GoapMainNpcProductionEnvironment.IsActive
+            && GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade))
+        {
+            return GoapMainNpcProductionEnvironment.ShouldEnableGoap(_playerBlackboard, facade);
+        }
+
         if (IsActiveHumanSelectedPlayer(facade))
         {
             return false;
@@ -1044,6 +1050,11 @@ public class GoapAgent : MonoBehaviour
         }
 
         if (goal is not BallPossessionAttackGoalSO)
+        {
+            return false;
+        }
+
+        if (IsProductionOffBallMainNpc())
         {
             return false;
         }
@@ -1473,10 +1484,27 @@ public class GoapAgent : MonoBehaviour
         if (_npcTier == GoapNpcTier.Main)
         {
             GoapMainNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
+            if (IsProductionOffBallMainNpc())
+            {
+                GoapMainNpcCatalog.RestrictToOffBallProduction(_availableGoals, _availableActions);
+            }
+
             return;
         }
 
         GoapTeammateNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
+    }
+
+    private bool IsProductionOffBallMainNpc()
+    {
+        if (_npcTier != GoapNpcTier.Main || !GoapMainNpcProductionEnvironment.IsActive)
+        {
+            return false;
+        }
+
+        var self = _playerBlackboard?.BasicData?.Self;
+        var facade = self != null ? self.GetComponent<AnimalFacade>() : null;
+        return GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade);
     }
 
     // === プラン中断 ===

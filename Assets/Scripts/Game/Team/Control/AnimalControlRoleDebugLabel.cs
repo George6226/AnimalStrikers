@@ -283,6 +283,23 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
             return $"{tierTag}·{position}";
         }
 
+        if (GoapMainNpcProductionEnvironment.IsActive && role == AnimalControlRole.Human)
+        {
+            var facade = GetComponent<AnimalFacade>();
+            var goap = AnimalGoapBrainComponents.Resolve(facade);
+            bool m2Active = goap.Agent != null
+                && goap.Agent.enabled
+                && GoapMainNpcProductionEnvironment.ShouldEnableGoap(goap.Blackboard, facade);
+            string humanTag = m2Active ? "YOU·M2" : "YOU";
+            string humanPosition = GetPositionTag();
+            if (string.IsNullOrEmpty(humanPosition))
+            {
+                return humanTag;
+            }
+
+            return $"{humanTag}·{humanPosition}";
+        }
+
         string roleTag = role switch
         {
             AnimalControlRole.Human => "YOU",
