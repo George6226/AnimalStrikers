@@ -8,6 +8,7 @@ public static class GoapDefenseLayoutDrivePatternLibrary
         {
             case GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward:
             case GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward:
+            case GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine:
                 mode = GoapBallOwnerAutoDriveMode.ForwardBack;
                 return true;
             default:

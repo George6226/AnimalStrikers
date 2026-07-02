@@ -5,7 +5,7 @@ set -euo pipefail
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
 GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|GoapPassTargetSelectionEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-137}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-140}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(
@@ -15,7 +15,7 @@ GOAP_BATCH_PROFILES=(
   "defenseBaseline|-goapBatchVerify=defenseBaseline|goap-batch-defense-result.txt|goap-batch-defense-verify.log|守備基本 #2-#3 (SELECTION 2/2)"
   "defenseTactical|-goapBatchVerify=defenseTactical|goap-batch-defense-tactical-result.txt|goap-batch-defense-tactical-verify.log|守備戦術 #4-#6,#9 (SELECTION 4/4)"
   "defenseCombined|-goapBatchVerify=defenseCombined|goap-batch-defense-combined-result.txt|goap-batch-defense-combined-verify.log|守備統合 #2-#6,#9 (SELECTION 6/6)"
-  "defenseCombinedDrive|-goapBatchVerify=defenseCombinedDrive|goap-batch-defense-combined-drive-result.txt|goap-batch-defense-combined-drive-verify.log|守備統合ドライブ #7-#8 (SELECTION+RUNTIME 2/2)"
+  "defenseCombinedDrive|-goapBatchVerify=defenseCombinedDrive|goap-batch-defense-combined-drive-result.txt|goap-batch-defense-combined-drive-verify.log|守備統合ドライブ #7-#8,#9 (SELECTION+RUNTIME 3/3)"
   "defenseDrive|-goapBatchVerify=defenseDrive|goap-batch-defense-drive-result.txt|goap-batch-defense-drive-verify.log|守備ドライブ #7-#8 (SELECTION+RUNTIME 2/2)"
   "mainNpcAttack|-goapMainNpcAttackVerify|goap-main-npc-attack-result.txt|goap-main-npc-attack-verify.log|Main NPC 攻撃+パス後サポート (M1/M2)"
 )

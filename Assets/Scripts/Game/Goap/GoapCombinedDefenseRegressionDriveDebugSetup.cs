@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Phase 7b 守備統合ドライブ: #7〜#8 で全候補コスト競争 + 敵保持ドライブ中の選出 + Retarget 追従。
-/// _batchPatternIndexStart/End = #7〜#8（2パターン）。verificationOnly=OFF。
+/// Phase 7b 守備統合ドライブ: #7〜#8 + #9 で全候補コスト競争 + 敵保持ドライブ中の選出 + Retarget 追従。
+/// verificationOnly=OFF。
 /// </summary>
 public class GoapCombinedDefenseRegressionDriveDebugSetup : GoapDefenseActionVerificationSetup
 {
@@ -25,10 +26,13 @@ public class GoapCombinedDefenseRegressionDriveDebugSetup : GoapDefenseActionVer
         GoapDefenseActionRuntimePassCriteria.EnemyOwnerDrive;
 
     protected override string BatchVerificationBanner =>
-        "Defense combined drive follow verification (#7-#8)";
+        "Defense combined drive follow verification (#7-#8,#9)";
 
     protected override string ProductionSelectionVerificationBanner =>
         "Defense combined drive (full competition + enemy-owner drive)";
+
+    protected override List<GoapDefenseLayoutPatternId> BuildBatchPatternList() =>
+        GoapDefenseLayoutPatternCatalog.BuildDefenseCombinedDriveSuite();
 
     protected override GoapProductionSelectionResolveMode ResolveProductionSelectionModeForPattern(
         GoapDefenseLayoutPatternId pattern) =>
@@ -53,7 +57,15 @@ public class GoapCombinedDefenseRegressionDriveDebugSetup : GoapDefenseActionVer
             return;
         }
 
-        _enemyLayouts.ApplyPattern(_defaultEnemyLayout);
-        LogLine($"ApplyEnemyLayout({pattern}) layout={_defaultEnemyLayout}");
+        GoapEnemyPositionDebugPatterns.LayoutPattern layout = pattern switch
+        {
+            GoapDefenseLayoutPatternId.EnemyOwner_ClusteredAllies_DriveForward
+                or GoapDefenseLayoutPatternId.EnemyOwner_SpreadMidfield_DriveForward
+                or GoapDefenseLayoutPatternId.EnemyOwner_RetreatToDefensiveLine =>
+                GoapEnemyPositionDebugPatterns.LayoutPattern.PressBallOwner,
+            _ => _defaultEnemyLayout,
+        };
+        _enemyLayouts.ApplyPattern(layout);
+        LogLine($"ApplyEnemyLayout({pattern}) layout={layout}");
     }
 }

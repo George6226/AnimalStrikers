@@ -26,8 +26,8 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-main-npc-attack` | Main NPC 攻撃+パス後サポート (M1/M2) | 約2-3分 |
 | `batch-defense` | 守備基本 #2-#3 | 約2分 |
 | `batch-defense-tactical` | 守備戦術 #4-#6 | 約2分 |
-| `batch-defense-combined` | 守備統合本番選出 #2-#6 | 約3分 |
-| `batch-defense-combined-drive` | 守備統合ドライブ #7-#8 | 約2分 |
+| `batch-defense-combined` | 守備統合本番選出 #2-#6,#9 | 約3分 |
+| `batch-defense-combined-drive` | 守備統合ドライブ #7-#8,#9 | 約3分 |
 | `batch-defense-drive` | 守備ドライブ #7-#8（Phase 6 MTD単体・任意） | 約2分 |
 | `batch` | 上記8バッチ連続 | 約16分 |
 | `all` | EditMode + 8バッチ（CI 相当） | 約16-20分 |
@@ -36,7 +36,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 
 ## 合格基準
 
-### EditMode（137 件）
+### EditMode（140 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -59,14 +59,14 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `defenseBaseline` | #2-#3 守備基本 | SELECTION 2/2 |
 | `defenseTactical` | #4-#6,#9 守備戦術 | SELECTION 4/4 |
 | `defenseCombined` | #2-#6,#9 守備統合本番選出 | SELECTION 6/6 |
-| `defenseCombinedDrive` | #7-#8 守備統合ドライブ | SELECTION 2/2 + RUNTIME 2/2 |
+| `defenseCombinedDrive` | #7-#8,#9 守備統合ドライブ | SELECTION 3/3 + RUNTIME 3/3 |
 | `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
 
 `mode=all` / `batch` の実行順（`goap-ci-config.sh` の定義順）:
 
 1. `combined` → 2. `wingDrive` → 3. `cfDrive` → 4. `defenseBaseline` → 5. `defenseTactical` → 6. `defenseCombined` → 7. `defenseCombinedDrive` → 8. `mainNpcAttack`
 
-`defenseCombinedDrive` が #7/#8 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
+`defenseCombinedDrive` が #7/#8/#9 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
 
 Unity が終了ハングしても、`Logs/goap-batch-*-result.txt` または `GoapDiag_*_latest.txt` のマーカーで合格判定します。
 
@@ -123,6 +123,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `137` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `140` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `2400` | バッチの timeout 秒 |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |
