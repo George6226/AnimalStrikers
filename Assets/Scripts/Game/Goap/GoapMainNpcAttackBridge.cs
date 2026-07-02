@@ -16,90 +16,12 @@ public static class GoapMainNpcAttackBridge
 
         PhotonAvatarContainerChild avatar = facade.GetAvatar();
         string tag = avatar != null ? avatar.gameObject.tag : null;
-        if (tag == ConstData.PLAYER_TAG)
+        if (tag == ConstData.NPC_TAG)
         {
-            var passSearch = facade.GetComponentInChildren<AnimalPass_Search>(true);
-            if (passSearch != null)
-            {
-                target = passSearch.FindAllyForPass(facade);
-            }
-        }
-        else
-        {
-            target = FindTeammatePassTarget(facade);
+            return GoapPassTargetSelection.TrySelectBestEnemyTeammate(facade, out target);
         }
 
-        return target != null;
-    }
-
-    private static AnimalFacade FindTeammatePassTarget(AnimalFacade passer)
-    {
-        if (passer == null)
-        {
-            return null;
-        }
-
-        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
-        if (regist == null)
-        {
-            return null;
-        }
-
-        const float angleThreshold = 30f;
-        var candidates = new System.Collections.Generic.List<AnimalFacade>();
-        float facingY = 360f - passer.transform.localEulerAngles.y;
-        Vector3 origin = passer.transform.position;
-
-        foreach (AnimalFacade ally in regist.Allys)
-        {
-            if (ally == null || ally == passer || ally.IsGK())
-            {
-                continue;
-            }
-
-            Vector3 targetPos = ally.transform.position;
-            float theta = Mathf.Atan2(targetPos.z - origin.z, targetPos.x - origin.x) * Mathf.Rad2Deg - 90f;
-            if (theta < 0f)
-            {
-                theta += 360f;
-            }
-
-            if (Mathf.Abs(facingY - theta) <= angleThreshold)
-            {
-                candidates.Add(ally);
-            }
-        }
-
-        if (candidates.Count > 0)
-        {
-            return candidates[Random.Range(0, candidates.Count)];
-        }
-
-        AnimalFacade nearest = null;
-        float bestAngle = float.MaxValue;
-        foreach (AnimalFacade ally in regist.Allys)
-        {
-            if (ally == null || ally == passer || ally.IsGK())
-            {
-                continue;
-            }
-
-            Vector3 targetPos = ally.transform.position;
-            float theta = Mathf.Atan2(targetPos.z - origin.z, targetPos.x - origin.x) * Mathf.Rad2Deg - 90f;
-            if (theta < 0f)
-            {
-                theta += 360f;
-            }
-
-            float angleDiff = Mathf.Abs(facingY - theta);
-            if (angleDiff < bestAngle)
-            {
-                bestAngle = angleDiff;
-                nearest = ally;
-            }
-        }
-
-        return nearest;
+        return GoapPassTargetSelection.TrySelectBestAlly(facade, out target);
     }
 
     public static bool TryExecutePass(PlayerBlackboard bb)
