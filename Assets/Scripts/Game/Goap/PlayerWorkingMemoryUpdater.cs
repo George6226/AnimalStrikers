@@ -165,15 +165,23 @@ public class PlayerWorkingMemoryUpdater
             mirrored,
             out _,
             out var opponentPositions);
+        // 味方 NPC は従来どおり EnemyGoalPosition 基準（守備バッチ #2/#3 との整合）。
+        // 敵 NPC のみ鏡像の DefendGoal を使う。
+        Vector3 referenceGoalPosition = mirrored
+            ? GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored)
+            : teamBB.FieldInfo.EnemyGoalPosition;
+        bool teamHasBall = mirrored
+            ? GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored)
+            : teamBB.BallInfo.TeamHasBall;
         return PlayerBlackboardCalculator.CalculateIsInDefensivePosition(
-            GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored),
+            teamHasBall,
             playerBB.BallState.HasBall,
             playerBB.ActionState.IsStunned,
             teamBB.FieldInfo.FieldLength,
             playerBB.PhysicalState.Position,
             teamBB.BallInfo.BallOwnerPosition,
             opponentPositions,
-            GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored)
+            referenceGoalPosition
         );
     }
 }
