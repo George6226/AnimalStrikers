@@ -61,7 +61,7 @@ public static class GoapMainNpcCatalog
         return actions;
     }
 
-    /// <summary>本番 Main NPC（操作キャラ）向け: M2 のみ（BallPossessionAttack を除外）。</summary>
+    /// <summary>Phase A 以前の M2 限定本番向け: BallPossessionAttack を除外（レガシー・テスト用）。</summary>
     public static void RestrictToOffBallProduction(List<GoapGoalSO> goals, List<GoapActionSO> actions)
     {
         if (goals != null)

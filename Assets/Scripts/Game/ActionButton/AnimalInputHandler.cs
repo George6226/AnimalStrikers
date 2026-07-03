@@ -55,6 +55,12 @@ public class AnimalInputHandler : MonoBehaviour
             return;
         }
 
+        var selectedFacade = _animalSelector.GetSelectAnimal(getTag());
+        if (GoapMainNpcProductionEnvironment.ShouldSuppressHumanInput(selectedFacade))
+        {
+            return;
+        }
+
         // 選択キャラクターが変更された場合の処理
         if (_previousSelectedAnimal != _animalSelector.GetSelectAnimal(getTag()))
         {
@@ -119,6 +125,12 @@ public class AnimalInputHandler : MonoBehaviour
         if (_animalSelector == null || _animalSelector.GetSelectAnimal(getTag()) == null)
         {
             Debug.LogWarning("[AnimalInputHandler] AnimalSelector または SelAnimalFacade が設定されていません。");
+            return;
+        }
+
+        var selectedFacade = _animalSelector.GetSelectAnimal(getTag());
+        if (GoapMainNpcProductionEnvironment.ShouldSuppressHumanInput(selectedFacade))
+        {
             return;
         }
 

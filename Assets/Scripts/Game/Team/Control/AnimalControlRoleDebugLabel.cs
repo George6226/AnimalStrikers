@@ -287,10 +287,11 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
         {
             var facade = GetComponent<AnimalFacade>();
             var goap = AnimalGoapBrainComponents.Resolve(facade);
-            bool m2Active = goap.Agent != null
+            string phaseTag = goap.Agent != null
                 && goap.Agent.enabled
-                && GoapMainNpcProductionEnvironment.ShouldEnableGoap(goap.Blackboard, facade);
-            string humanTag = m2Active ? "YOU·M2" : "YOU";
+                ? GoapMainNpcProductionEnvironment.ResolveProductionGoapPhaseTag(goap.Blackboard, facade)
+                : string.Empty;
+            string humanTag = string.IsNullOrEmpty(phaseTag) ? "YOU" : $"YOU·{phaseTag}";
             string humanPosition = GetPositionTag();
             if (string.IsNullOrEmpty(humanPosition))
             {
