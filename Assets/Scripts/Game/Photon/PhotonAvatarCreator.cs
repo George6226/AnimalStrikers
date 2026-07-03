@@ -19,6 +19,7 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
 
     // 生成完了
     private int _created = 0;
+    private bool _spawnCoroutineRunning;
     public int Created
     {
         get { return _created; }
@@ -41,13 +42,24 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
         }
         else{
             // ルームに入っている場合は通常の処理を開始
-            StartCoroutine(WaitForPoolAndSpawn());
+            BeginSpawnIfNeeded();
         }
     }
 
     // アバターの生成(ルームマッチングから)
     public void executeAvatarCreator()
-    {   
+    {
+        BeginSpawnIfNeeded();
+    }
+
+    private void BeginSpawnIfNeeded()
+    {
+        if (_spawnCoroutineRunning)
+        {
+            return;
+        }
+
+        _spawnCoroutineRunning = true;
         StartCoroutine(WaitForPoolAndSpawn());
     }
 
@@ -56,8 +68,8 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
     {
         // ネットワークメッセージ処理の有効
         PhotonNetwork.IsMessageQueueRunning = true;
-        // プールが設定されるまで待機
-        while (PhotonNetwork.PrefabPool == null)
+        // DefaultPool（Resources 参照）は使わず、GameScene 登録プールを待つ
+        while (!PhotonCreateToPrefabPool.IsActivePool)
         {
             yield return new WaitForSeconds(0.1f);
         }

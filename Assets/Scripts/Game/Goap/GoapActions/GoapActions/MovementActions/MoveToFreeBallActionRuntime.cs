@@ -29,7 +29,7 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true) return false;
         if (!IsFreeBallSituation()) return false;
         if (TeammateNpcGoapRoleDifferentiation.Enabled
-            && !TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc())
+            && !TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc(bb))
         {
             return false;
         }
@@ -145,7 +145,7 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         }
 
         if (TeammateNpcGoapRoleDifferentiation.Enabled
-            && !TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc())
+            && !TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc(_bb))
         {
             FinishFreeBallChase(false);
             return true;

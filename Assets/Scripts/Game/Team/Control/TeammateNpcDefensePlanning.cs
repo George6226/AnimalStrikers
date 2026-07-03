@@ -69,24 +69,15 @@ public static class TeammateNpcDefensePlanning
 
         var assignment = bb.BasicData.Self.GetComponentInParent<AnimalControlAssignment>()
             ?? bb.BasicData.Self.GetComponent<AnimalControlAssignment>();
-        return assignment != null && assignment.Role == AnimalControlRole.TeammateNpc;
+        return assignment != null
+            && (assignment.Role == AnimalControlRole.TeammateNpc
+                || assignment.Role == AnimalControlRole.EnemyFieldNpc);
     }
 
     /// <summary>DefensivePositioning が有効な相手ボール局面（FREE/味方保持を除く）。</summary>
-    public static bool IsEnemyBallDefenseContext(TeamBlackboard teamBB)
+    public static bool IsEnemyBallDefenseContext(TeamBlackboard teamBB, PlayerBlackboard bb = null)
     {
-        if (teamBB == null)
-        {
-            return false;
-        }
-
-        var ball = teamBB.BallInfo;
-        if (ball.BallState == BallManager_State.BALL_STATE.FREE)
-        {
-            return false;
-        }
-
-        return ball.EnemyHasBall && !ball.TeamHasBall;
+        return GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, bb);
     }
 
     /// <summary>
@@ -100,7 +91,7 @@ public static class TeammateNpcDefensePlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        return IsEnemyBallDefenseContext(teamBB);
+        return IsEnemyBallDefenseContext(teamBB, bb);
     }
 
     /// <summary>プランナー用の動的コスト（重なり回避＋状況調整を反映）。</summary>

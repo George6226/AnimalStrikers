@@ -28,7 +28,7 @@ public static class MainNpcAttackPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        return teamBB != null && TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB);
+        return teamBB != null && TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb);
     }
 
     public static bool CanPassToTeammate(PlayerBlackboard bb)
@@ -205,7 +205,9 @@ public static class MainNpcAttackPlanning
         }
 
         maxDistance = teamBB.FieldInfo.FieldLength * MaxShootDistanceRatio;
-        distance = Vector3.Distance(bb.PhysicalState.Position, teamBB.FieldInfo.EnemyGoalPosition);
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        Vector3 goalPos = GoapFieldNpcPerspective.GetAttackGoalPosition(teamBB, mirrored);
+        distance = Vector3.Distance(bb.PhysicalState.Position, goalPos);
         return true;
     }
 }

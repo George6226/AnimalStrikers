@@ -4,6 +4,7 @@ using UnityEngine;
 using Photon.Pun;
 
 // Photonの生成をプレハブに変更する
+[DefaultExecutionOrder(-500)]
 public class PhotonCreateToPrefabPool : MonoBehaviour, IPunPrefabPool
 {
     // Photon用のプレハブ
@@ -26,10 +27,12 @@ public class PhotonCreateToPrefabPool : MonoBehaviour, IPunPrefabPool
         }
     }
 
-    // Start is called before the first frame update
-    private void Start()
+  /// <summary>GameScene の Prefabs/Animals 登録プールが有効か（DefaultPool の Resources 参照を避ける）。</summary>
+    public static bool IsActivePool =>
+        PhotonNetwork.PrefabPool is PhotonCreateToPrefabPool;
+
+    private void Awake()
     {
-        // ネットワークオブジェクトの生成・破棄を行う処理をこのクラスに変更
         PhotonNetwork.PrefabPool = this;
     }
 

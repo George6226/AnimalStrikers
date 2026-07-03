@@ -27,7 +27,7 @@ namespace Game.Goap.Goals
         public override float EvaluatePriority(PlayerBlackboard bb, TeamBlackboard tb)
         {
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (!TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB))
+            if (!TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb))
             {
                 return _basePriority;
             }
@@ -54,7 +54,7 @@ namespace Game.Goap.Goals
         public override bool IsAchievable(PlayerBlackboard bb)
         {
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (!TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB))
+            if (!TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb))
             {
                 return false;
             }

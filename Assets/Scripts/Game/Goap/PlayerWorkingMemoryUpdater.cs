@@ -59,23 +59,23 @@ public class PlayerWorkingMemoryUpdater
             CalculateIsInDefensivePosition(playerBB, teamBB));
 
         /***** Position情報 *****/
-        // ボールが近くにあるか
         SetBooleanFact(SymbolTag.Position.NEAR_BALL, playerBB.BallState.BallDistance < 3f);
-        // ボールを持たない敵が近くにいるか?
         SetBooleanFact(SymbolTag.Position.NEAR_ENEMY_NO_BALL,
             IsNearEnemyNoBall(playerBB, teamBB));
-        // ボールを持つ敵が近くにいるか?
         SetBooleanFact(SymbolTag.Position.NEAR_ENEMY_HAS_BALL,
             IsNearEnemyHasBall(playerBB, teamBB));
-        // 自陣にいるか
-        SetBooleanFact(SymbolTag.Position.MY_FIELD_NOW,
-            playerBB.PhysicalState.Position.z < teamBB.FieldInfo.FieldCenter.z);
 
         /***** Tactical情報 *****/
-        // 自分から見てチームがボールを持っているか
-        SetBooleanFact(SymbolTag.Tactical.TEAM_HAS_BALL, teamBB.BallInfo.TeamHasBall);
-        // 敵がボールを持っているか
-        SetBooleanFact(SymbolTag.Tactical.ENEMY_HAS_BALL, teamBB.BallInfo.EnemyHasBall);
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(playerBB);
+        SetBooleanFact(SymbolTag.Tactical.TEAM_HAS_BALL,
+            GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored));
+        SetBooleanFact(SymbolTag.Tactical.ENEMY_HAS_BALL,
+            GoapFieldNpcPerspective.EffectiveEnemyHasBall(teamBB, mirrored));
+
+        bool myFieldNow = mirrored
+            ? playerBB.PhysicalState.Position.z > teamBB.FieldInfo.FieldCenter.z
+            : playerBB.PhysicalState.Position.z < teamBB.FieldInfo.FieldCenter.z;
+        SetBooleanFact(SymbolTag.Position.MY_FIELD_NOW, myFieldNow);
 
         // トランジションはアクションのコスト/ゴール切替で表現するため、Factでは管理しない
     }
@@ -114,20 +114,27 @@ public class PlayerWorkingMemoryUpdater
     // ボールを持たない敵が近くにいるかチェック
     private bool IsNearEnemyNoBall(PlayerBlackboard playerBB, TeamBlackboard teamBB)
     {
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(playerBB);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out _,
+            out var opponentPositions);
         Vector3 ballOwnerPosition = teamBB.BallInfo.BallOwnerPosition;
         return PlayerBlackboardCalculator.IsNearEnemyNoBall(
             playerBB.PhysicalState.Position,
             ballOwnerPosition,
-            teamBB.BasicInfo.EnemyPositions
+            opponentPositions
         );
     }
 
     // ボールを持つ敵が近くにいるかチェック
     private bool IsNearEnemyHasBall(PlayerBlackboard playerBB, TeamBlackboard teamBB)
     {
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(playerBB);
         return PlayerBlackboardCalculator.IsNearEnemyHasBall(
             playerBB.PhysicalState.Position,
-            teamBB.BallInfo.EnemyHasBall,
+            GoapFieldNpcPerspective.EffectiveEnemyHasBall(teamBB, mirrored),
             teamBB.BallInfo.BallOwnerPosition
         );
     }
@@ -152,15 +159,21 @@ public class PlayerWorkingMemoryUpdater
     /// <returns>守備位置にいるかどうか</returns>
     private bool CalculateIsInDefensivePosition(PlayerBlackboard playerBB, TeamBlackboard teamBB)
     {
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(playerBB);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out _,
+            out var opponentPositions);
         return PlayerBlackboardCalculator.CalculateIsInDefensivePosition(
-            teamBB.BallInfo.TeamHasBall,
+            GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored),
             playerBB.BallState.HasBall,
             playerBB.ActionState.IsStunned,
             teamBB.FieldInfo.FieldLength,
             playerBB.PhysicalState.Position,
             teamBB.BallInfo.BallOwnerPosition,
-            teamBB.BasicInfo.EnemyPositions,
-            teamBB.FieldInfo.EnemyGoalPosition
+            opponentPositions,
+            GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored)
         );
     }
 }

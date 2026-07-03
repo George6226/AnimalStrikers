@@ -647,13 +647,29 @@ public class GoapAgent : MonoBehaviour
             return GoapMainNpcProductionEnvironment.ShouldEnableGoap(_playerBlackboard, facade);
         }
 
+        var assignment = self.GetComponentInParent<AnimalControlAssignment>()
+            ?? self.GetComponent<AnimalControlAssignment>();
+        if (assignment != null && assignment.Role == AnimalControlRole.EnemyFieldNpc)
+        {
+            var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+            if (enemySquad == null || !enemySquad.ShouldUseGoapFor(facade))
+            {
+                return false;
+            }
+
+            if (enemySquad.ResolveNpcTier(facade) == GoapNpcTier.Main)
+            {
+                return GoapEnemyMainNpcPlanning.ShouldEnableGoap(_playerBlackboard, facade);
+            }
+
+            return true;
+        }
+
         if (IsActiveHumanSelectedPlayer(facade))
         {
             return false;
         }
 
-        var assignment = self.GetComponentInParent<AnimalControlAssignment>()
-            ?? self.GetComponent<AnimalControlAssignment>();
         if (assignment == null)
         {
             return true;
@@ -1163,7 +1179,9 @@ public class GoapAgent : MonoBehaviour
 
         string productionTag = IsProductionMainNpc()
             ? BuildProductionMainNpcDiagnosticTag(diagnostic)
-            : string.Empty;
+            : IsEnemyMainNpc()
+                ? BuildProductionMainNpcDiagnosticTag(diagnostic)
+                : string.Empty;
         return "mainNpcDiag="
             + productionTag
             + $"ctx:{diagnostic.ContextTag},"
@@ -1545,6 +1563,18 @@ public class GoapAgent : MonoBehaviour
         }
 
         GoapTeammateNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
+    }
+
+    private bool IsEnemyMainNpc()
+    {
+        if (_npcTier != GoapNpcTier.Main)
+        {
+            return false;
+        }
+
+        var self = _playerBlackboard?.BasicData?.Self;
+        var facade = self != null ? self.GetComponent<AnimalFacade>() : null;
+        return GoapEnemyMainNpcPlanning.IsEnemyMainPlayer(facade);
     }
 
     private bool IsProductionMainNpc()

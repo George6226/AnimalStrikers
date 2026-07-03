@@ -40,7 +40,7 @@ namespace Game.Goap.Goals
         public override float EvaluatePriority(PlayerBlackboard bb, TeamBlackboard tb)
         {
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (!IsEnemyBallDefenseContext(teamBB))
+            if (!TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
             {
                 return _basePriority;
             }
@@ -54,6 +54,7 @@ namespace Game.Goap.Goals
                 ? TeammateNpcDefensePlanning.DefensivePositioningEnemyBallPriority
                 : _basePriority;
 
+            bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
             Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
             float fieldLength = teamBB.FieldInfo.FieldLength;
             float minDist = fieldLength * _minDistanceRatio;
@@ -63,17 +64,22 @@ namespace Game.Goap.Goals
             float optimalOwner = fieldLength * _optimalDistanceToOwnerRatio;
             float distToOwner = Vector3.Distance(bb.PhysicalState.Position, ownerPos);
             float pressureDistanceScore = Mathf.Clamp01(1f - Mathf.Abs(distToOwner - optimalOwner) / Mathf.Max(optimalOwner, 0.01f));
-            Vector3 enemyGoal = teamBB.FieldInfo.EnemyGoalPosition; // 基準ベクトルに使用
-            Vector3 toGoal = (enemyGoal - ownerPos).normalized;
+            Vector3 attackGoal = GoapFieldNpcPerspective.GetAttackGoalPosition(teamBB, mirrored);
+            Vector3 toGoal = (attackGoal - ownerPos).normalized;
             Vector3 lateral = Vector3.Cross(toGoal, Vector3.up).normalized;
             float lateralAlign = Mathf.Abs(Vector3.Dot((bb.PhysicalState.Position - ownerPos).normalized, lateral));
             float pressureScore = 0.6f * pressureDistanceScore + 0.4f * lateralAlign;
             priority += _pressureBonus * pressureScore;
 
             // 2) マーク（最も危険な相手≒最も前方の敵に近接）
+            GoapFieldNpcPerspective.ResolveTeamPositions(
+                teamBB,
+                mirrored,
+                out _,
+                out System.Collections.Generic.List<Vector3> opponentPositions);
             Vector3 bestEnemy = ownerPos;
             float bestEnemyScore = -1f;
-            foreach (var e in teamBB.BasicInfo.EnemyPositions)
+            foreach (var e in opponentPositions)
             {
                 // ゴール方向への前進度合いをスコア化
                 float forwardness = Vector3.Dot((e - ownerPos).normalized, toGoal);
@@ -113,7 +119,7 @@ namespace Game.Goap.Goals
         public override bool IsAchievable(PlayerBlackboard bb)
         {
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (!IsEnemyBallDefenseContext(teamBB))
+            if (!TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
             {
                 return false;
             }
@@ -150,28 +156,6 @@ namespace Game.Goap.Goals
             }
 
             return RequiredFacts;
-        }
-
-        /// <summary>相手保持かつ味方非保持（FREE/味方ボール時は false）。</summary>
-        private static bool IsEnemyBallDefenseContext(TeamBlackboard teamBB)
-        {
-            if (teamBB == null)
-            {
-                return false;
-            }
-
-            var ball = teamBB.BallInfo;
-            if (ball.BallState == BallManager_State.BALL_STATE.FREE)
-            {
-                return false;
-            }
-
-            if (!ball.EnemyHasBall || ball.TeamHasBall)
-            {
-                return false;
-            }
-
-            return true;
         }
 
         public override string GetGoalDescription()
