@@ -77,6 +77,12 @@ public class EnemySquadControlController : MonoBehaviour
 
     public bool ShouldUseGoapFor(AnimalFacade facade)
     {
+        // 既存 GOAP バッチ（味方サポート/守備選出）と干渉しないよう本番マッチのみ有効化する。
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return false;
+        }
+
         if (!_enableEnemyGoap || facade == null || facade.IsGK())
         {
             return false;
