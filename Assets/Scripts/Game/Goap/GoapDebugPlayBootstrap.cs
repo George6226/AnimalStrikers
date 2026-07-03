@@ -125,6 +125,8 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             yield break;
         }
 
+        PhotonCreateToPrefabPool.EnsureActivePool();
+
         if (!PhotonNetwork.InRoom)
         {
             PhotonNetwork.CreateRoom(
@@ -180,6 +182,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (!HasMinimumFieldPlayers())
         {
+            PhotonCreateToPrefabPool.EnsureActivePool();
             Log("batch verify: executeAvatarCreator");
             _avatarCreator.executeAvatarCreator();
             yield return WaitForLayoutApplyReady(SpawnWaitTimeoutSeconds);
@@ -203,6 +206,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < 10f && !PhotonCreateToPrefabPool.IsActivePool)
         {
+            PhotonCreateToPrefabPool.EnsureActivePool();
             elapsed += Time.deltaTime;
             yield return null;
         }

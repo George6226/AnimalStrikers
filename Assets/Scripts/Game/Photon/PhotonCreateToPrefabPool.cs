@@ -31,6 +31,21 @@ public class PhotonCreateToPrefabPool : MonoBehaviour, IPunPrefabPool
     public static bool IsActivePool =>
         PhotonNetwork.PrefabPool is PhotonCreateToPrefabPool;
 
+    /// <summary>Photon 接続後などで DefaultPool に戻った場合に GameScene プールを再登録する。</summary>
+    public static void EnsureActivePool()
+    {
+        if (IsActivePool)
+        {
+            return;
+        }
+
+        var pool = Object.FindFirstObjectByType<PhotonCreateToPrefabPool>(FindObjectsInactive.Include);
+        if (pool != null)
+        {
+            PhotonNetwork.PrefabPool = pool;
+        }
+    }
+
     private void Awake()
     {
         PhotonNetwork.PrefabPool = this;

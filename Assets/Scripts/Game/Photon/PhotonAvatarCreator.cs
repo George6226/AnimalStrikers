@@ -34,7 +34,12 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
     }
 
     void Start()
-    {   
+    {
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
+        {
+            return;
+        }
+
         // ルームに入っているか確認
         if (!PhotonNetwork.InRoom){
             // ルームマッチングを行う
@@ -66,13 +71,33 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
     // マッチング後プールからキャラクタを生成
     private IEnumerator WaitForPoolAndSpawn()
     {
-        // ネットワークメッセージ処理の有効
-        PhotonNetwork.IsMessageQueueRunning = true;
-        // DefaultPool（Resources 参照）は使わず、GameScene 登録プールを待つ
-        while (!PhotonCreateToPrefabPool.IsActivePool)
+        try
         {
-            yield return new WaitForSeconds(0.1f);
-        }
+            // ネットワークメッセージ処理の有効
+            PhotonNetwork.IsMessageQueueRunning = true;
+            float elapsed = 0f;
+            float timeout = UsesAutomatedVerifySpawn()
+                ? GoapBatchVerifyEnvironment.ResolveTimeout(30f, 60f)
+                : float.PositiveInfinity;
+            while (!PhotonCreateToPrefabPool.IsActivePool)
+            {
+                PhotonCreateToPrefabPool.EnsureActivePool();
+                if (PhotonCreateToPrefabPool.IsActivePool)
+                {
+                    break;
+                }
+
+                if (elapsed >= timeout)
+                {
+                    Debug.LogError(
+                        $"[PhotonAvatarCreator] prefab pool not active after {timeout:F0}s " +
+                        $"(pool={(PhotonNetwork.PrefabPool != null ? PhotonNetwork.PrefabPool.GetType().Name : "null")})");
+                    yield break;
+                }
+
+                elapsed += 0.1f;
+                yield return new WaitForSeconds(0.1f);
+            }
 
         // NPC対戦
         if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC)
@@ -111,7 +136,15 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
                 SpawnCharacters(PlayerType.Sub);
             }
         }
+        }
+        finally
+        {
+            _spawnCoroutineRunning = false;
+        }
     }
+
+    private static bool UsesAutomatedVerifySpawn() =>
+        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive;
 
     // キャラクタの生成
     private void SpawnCharacters(PlayerType playerType)
