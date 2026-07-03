@@ -579,4 +579,28 @@ public static class TeammateNpcDefensePlanning
 
         return urgency;
     }
+
+    public struct DefensiveRetreatOverextensionDiagnostic
+    {
+        public bool HasSample;
+        public float RetreatUrgency;
+        public float AheadRatio;
+        public bool IsSignificantlyAhead;
+    }
+
+    /// <summary>本番プレイ観察用: オーバー伸展と Retreat 選好の材料をまとめて返す。</summary>
+    public static DefensiveRetreatOverextensionDiagnostic GetRetreatOverextensionDiagnostic(PlayerBlackboard bb)
+    {
+        var diagnostic = default(DefensiveRetreatOverextensionDiagnostic);
+        if (!TrySampleDefensiveRetreatLine(bb, 0.28f, 0.6f, out DefensiveRetreatLineSample line))
+        {
+            return diagnostic;
+        }
+
+        diagnostic.HasSample = true;
+        diagnostic.AheadRatio = line.AheadRatio();
+        diagnostic.IsSignificantlyAhead = line.IsSignificantlyAhead();
+        diagnostic.RetreatUrgency = ComputeSevereRetreatOverextensionUrgency(bb);
+        return diagnostic;
+    }
 }
