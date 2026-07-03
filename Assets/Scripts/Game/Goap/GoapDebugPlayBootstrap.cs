@@ -86,33 +86,14 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             yield break;
         }
 
-        if (_forceNpcBattleMode && local.getBattleMode() != ConstData.BATTLE_MODE.NPC)
-        {
-            var previousMode = local.getBattleMode();
-            local.setBattleMode(ConstData.BATTLE_MODE.NPC);
-            Log($"forced BattleMode=NPC (was {previousMode})");
-        }
-
         if (PhotonPlayerInfo.Instance != null)
         {
             PhotonPlayerInfo.Instance.Initialize(local);
         }
 
-        if (!HasMinimumFieldPlayers())
-        {
-            if (_avatarCreator != null)
-            {
-                Log("InRoom but field players missing -> executeAvatarCreator");
-                _avatarCreator.executeAvatarCreator();
-            }
-            else
-            {
-                Log("InRoom but PhotonAvatarCreator not found");
-            }
-
-            yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
-        }
-
+        // MainMenu 経由では PhotonAvatarCreator が生成する。ここでは完了待ちのみ。
+        Log("InRoom: waiting for PhotonAvatarCreator spawn");
+        yield return WaitForFieldPlayersSpawned(SpawnWaitTimeoutSeconds);
         CompleteIfReady();
     }
 
@@ -143,6 +124,8 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             Log($"batch verify spawn aborted: Photon offline connect failed after {ConnectTimeoutSeconds:F0}s");
             yield break;
         }
+
+        PhotonCreateToPrefabPool.EnsureActivePool();
 
         if (!PhotonNetwork.InRoom)
         {
@@ -184,7 +167,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (PhotonPlayerInfo.Instance != null)
         {
-            PhotonPlayerInfo.Instance.Initialize(local);
+            PhotonPlayerInfo.Instance.InitializeForAutomatedVerify(local);
         }
         else
         {
@@ -199,6 +182,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (!HasMinimumFieldPlayers())
         {
+            PhotonCreateToPrefabPool.EnsureActivePool();
             Log("batch verify: executeAvatarCreator");
             _avatarCreator.executeAvatarCreator();
             yield return WaitForLayoutApplyReady(SpawnWaitTimeoutSeconds);
@@ -220,15 +204,16 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
     private IEnumerator WaitForPrefabPoolReady()
     {
         float elapsed = 0f;
-        while (elapsed < 10f && PhotonNetwork.PrefabPool == null)
+        while (elapsed < 10f && !PhotonCreateToPrefabPool.IsActivePool)
         {
+            PhotonCreateToPrefabPool.EnsureActivePool();
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        if (PhotonNetwork.PrefabPool == null)
+        if (!PhotonCreateToPrefabPool.IsActivePool)
         {
-            Log("batch verify: Photon PrefabPool still null after 10s");
+            Log("batch verify: PhotonCreateToPrefabPool not active after 10s");
         }
     }
 

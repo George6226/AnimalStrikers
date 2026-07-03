@@ -31,7 +31,7 @@ namespace Game.Goap.Goals
             }
 
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (teamBB == null || !teamBB.BallInfo.EnemyHasBall)
+            if (!TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
             {
                 return _basePriority;
             }
@@ -59,7 +59,10 @@ namespace Game.Goap.Goals
             }
 
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-            if (teamBB == null || !teamBB.BallInfo.EnemyHasBall) return false;
+            if (!TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
+            {
+                return false;
+            }
             if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true) return false;
             if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true) return false;
 

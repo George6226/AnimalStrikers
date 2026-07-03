@@ -12,6 +12,7 @@ public class AnimalControlBrainRouter : MonoBehaviour
     private AnimalGoapBrainComponents _goap;
     private bool _goapConfigured;
     private bool _productionGoapActive;
+    private bool _enemyMainGoapActive;
 
     public bool IsProductionMainGoapActive => _productionGoapActive;
 
@@ -49,7 +50,12 @@ public class AnimalControlBrainRouter : MonoBehaviour
     public void ApplyRole(AnimalControlRole role)
     {
         bool useGoap = role == AnimalControlRole.TeammateNpc && ShouldUseGoapPilot();
-        if ((GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive) && _facade != null)
+        if (role == AnimalControlRole.EnemyFieldNpc)
+        {
+            var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+            useGoap = enemySquad != null && _facade != null && enemySquad.ShouldUseGoapFor(_facade);
+        }
+        else if ((GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive) && _facade != null)
         {
             var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
             useGoap = squad != null && squad.ShouldUseGoapFor(_facade);
@@ -79,6 +85,7 @@ public class AnimalControlBrainRouter : MonoBehaviour
     private void LateUpdate()
     {
         RefreshProductionMainNpcGoap();
+        RefreshEnemyMainNpcGoap();
     }
 
     private void RefreshProductionMainNpcGoap()
@@ -110,6 +117,45 @@ public class AnimalControlBrainRouter : MonoBehaviour
         _goap.SetActive(false);
     }
 
+    private void RefreshEnemyMainNpcGoap()
+    {
+        if (_facade == null
+            || _assignment == null
+            || _assignment.Role != AnimalControlRole.EnemyFieldNpc)
+        {
+            return;
+        }
+
+        var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+        if (enemySquad == null || !enemySquad.ShouldUseGoapFor(_facade))
+        {
+            return;
+        }
+
+        if (enemySquad.ResolveNpcTier(_facade) != GoapNpcTier.Main)
+        {
+            return;
+        }
+
+        bool wantGoap = GoapEnemyMainNpcPlanning.ShouldEnableGoap(_goap.Blackboard, _facade);
+        if (wantGoap == _enemyMainGoapActive)
+        {
+            return;
+        }
+
+        _enemyMainGoapActive = wantGoap;
+
+        if (wantGoap)
+        {
+            _goapConfigured = false;
+            TryConfigureEnemyGoap();
+            _goap.SetActive(true);
+            return;
+        }
+
+        _goap.SetActive(false);
+    }
+
     public void ResetGoapConfiguration()
     {
         _goapConfigured = false;
@@ -128,6 +174,12 @@ public class AnimalControlBrainRouter : MonoBehaviour
             return;
         }
 
+        if (_assignment != null && _assignment.Role == AnimalControlRole.EnemyFieldNpc)
+        {
+            TryConfigureEnemyGoap();
+            return;
+        }
+
         var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
         if (squad == null)
         {
@@ -135,6 +187,23 @@ public class AnimalControlBrainRouter : MonoBehaviour
         }
 
         squad.ApplyGoapPilotConfiguration(_goap.Agent, _facade);
+        _goapConfigured = true;
+    }
+
+    private void TryConfigureEnemyGoap()
+    {
+        if (_goapConfigured || !_goap.HasAgent)
+        {
+            return;
+        }
+
+        var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+        if (enemySquad == null)
+        {
+            return;
+        }
+
+        enemySquad.ApplyGoapConfiguration(_goap.Agent, _facade);
         _goapConfigured = true;
     }
 }

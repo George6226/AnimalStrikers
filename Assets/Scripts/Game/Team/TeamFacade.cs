@@ -68,6 +68,13 @@ public class TeamFacade : MonoBehaviour
         get { return _squadControl; }
     }
 
+    // 敵チームの操作割当（敵Main1 + 敵Sub2 + GK NPC）
+    [SerializeField] private EnemySquadControlController _enemySquadControl;
+    public EnemySquadControlController EnemySquadControl
+    {
+        get { return _enemySquadControl; }
+    }
+
     private void Awake()
     {
         if (_instance != null && _instance != this)
@@ -105,6 +112,10 @@ public class TeamFacade : MonoBehaviour
         if (_squadControl == null)
         {
             _squadControl = FindObjectOfType<SquadControlController>();
+        }
+        if (_enemySquadControl == null)
+        {
+            _enemySquadControl = FindObjectOfType<EnemySquadControlController>();
         }
     }
 }

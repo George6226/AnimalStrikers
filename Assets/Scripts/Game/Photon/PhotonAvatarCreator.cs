@@ -19,6 +19,7 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
 
     // 生成完了
     private int _created = 0;
+    private bool _spawnCoroutineRunning;
     public int Created
     {
         get { return _created; }
@@ -33,7 +34,12 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
     }
 
     void Start()
-    {   
+    {
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
+        {
+            return;
+        }
+
         // ルームに入っているか確認
         if (!PhotonNetwork.InRoom){
             // ルームマッチングを行う
@@ -41,29 +47,61 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
         }
         else{
             // ルームに入っている場合は通常の処理を開始
-            StartCoroutine(WaitForPoolAndSpawn());
+            BeginSpawnIfNeeded();
         }
     }
 
     // アバターの生成(ルームマッチングから)
     public void executeAvatarCreator()
-    {   
+    {
+        BeginSpawnIfNeeded();
+    }
+
+    private void BeginSpawnIfNeeded()
+    {
+        if (_spawnCoroutineRunning)
+        {
+            return;
+        }
+
+        _spawnCoroutineRunning = true;
         StartCoroutine(WaitForPoolAndSpawn());
     }
 
     // マッチング後プールからキャラクタを生成
     private IEnumerator WaitForPoolAndSpawn()
     {
-        // ネットワークメッセージ処理の有効
-        PhotonNetwork.IsMessageQueueRunning = true;
-        // プールが設定されるまで待機
-        while (PhotonNetwork.PrefabPool == null)
+        try
         {
-            yield return new WaitForSeconds(0.1f);
-        }
+            // ネットワークメッセージ処理の有効
+            PhotonNetwork.IsMessageQueueRunning = true;
+            float elapsed = 0f;
+            float timeout = UsesAutomatedVerifySpawn()
+                ? GoapBatchVerifyEnvironment.ResolveTimeout(30f, 60f)
+                : float.PositiveInfinity;
+            while (!PhotonCreateToPrefabPool.IsActivePool)
+            {
+                PhotonCreateToPrefabPool.EnsureActivePool();
+                if (PhotonCreateToPrefabPool.IsActivePool)
+                {
+                    break;
+                }
 
-        // NPC対戦
-        if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC)
+                if (elapsed >= timeout)
+                {
+                    Debug.LogError(
+                        $"[PhotonAvatarCreator] prefab pool not active after {timeout:F0}s " +
+                        $"(pool={(PhotonNetwork.PrefabPool != null ? PhotonNetwork.PrefabPool.GetType().Name : "null")})");
+                    yield break;
+                }
+
+                elapsed += 0.1f;
+                yield return new WaitForSeconds(0.1f);
+            }
+
+        // NPC対戦（自動検証は setBattleMode 反映前にスポーンが走るため明示的に NPC 経路へ）
+        if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC
+            || UsesAutomatedVerifySpawn())
         {
             // マスター = Player
             if (PhotonPlayerInfo.Instance.IsMasterClient)
@@ -99,7 +137,15 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
                 SpawnCharacters(PlayerType.Sub);
             }
         }
+        }
+        finally
+        {
+            _spawnCoroutineRunning = false;
+        }
     }
+
+    private static bool UsesAutomatedVerifySpawn() =>
+        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive;
 
     // キャラクタの生成
     private void SpawnCharacters(PlayerType playerType)

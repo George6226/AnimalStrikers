@@ -38,7 +38,7 @@ namespace Game.Goap.Goals
                 return _basePriority;
             }
 
-            if (!TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc())
+            if (!TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc(bb))
             {
                 return _basePriority;
             }
@@ -59,7 +59,10 @@ namespace Game.Goap.Goals
             var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
             if (teamBB == null) return false;
             if (teamBB.BallInfo.BallState != BallManager_State.BALL_STATE.FREE) return false;
-            if (!TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc()) return false;
+            if (!TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc(bb))
+            {
+                return false;
+            }
             if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true) return false;
             if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true) return false;
 

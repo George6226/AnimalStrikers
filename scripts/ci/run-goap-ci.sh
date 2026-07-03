@@ -121,9 +121,11 @@ run_editmode_tests() {
   echo "[goap-ci] === EditMode tests (約30秒・期待 ${GOAP_EDITMODE_EXPECTED_TESTS} 件) ==="
   echo "[goap-ci] filter=${GOAP_EDITMODE_TEST_FILTER}"
   echo "[goap-ci] log=${log_file}"
+  goap_ci_clear_batch_markers "${LOG_DIR}"
   "${unity_bin}" \
     -batchmode \
     -nographics \
+    -quit \
     -projectPath "${PROJECT_ROOT}" \
     -runTests \
     -testPlatform EditMode \

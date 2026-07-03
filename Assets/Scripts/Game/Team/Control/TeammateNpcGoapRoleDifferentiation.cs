@@ -224,8 +224,21 @@ public static class TeammateNpcGoapRoleDifferentiation
 
     /// <summary>
     /// 条件A: 操作プレイヤーがボールから十分離れ、かつ最寄り味方 NPC がボール近くかつ人間より近いときだけ NPC に追跡を委譲する。
+    /// 敵側は操作プレイヤーがいないため、最寄り敵フィールド NPC が近ければ常に委譲する。
     /// </summary>
-    public static bool ShouldDelegateFreeBallChaseToNpc()
+    public static bool ShouldDelegateFreeBallChaseToNpc(PlayerBlackboard bb)
+    {
+        if (bb?.BasicData?.Self == null)
+        {
+            return ShouldDelegateFreeBallChaseToNpc((AnimalFacade)null);
+        }
+
+        var facade = bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?? bb.BasicData.Self.GetComponent<AnimalFacade>();
+        return ShouldDelegateFreeBallChaseToNpc(facade);
+    }
+
+    public static bool ShouldDelegateFreeBallChaseToNpc(AnimalFacade requester = null)
     {
         if (!Enabled)
         {
@@ -239,7 +252,14 @@ public static class TeammateNpcGoapRoleDifferentiation
         }
 
         Vector3 ballPos = teamBB.BallInfo.BallPosition;
-        if (!TryGetNearestTeammateNpcBallDistance(ballPos, out float nearestNpcDist))
+        bool enemySide = requester != null && GoapFieldNpcPerspective.IsEnemyFieldNpc(requester);
+        if (enemySide)
+        {
+            return TryGetNearestFieldNpcBallDistance(ballPos, enemySide: true, out float nearestEnemyNpcDist)
+                && nearestEnemyNpcDist < FreeBallNpcNearBallDistance;
+        }
+
+        if (!TryGetNearestFieldNpcBallDistance(ballPos, enemySide: false, out float nearestNpcDist))
         {
             return false;
         }
@@ -266,8 +286,8 @@ public static class TeammateNpcGoapRoleDifferentiation
         return nearestNpcDist < humanDist - FreeBallLeaderTieBreakEpsilon;
     }
 
-    /// <summary>フリーボール時、味方フィールドNPCのうち1体だけが追いかけるリーダーを決定する。</summary>
-    public static AnimalFacade ResolveFreeBallChaseLeader()
+    /// <summary>フリーボール時、フィールドNPCのうち1体だけが追いかけるリーダーを決定する。</summary>
+    public static AnimalFacade ResolveFreeBallChaseLeader(AnimalFacade requester = null)
     {
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null || !IsFreeBallContext(teamBB))
@@ -276,14 +296,15 @@ public static class TeammateNpcGoapRoleDifferentiation
             return null;
         }
 
-        if (!ShouldDelegateFreeBallChaseToNpc())
+        bool enemySide = requester != null && GoapFieldNpcPerspective.IsEnemyFieldNpc(requester);
+        if (!ShouldDelegateFreeBallChaseToNpc(requester))
         {
             ClearFreeBallChaseLeaderLock();
             return null;
         }
 
         if (Time.time < _lockedChaseLeaderUntil
-            && TryFindTeammateNpcByPlayerId(_lockedChaseLeaderPlayerId, out AnimalFacade lockedLeader))
+            && TryFindFieldNpcByPlayerId(_lockedChaseLeaderPlayerId, enemySide, out AnimalFacade lockedLeader))
         {
             return lockedLeader;
         }
@@ -298,8 +319,12 @@ public static class TeammateNpcGoapRoleDifferentiation
         AnimalFacade leader = null;
         float leaderDist = float.MaxValue;
         int leaderPlayerId = int.MaxValue;
+        var candidates = enemySide ? regist.Enemies : regist.Allys;
+        AnimalControlRole requiredRole = enemySide
+            ? AnimalControlRole.EnemyFieldNpc
+            : AnimalControlRole.TeammateNpc;
 
-        foreach (var facade in regist.Allys)
+        foreach (var facade in candidates)
         {
             if (facade == null || facade.IsGK())
             {
@@ -307,7 +332,7 @@ public static class TeammateNpcGoapRoleDifferentiation
             }
 
             var assignment = facade.GetComponent<AnimalControlAssignment>();
-            if (assignment == null || assignment.Role != AnimalControlRole.TeammateNpc)
+            if (assignment == null || assignment.Role != requiredRole)
             {
                 continue;
             }
@@ -336,7 +361,7 @@ public static class TeammateNpcGoapRoleDifferentiation
             return true;
         }
 
-        var leader = ResolveFreeBallChaseLeader();
+        var leader = ResolveFreeBallChaseLeader(facade);
         return leader != null && leader == facade;
     }
 
@@ -387,7 +412,7 @@ public static class TeammateNpcGoapRoleDifferentiation
         _lockedChaseLeaderUntil = 0f;
     }
 
-    private static bool TryFindTeammateNpcByPlayerId(int playerId, out AnimalFacade facade)
+    private static bool TryFindFieldNpcByPlayerId(int playerId, bool enemySide, out AnimalFacade facade)
     {
         facade = null;
         if (playerId <= 0)
@@ -401,27 +426,88 @@ public static class TeammateNpcGoapRoleDifferentiation
             return false;
         }
 
-        foreach (var ally in regist.Allys)
+        var candidates = enemySide ? regist.Enemies : regist.Allys;
+        AnimalControlRole requiredRole = enemySide
+            ? AnimalControlRole.EnemyFieldNpc
+            : AnimalControlRole.TeammateNpc;
+        foreach (var candidate in candidates)
         {
-            if (ally == null || ally.IsGK())
+            if (candidate == null || candidate.IsGK())
             {
                 continue;
             }
 
-            if (ResolvePlayerId(ally) != playerId)
+            if (ResolvePlayerId(candidate) != playerId)
             {
                 continue;
             }
 
-            var assignment = ally.GetComponent<AnimalControlAssignment>();
-            if (assignment != null && assignment.Role == AnimalControlRole.TeammateNpc)
+            var assignment = candidate.GetComponent<AnimalControlAssignment>();
+            if (assignment == null || assignment.Role != requiredRole)
             {
-                facade = ally;
-                return true;
+                continue;
             }
+
+            facade = candidate;
+            return true;
         }
 
         return false;
+    }
+
+    private static bool TryGetNearestFieldNpcBallDistance(Vector3 ballPos, bool enemySide, out float distance)
+    {
+        distance = float.MaxValue;
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return false;
+        }
+
+        bool found = false;
+        float minDist = float.MaxValue;
+        var candidates = enemySide ? regist.Enemies : regist.Allys;
+        AnimalControlRole requiredRole = enemySide
+            ? AnimalControlRole.EnemyFieldNpc
+            : AnimalControlRole.TeammateNpc;
+        foreach (var facade in candidates)
+        {
+            if (facade == null || facade.IsGK())
+            {
+                continue;
+            }
+
+            var assignment = facade.GetComponent<AnimalControlAssignment>();
+            if (assignment == null || assignment.Role != requiredRole)
+            {
+                continue;
+            }
+
+            float d = HorizontalDistance(facade.transform.position, ballPos);
+            if (d < minDist)
+            {
+                minDist = d;
+                found = true;
+            }
+        }
+
+        if (!found)
+        {
+            return false;
+        }
+
+        distance = minDist;
+        return true;
+    }
+
+    private static bool TryFindTeammateNpcByPlayerId(int playerId, out AnimalFacade facade)
+    {
+        return TryFindFieldNpcByPlayerId(playerId, enemySide: false, out facade);
+    }
+
+    private static bool TryGetNearestTeammateNpcBallDistance(Vector3 ballPos, out float distance)
+    {
+        return TryGetNearestFieldNpcBallDistance(ballPos, enemySide: false, out distance);
     }
 
     private static bool IsFreeBallContext(TeamBlackboard teamBB)
@@ -451,47 +537,6 @@ public static class TeammateNpcGoapRoleDifferentiation
             }
 
             float d = HorizontalDistance(human.transform.position, ballPos);
-            if (d < minDist)
-            {
-                minDist = d;
-                found = true;
-            }
-        }
-
-        if (!found)
-        {
-            return false;
-        }
-
-        distance = minDist;
-        return true;
-    }
-
-    private static bool TryGetNearestTeammateNpcBallDistance(Vector3 ballPos, out float distance)
-    {
-        distance = float.MaxValue;
-        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
-        if (regist == null)
-        {
-            return false;
-        }
-
-        bool found = false;
-        float minDist = float.MaxValue;
-        foreach (var facade in regist.Allys)
-        {
-            if (facade == null || facade.IsGK())
-            {
-                continue;
-            }
-
-            var assignment = facade.GetComponent<AnimalControlAssignment>();
-            if (assignment == null || assignment.Role != AnimalControlRole.TeammateNpc)
-            {
-                continue;
-            }
-
-            float d = HorizontalDistance(facade.transform.position, ballPos);
             if (d < minDist)
             {
                 minDist = d;

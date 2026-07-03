@@ -990,12 +990,26 @@ public abstract class GoapDefenseActionVerificationSetup : MonoBehaviour
     private IEnumerator AssignBallToEnemyCoroutine(int enemyIndex)
     {
         _lastAssignBallOwnershipChanged = false;
-        const float timeout = 5f;
+        float timeout = GoapBatchVerifyEnvironment.ResolveTimeout(5f, 30f);
         float elapsed = 0f;
         while (elapsed < timeout && !IsBallAvailable())
         {
             elapsed += Time.deltaTime;
             yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < timeout
+            && GoapDefenseVerificationBallHelper.GetEnemyByIndex(enemyIndex) == null)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (GoapDefenseVerificationBallHelper.GetEnemyByIndex(enemyIndex) == null)
+        {
+            LogLine($"AssignEnemyBall(index={enemyIndex}) failed: enemy{enemyIndex}_not_found");
+            yield break;
         }
 
         if (!GoapDefenseVerificationBallHelper.TryAssignBallToEnemyIndex(

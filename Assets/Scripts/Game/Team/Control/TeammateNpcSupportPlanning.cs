@@ -61,20 +61,9 @@ public static class TeammateNpcSupportPlanning
         return TacticalSupportPlanningRequiredFacts;
     }
 
-    public static bool IsTeamBallAttackContext(TeamBlackboard teamBB)
+    public static bool IsTeamBallAttackContext(TeamBlackboard teamBB, PlayerBlackboard bb = null)
     {
-        if (teamBB == null)
-        {
-            return false;
-        }
-
-        var ball = teamBB.BallInfo;
-        if (ball.BallState == BallManager_State.BALL_STATE.FREE)
-        {
-            return false;
-        }
-
-        return ball.TeamHasBall && !ball.EnemyHasBall;
+        return GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, bb);
     }
 
     public static bool ShouldUseTacticalSupportGoal(PlayerBlackboard bb)
@@ -85,7 +74,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        return IsTeamBallAttackContext(teamBB);
+        return IsTeamBallAttackContext(teamBB, bb);
     }
 
     /// <summary>味方ボール時にスロット別コストを適用する対象（TeammateNpc 以外の味方フィールドプレイヤーも含む）。</summary>
@@ -97,7 +86,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return false;
         }
@@ -148,6 +137,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         return assignment.Role == AnimalControlRole.TeammateNpc
+            || assignment.Role == AnimalControlRole.EnemyFieldNpc
             || assignment.Role == AnimalControlRole.Unassigned;
     }
 
@@ -172,7 +162,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB) || !IsFieldPlayer(bb))
+        if (!IsTeamBallAttackContext(teamBB, bb) || !IsFieldPlayer(bb))
         {
             return false;
         }
@@ -294,7 +284,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (teamBB == null || !IsTeamBallAttackContext(teamBB))
+        if (teamBB == null || !IsTeamBallAttackContext(teamBB, bb))
         {
             return false;
         }
@@ -475,7 +465,7 @@ public static class TeammateNpcSupportPlanning
             return false;
         }
 
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return true;
         }
@@ -547,7 +537,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB) || bb == null || teamBB == null)
+        if (!IsTeamBallAttackContext(teamBB, bb) || bb == null || teamBB == null)
         {
             return false;
         }
@@ -618,7 +608,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB) || !IsFieldPlayer(bb))
+        if (!IsTeamBallAttackContext(teamBB, bb) || !IsFieldPlayer(bb))
         {
             return false;
         }
@@ -662,7 +652,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return false;
         }
@@ -693,7 +683,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return false;
         }
@@ -737,7 +727,7 @@ public static class TeammateNpcSupportPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return false;
         }
@@ -761,6 +751,18 @@ public static class TeammateNpcSupportPlanning
         var assignment = bb.BasicData.Self.GetComponentInParent<AnimalControlAssignment>()
             ?? bb.BasicData.Self.GetComponent<AnimalControlAssignment>();
         return assignment != null && assignment.Role == AnimalControlRole.TeammateNpc;
+    }
+
+    public static bool IsEnemyFieldNpc(PlayerBlackboard bb)
+    {
+        if (bb?.BasicData?.Self == null)
+        {
+            return false;
+        }
+
+        var assignment = bb.BasicData.Self.GetComponentInParent<AnimalControlAssignment>()
+            ?? bb.BasicData.Self.GetComponent<AnimalControlAssignment>();
+        return assignment != null && assignment.Role == AnimalControlRole.EnemyFieldNpc;
     }
 
     private static GoapActionSO ResolveForcedSupportActionForSlot(
@@ -943,7 +945,7 @@ public static class TeammateNpcSupportPlanning
 
         int slot = TeammateNpcGoapRoleDifferentiation.ResolveFormationSlot(bb);
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (!IsTeamBallAttackContext(teamBB))
+        if (!IsTeamBallAttackContext(teamBB, bb))
         {
             return 0f;
         }

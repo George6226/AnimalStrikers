@@ -20,7 +20,7 @@ public static class MainNpcPostPassPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        return TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB);
+        return TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb);
     }
 
     public static bool IsFreeBallRecoveryContext(PlayerBlackboard bb)
@@ -36,15 +36,7 @@ public static class MainNpcPostPassPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (teamBB == null)
-        {
-            return false;
-        }
-
-        var ball = teamBB.BallInfo;
-        return ball.BallState == BallManager_State.BALL_STATE.FREE
-            && !ball.TeamHasBall
-            && !ball.EnemyHasBall;
+        return GoapFieldNpcPerspective.IsFreeBallContext(teamBB);
     }
 
     /// <summary>味方ボール保持中にメイン NPC がサポート移動を継続すべきか。</summary>

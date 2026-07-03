@@ -30,20 +30,40 @@ public class AnimalTeamRegistrar : MonoBehaviour
 
     private void OnDestroy()
     {
-        // プレハブ破棄時に登録解除（存在チェック付き、TeamFacade 経由）
         var teamRegist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
         if (teamRegist != null && _facade != null)
         {
             teamRegist.Unregister(_facade);
             var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
             squad?.OnLocalAllyUnregistered(_facade);
+            var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+            enemySquad?.OnLocalEnemyUnregistered(_facade);
         }
     }
 
     private static void NotifySquadControl(AnimalFacade facade)
     {
+        if (IsLocalEnemy(facade))
+        {
+            var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+            enemySquad?.OnLocalEnemyRegistered(facade);
+            return;
+        }
+
         var squad = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
         squad?.OnLocalAllyRegistered(facade);
+    }
+
+    private static bool IsLocalEnemy(AnimalFacade facade)
+    {
+        var avatar = facade?.GetAvatar();
+        if (avatar == null || !avatar.IsMine)
+        {
+            return false;
+        }
+
+        string tag = string.IsNullOrEmpty(avatar.CurrentTag) ? avatar.tag : avatar.CurrentTag;
+        return tag == ConstData.NPC_TAG || tag == ConstData.ENEMY_TAG;
     }
 }
 

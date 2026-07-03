@@ -301,6 +301,34 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
             return $"{humanTag}·{humanPosition}";
         }
 
+        if (role == AnimalControlRole.EnemyFieldNpc)
+        {
+            var facade = GetComponent<AnimalFacade>();
+            var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
+            string tierTag = enemySquad != null && enemySquad.ResolveNpcTier(facade) == GoapNpcTier.Main
+                ? "EN·MAIN"
+                : "EN·SUB";
+            var goap = AnimalGoapBrainComponents.Resolve(facade);
+            if (tierTag == "EN·MAIN"
+                && goap.Agent != null
+                && goap.Agent.enabled)
+            {
+                string phaseTag = GoapEnemyMainNpcPlanning.ResolveEnemyGoapPhaseTag(goap.Blackboard, facade);
+                if (!string.IsNullOrEmpty(phaseTag))
+                {
+                    tierTag = $"{tierTag}·{phaseTag}";
+                }
+            }
+
+            string position = GetPositionTag();
+            if (string.IsNullOrEmpty(position) || position == tierTag)
+            {
+                return tierTag;
+            }
+
+            return $"{tierTag}·{position}";
+        }
+
         string roleTag = role switch
         {
             AnimalControlRole.Human => "YOU",
@@ -352,7 +380,7 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
 
         if (goal == "-" && (action == "-" || string.IsNullOrEmpty(action)))
         {
-            return role == AnimalControlRole.TeammateNpc ? "—" : string.Empty;
+            return role == AnimalControlRole.TeammateNpc || role == AnimalControlRole.EnemyFieldNpc ? "—" : string.Empty;
         }
 
         if (!_showGoapState)
@@ -413,7 +441,7 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
 
     private string GetMovementBrainLine(AnimalControlRole role)
     {
-        if (role != AnimalControlRole.TeammateNpc)
+        if (role != AnimalControlRole.TeammateNpc && role != AnimalControlRole.EnemyFieldNpc)
         {
             return string.Empty;
         }
@@ -444,6 +472,7 @@ public class AnimalControlRoleDebugLabel : MonoBehaviour
             AnimalControlRole.Human => new Color(0.12f, 0.38f, 0.92f),
             // マゼンタ系（緑フィールドと被らない）
             AnimalControlRole.TeammateNpc => new Color(1f, 0.45f, 0.95f),
+            AnimalControlRole.EnemyFieldNpc => new Color(1f, 0.35f, 0.2f),
             // ゴールド
             AnimalControlRole.GoalkeeperNpc => new Color(1f, 0.82f, 0.35f),
             _ => new Color(0.92f, 0.92f, 0.95f),

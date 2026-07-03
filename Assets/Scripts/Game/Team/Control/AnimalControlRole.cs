@@ -11,4 +11,6 @@ public enum AnimalControlRole
     TeammateNpc = 2,
     /// <summary>ゴールキーパー用NPC（常にNPC）</summary>
     GoalkeeperNpc = 3,
+    /// <summary>敵チームのフィールドNPC（3体）。鏡像 GOAP 対象。</summary>
+    EnemyFieldNpc = 4,
 }
