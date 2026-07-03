@@ -4,6 +4,14 @@ using NUnit.Framework;
 public sealed class MainNpcPostPassPlanningEditModeTests
 {
     [Test]
+    public void GetPlaytestDiagnostic_ReturnsIdleWhenNoContext()
+    {
+        var diagnostic = MainNpcPostPassPlanning.GetPlaytestDiagnostic(null);
+
+        Assert.That(diagnostic.HasSample, Is.False);
+    }
+
+    [Test]
     public void VerifyMainNpcPostPassSupportStarted_DetectsGoalChangeAfterPass()
     {
         const string summary =

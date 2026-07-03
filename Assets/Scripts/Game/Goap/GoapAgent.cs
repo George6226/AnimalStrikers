@@ -1115,8 +1115,9 @@ public class GoapAgent : MonoBehaviour
         string selectedPath = FormatPlanPath(selectedPlan);
         float selectedCost = ComputePlanTotalCost(selectedPlan);
         string defenseDiagPart = BuildDefenseOverextensionDiagnosticPart(goal);
+        string mainNpcDiagPart = BuildMainNpcPlaytestDiagnosticPart(goal);
         LogSummary(
-            $"PlanCosts(goal={goalName}, slot={slot}, {defenseDiagPart}{overlapPart}{actionsPart}, {plansPart}, selected={selectedPath}:{selectedCost:F2})");
+            $"PlanCosts(goal={goalName}, tier={_npcTier}, slot={slot}, {defenseDiagPart}{mainNpcDiagPart}{overlapPart}{actionsPart}, {plansPart}, selected={selectedPath}:{selectedCost:F2})");
     }
 
     private string BuildDefenseOverextensionDiagnosticPart(GoapGoalSO goal)
@@ -1139,6 +1140,42 @@ public class GoapAgent : MonoBehaviour
             + $"urgency:{diagnostic.RetreatUrgency:F2},"
             + $"ahead:{diagnostic.AheadRatio:F2},"
             + $"sigAhead:{diagnostic.IsSignificantlyAhead}, ";
+    }
+
+    private string BuildMainNpcPlaytestDiagnosticPart(GoapGoalSO goal)
+    {
+        if (_npcTier != GoapNpcTier.Main
+            || goal == null
+            || _playerBlackboard == null)
+        {
+            return string.Empty;
+        }
+
+        string goalName = goal.GoalName;
+        if (goalName != "TeamBallSupport"
+            && goalName != "FreeBallRecovery"
+            && goalName != "BallPossessionAttack")
+        {
+            return string.Empty;
+        }
+
+        MainNpcPostPassPlanning.MainNpcPlaytestDiagnostic diagnostic =
+            MainNpcPostPassPlanning.GetPlaytestDiagnostic(_playerBlackboard);
+        if (!diagnostic.HasSample)
+        {
+            return string.Empty;
+        }
+
+        string productionTag = IsProductionOffBallMainNpc() ? "prodM2:True," : string.Empty;
+        return "mainNpcDiag="
+            + productionTag
+            + $"ctx:{diagnostic.ContextTag},"
+            + $"needsMove:{diagnostic.NeedsSupportMovement},"
+            + $"canPass:{diagnostic.CanPass},"
+            + $"canShoot:{diagnostic.CanShoot},"
+            + $"press:{diagnostic.Pressure},"
+            + $"passAdj:{diagnostic.PassCostAdjustment:F2},"
+            + $"shootAdj:{diagnostic.ShootCostAdjustment:F2}, ";
     }
 
     /// <summary>TeamBallSupport 時: アクション別予測位置の重なりコスト（B の検証用）。</summary>

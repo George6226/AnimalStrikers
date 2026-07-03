@@ -73,6 +73,62 @@ public static class MainNpcPostPassPlanning
         return GoapMainNpcCatalog.IsTeamBallSupportAction(action);
     }
 
+    public struct MainNpcPlaytestDiagnostic
+    {
+        public bool HasSample;
+        public string ContextTag;
+        public bool NeedsSupportMovement;
+        public bool CanPass;
+        public bool CanShoot;
+        public int Pressure;
+        public float PassCostAdjustment;
+        public float ShootCostAdjustment;
+    }
+
+    /// <summary>本番プレイ観察用: M2 文脈と M1 攻撃判断の材料をまとめて返す。</summary>
+    public static MainNpcPlaytestDiagnostic GetPlaytestDiagnostic(PlayerBlackboard bb)
+    {
+        var diagnostic = default(MainNpcPlaytestDiagnostic);
+        if (bb == null)
+        {
+            return diagnostic;
+        }
+
+        bool hasBall = bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true;
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        diagnostic.Pressure = teamBB != null ? teamBB.BallInfo.IsBallOwnerUnderPressure : 0;
+
+        if (hasBall && MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
+        {
+            diagnostic.HasSample = true;
+            diagnostic.ContextTag = "Attack";
+            diagnostic.CanPass = MainNpcAttackPlanning.CanPassToTeammate(bb);
+            diagnostic.CanShoot = MainNpcAttackPlanning.CanShootAtGoal(bb);
+            diagnostic.PassCostAdjustment = MainNpcAttackPlanning.ComputePassCostAdjustment(bb);
+            diagnostic.ShootCostAdjustment = MainNpcAttackPlanning.ComputeShootCostAdjustment(bb);
+            return diagnostic;
+        }
+
+        if (IsFreeBallRecoveryContext(bb))
+        {
+            diagnostic.HasSample = true;
+            diagnostic.ContextTag = "FreeBall";
+            return diagnostic;
+        }
+
+        if (IsTeamBallSupportContext(bb))
+        {
+            diagnostic.HasSample = true;
+            diagnostic.ContextTag = "Support";
+            diagnostic.NeedsSupportMovement = NeedsPostPassSupportMovement(bb);
+            return diagnostic;
+        }
+
+        diagnostic.HasSample = true;
+        diagnostic.ContextTag = "Idle";
+        return diagnostic;
+    }
+
     /// <summary>CLI / Play 検証: メイン NPC がパス後に TeamBallSupport を開始したか。</summary>
     public static bool VerifyMainNpcPostPassSupportStarted(string summary, string mainOwnerMarker = "owner=Lion")
     {
