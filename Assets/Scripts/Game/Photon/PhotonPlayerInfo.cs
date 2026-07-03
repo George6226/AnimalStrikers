@@ -48,6 +48,18 @@ public class PhotonPlayerInfo : MonoBehaviourPunCallbacks
         Debug.Log("PlayerInfo.Initialize:playerName="+_playerName+" isMasterClient="+ _isMasterClient + " battleMode="+_battleMode);
     }
 
+    /// <summary>
+    /// GOAP バッチ / Main NPC 検証用。setBattleMode は非同期のため、スポーン直前は NPC 対戦を明示する。
+    /// </summary>
+    public void InitializeForAutomatedVerify(Player player)
+    {
+        Initialize(player);
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
+        {
+            _battleMode = ConstData.BATTLE_MODE.NPC;
+        }
+    }
+
     // プレイヤー名の取得・設定
     public string PlayerName
     {

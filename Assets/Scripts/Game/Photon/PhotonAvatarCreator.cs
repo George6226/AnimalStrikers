@@ -99,8 +99,9 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
                 yield return new WaitForSeconds(0.1f);
             }
 
-        // NPC対戦
-        if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC)
+        // NPC対戦（自動検証は setBattleMode 反映前にスポーンが走るため明示的に NPC 経路へ）
+        if (PhotonPlayerInfo.Instance.BattleMode == ConstData.BATTLE_MODE.NPC
+            || UsesAutomatedVerifySpawn())
         {
             // マスター = Player
             if (PhotonPlayerInfo.Instance.IsMasterClient)

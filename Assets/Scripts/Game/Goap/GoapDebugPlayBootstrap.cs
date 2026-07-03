@@ -167,7 +167,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
         if (PhotonPlayerInfo.Instance != null)
         {
-            PhotonPlayerInfo.Instance.Initialize(local);
+            PhotonPlayerInfo.Instance.InitializeForAutomatedVerify(local);
         }
         else
         {
