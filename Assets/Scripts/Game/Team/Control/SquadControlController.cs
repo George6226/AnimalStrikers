@@ -34,8 +34,8 @@ public class SquadControlController : MonoBehaviour
     [SerializeField] private List<GoapGoalSO> _goapMainNpcGoals = new List<GoapGoalSO>();
     [SerializeField] private List<GoapActionSO> _goapMainNpcActions = new List<GoapActionSO>();
 
-    [Header("Phase M2: メイン NPC GOAP 本番")]
-    [Tooltip("ON=操作キャラがボール非保持時に M2（パス後サポート・ルーズボール）GOAP を動かす")]
+    [Header("Phase A: メイン NPC GOAP 本番")]
+    [Tooltip("ON=操作キャラに Main GOAP（M1 保持中 Pass/Shoot + M2 オフボール）を動かす")]
     [SerializeField] private bool _enableMainNpcGoapInProduction = true;
 
     [Header("段階4 役割分担（2体が重ならない）")]

@@ -17,6 +17,11 @@ public class AnimalInputKey_Player : MonoBehaviour
         var animal = TeamFacade.Instance.AnimalSelectorManager.GetSelectAnimal(ConstData.PLAYER_TAG);
         if (animal == null) return;
 
+        if (GoapMainNpcProductionEnvironment.ShouldSuppressHumanInput(animal))
+        {
+            return;
+        }
+
         // ボタン入力
         ButtonInput();
 #endif

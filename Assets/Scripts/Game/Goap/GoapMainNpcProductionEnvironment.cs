@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Phase M2 本番: 操作キャラ（Human）がボール非保持時に Main NPC GOAP（パス後サポート・ルーズボール）を動かす。
+/// Phase A 本番: 操作キャラ（Human）に Main NPC GOAP（M1 保持中 Pass/Shoot + M2 オフボール）を動かす。
 /// 検証モード（M0 CLI / Inspector verify）が有効なときは常に OFF。
 /// </summary>
 public static class GoapMainNpcProductionEnvironment
@@ -36,7 +36,7 @@ public static class GoapMainNpcProductionEnvironment
         return IsProductionMainPlayer(facade) ? GoapNpcTier.Main : GoapNpcTier.Sub;
     }
 
-    /// <summary>本番 Main NPC が GOAP を動かすべきオフボール文脈か（M2 のみ。保持中 M1 は対象外）。</summary>
+    /// <summary>本番 Main NPC が GOAP を動かすべき文脈か（M1 + M2）。</summary>
     public static bool ShouldEnableGoap(PlayerBlackboard bb, AnimalFacade facade)
     {
         if (!IsProductionMainPlayer(facade) || bb == null)
@@ -46,10 +46,43 @@ public static class GoapMainNpcProductionEnvironment
 
         if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
         {
-            return false;
+            return MainNpcAttackPlanning.IsBallPossessionAttackContext(bb);
         }
 
         return MainNpcPostPassPlanning.IsTeamBallSupportContext(bb)
             || MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb);
+    }
+
+    /// <summary>本番 Main GOAP 稼働中は手動入力を抑止（GOAP とプレイヤー操作の二重実行防止）。</summary>
+    public static bool ShouldSuppressHumanInput(AnimalFacade facade)
+    {
+        if (!IsProductionMainPlayer(facade))
+        {
+            return false;
+        }
+
+        var goap = AnimalGoapBrainComponents.Resolve(facade.gameObject);
+        if (goap.Agent == null || !goap.Agent.enabled)
+        {
+            return false;
+        }
+
+        return ShouldEnableGoap(goap.Blackboard, facade);
+    }
+
+    /// <summary>デバッグラベル用: M1 / M2 / なし。</summary>
+    public static string ResolveProductionGoapPhaseTag(PlayerBlackboard bb, AnimalFacade facade)
+    {
+        if (!ShouldEnableGoap(bb, facade))
+        {
+            return string.Empty;
+        }
+
+        if (bb != null && bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            return "M1";
+        }
+
+        return "M2";
     }
 }

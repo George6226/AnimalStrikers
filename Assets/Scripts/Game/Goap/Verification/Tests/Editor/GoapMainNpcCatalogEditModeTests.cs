@@ -83,6 +83,52 @@ public sealed class GoapMainNpcCatalogEditModeTests
     }
 
     [Test]
+    public void ProductionEnvironment_ShouldEnableGoap_IsFalseWhenInactive()
+    {
+        GoapMainNpcProductionEnvironment.Sync(false);
+        var humanGo = new GameObject("human");
+        var humanAssignment = humanGo.AddComponent<AnimalControlAssignment>();
+        humanGo.AddComponent<AnimalFacade>();
+        humanAssignment.SetRole(AnimalControlRole.Human);
+
+        try
+        {
+            Assert.That(
+                GoapMainNpcProductionEnvironment.ShouldEnableGoap(null, humanGo.GetComponent<AnimalFacade>()),
+                Is.False);
+            Assert.That(
+                GoapMainNpcProductionEnvironment.ShouldSuppressHumanInput(humanGo.GetComponent<AnimalFacade>()),
+                Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(humanGo);
+        }
+    }
+
+    [Test]
+    public void ResolveProductionGoapPhaseTag_ReturnsEmptyWhenGoapDisabled()
+    {
+        GoapMainNpcProductionEnvironment.Sync(true);
+        var humanGo = new GameObject("human");
+        var humanAssignment = humanGo.AddComponent<AnimalControlAssignment>();
+        humanGo.AddComponent<AnimalFacade>();
+        humanAssignment.SetRole(AnimalControlRole.Human);
+
+        try
+        {
+            Assert.That(
+                GoapMainNpcProductionEnvironment.ResolveProductionGoapPhaseTag(null, humanGo.GetComponent<AnimalFacade>()),
+                Is.Empty);
+        }
+        finally
+        {
+            Object.DestroyImmediate(humanGo);
+            GoapMainNpcProductionEnvironment.Sync(false);
+        }
+    }
+
+    [Test]
     public void ProductionEnvironment_ResolvesMainTierForHumanOnly()
     {
         GoapMainNpcProductionEnvironment.Sync(true);

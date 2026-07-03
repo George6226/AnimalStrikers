@@ -1054,11 +1054,6 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        if (IsProductionOffBallMainNpc())
-        {
-            return false;
-        }
-
         if (!MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
         {
             return false;
@@ -1166,7 +1161,9 @@ public class GoapAgent : MonoBehaviour
             return string.Empty;
         }
 
-        string productionTag = IsProductionOffBallMainNpc() ? "prodM2:True," : string.Empty;
+        string productionTag = IsProductionMainNpc()
+            ? BuildProductionMainNpcDiagnosticTag(diagnostic)
+            : string.Empty;
         return "mainNpcDiag="
             + productionTag
             + $"ctx:{diagnostic.ContextTag},"
@@ -1544,18 +1541,13 @@ public class GoapAgent : MonoBehaviour
         if (_npcTier == GoapNpcTier.Main)
         {
             GoapMainNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
-            if (IsProductionOffBallMainNpc())
-            {
-                GoapMainNpcCatalog.RestrictToOffBallProduction(_availableGoals, _availableActions);
-            }
-
             return;
         }
 
         GoapTeammateNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
     }
 
-    private bool IsProductionOffBallMainNpc()
+    private bool IsProductionMainNpc()
     {
         if (_npcTier != GoapNpcTier.Main || !GoapMainNpcProductionEnvironment.IsActive)
         {
@@ -1565,6 +1557,22 @@ public class GoapAgent : MonoBehaviour
         var self = _playerBlackboard?.BasicData?.Self;
         var facade = self != null ? self.GetComponent<AnimalFacade>() : null;
         return GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade);
+    }
+
+    private static string BuildProductionMainNpcDiagnosticTag(
+        MainNpcPostPassPlanning.MainNpcPlaytestDiagnostic diagnostic)
+    {
+        if (diagnostic.ContextTag == "Attack")
+        {
+            return "prodM1:True,";
+        }
+
+        if (diagnostic.ContextTag == "Support" || diagnostic.ContextTag == "FreeBall")
+        {
+            return "prodM2:True,";
+        }
+
+        return string.Empty;
     }
 
     // === プラン中断 ===

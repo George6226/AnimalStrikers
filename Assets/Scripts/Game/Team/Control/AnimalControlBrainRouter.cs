@@ -13,6 +13,8 @@ public class AnimalControlBrainRouter : MonoBehaviour
     private bool _goapConfigured;
     private bool _productionGoapActive;
 
+    public bool IsProductionMainGoapActive => _productionGoapActive;
+
     private void Awake()
     {
         if (_assignment == null)
