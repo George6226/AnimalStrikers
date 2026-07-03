@@ -41,6 +41,7 @@ public static class GoapBatchVerifySceneConfigurator
         ConfigureDefenseSetup(defenseCombined, profile == GoapBatchVerifyProfile.DefenseCombined);
         ConfigureDefenseSetup(defenseCombinedDrive, profile == GoapBatchVerifyProfile.DefenseCombinedDrive);
         ConfigureMainNpcVerifyForBatch();
+        ConfigureEnemySquadForBatch();
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log(
@@ -252,6 +253,19 @@ public static class GoapBatchVerifySceneConfigurator
             SetInt(serialized, "_ballTarget", (int)GoapMainNpcVerifyBootstrapBallTarget.EnemyForDefenseVerify);
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
+    }
+
+    private static void ConfigureEnemySquadForBatch()
+    {
+        var enemySquad = Object.FindFirstObjectByType<EnemySquadControlController>(FindObjectsInactive.Include);
+        if (enemySquad == null)
+        {
+            return;
+        }
+
+        var serialized = new SerializedObject(enemySquad);
+        SetBool(serialized, "_enableEnemyGoap", false);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void ConfigureDefenseSetup(GoapDefenseActionVerificationSetup setup, bool active)

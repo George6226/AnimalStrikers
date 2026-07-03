@@ -58,6 +58,12 @@ public class EnemySquadControlController : MonoBehaviour
             return;
         }
 
+        // 既存 GOAP バッチは味方サポート/守備選出のみ。敵へのロール付与・移動 Brain 注入でレイアウトが崩れる。
+        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive)
+        {
+            return;
+        }
+
         EnsureControlComponents(facade);
 
         if (!_pendingLocalEnemies.Contains(facade))
