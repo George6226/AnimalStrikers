@@ -10,7 +10,7 @@ MODE="${1:-all}"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 IMAGE="${GOAP_DOCKER_IMAGE}"
 LOG_DIR="${PROJECT_ROOT}/Logs"
-EDITMODE_TIMEOUT="${GOAP_EDITMODE_DOCKER_TIMEOUT:-2700}"
+EDITMODE_TIMEOUT="${GOAP_EDITMODE_DOCKER_TIMEOUT:-600}"
 BATCH_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-2400}"
 mkdir -p "${LOG_DIR}"
 
@@ -43,6 +43,9 @@ if goap_ci_mode_runs_batch "${MODE}"; then
     "${LOG_DIR}/goap-main-npc-attack-started.marker"
 fi
 
+# 前回バッチのマーカーが残ると Play 側が誤ってバッチモードになることがある
+goap_ci_clear_batch_markers "${LOG_DIR}"
+
 docker_env=( -e UNITY_EMAIL -e UNITY_PASSWORD )
 if [[ -n "${UNITY_SERIAL:-}" ]]; then
   docker_env+=( -e UNITY_SERIAL )
@@ -71,24 +74,36 @@ EDITMODE_TIMEOUT="${EDITMODE_TIMEOUT}"
 BATCH_TIMEOUT="${BATCH_TIMEOUT}"
 
 if goap_ci_mode_runs_editmode "\${MODE}"; then
-  echo "[goap-ci] starting EditMode tests at \$(date -u +%H:%M:%S)"
-  set +e
-  timeout "\${EDITMODE_TIMEOUT}" unity-editor \
-    -batchmode \
-    -nographics \
-    -projectPath /project \
-    -runTests \
-    -testPlatform EditMode \
-    -testFilter "\${EDITMODE_FILTER}" \
-    -testResults /project/Logs/goap-editmode-results.xml \
-    -logFile /project/Logs/goap-editmode-tests.log
-  editmode_exit=\$?
-  set -e
-  if [[ "\${editmode_exit}" -ne 0 ]]; then
+  goap_ci_clear_batch_markers /project/Logs
+  editmode_exit=1
+  for editmode_attempt in 1 2; do
+    echo "[goap-ci] starting EditMode tests at \$(date -u +%H:%M:%S) (attempt=\${editmode_attempt})"
+    set +e
+    timeout "\${EDITMODE_TIMEOUT}" unity-editor \
+      -batchmode \
+      -nographics \
+      -quit \
+      -projectPath /project \
+      -runTests \
+      -testPlatform EditMode \
+      -testFilter "\${EDITMODE_FILTER}" \
+      -testResults /project/Logs/goap-editmode-results.xml \
+      -logFile /project/Logs/goap-editmode-tests.log
+    editmode_exit=\$?
+    set -e
+    if [[ "\${editmode_exit}" -eq 0 ]]; then
+      echo "[goap-ci] EditMode tests passed"
+      break
+    fi
+    if [[ "\${editmode_attempt}" -lt 2 && "\${editmode_exit}" -eq 124 ]]; then
+      echo "[goap-ci] EditMode timed out (exit=124); retrying once after marker cleanup" >&2
+      goap_ci_clear_batch_markers /project/Logs
+      rm -f /project/Logs/goap-editmode-results.xml /project/Logs/goap-editmode-tests.log
+      continue
+    fi
     echo "[goap-ci] EditMode tests failed (exit=\${editmode_exit})" >&2
     exit "\${editmode_exit}"
-  fi
-  echo "[goap-ci] EditMode tests passed"
+  done
 fi
 
 run_batch_profile() {

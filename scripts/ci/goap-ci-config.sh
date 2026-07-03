@@ -30,7 +30,7 @@ goap_ci_print_usage() {
   local script_name="${1:-run-goap-ci.sh}"
   echo "Usage: ${script_name} [$(IFS='|'; echo "${GOAP_CI_MODES[*]}")]" >&2
   echo "" >&2
-  echo "  editmode        EditMode ${GOAP_EDITMODE_EXPECTED_TESTS} 件（約30秒）" >&2
+  echo "  editmode        EditMode ${GOAP_EDITMODE_EXPECTED_TESTS} 件（約30秒・Docker タイムアウト 600s）" >&2
   echo "  batch-combined  combined 本番選出のみ" >&2
   echo "  batch-wing      wingDrive 選出+追従のみ" >&2
   echo "  batch-cf-drive  cfDrive 選出+追従のみ" >&2
