@@ -7,6 +7,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCENE="${PROJECT_ROOT}/Assets/Scenes/GameScene.unity"
 LOG_SUMMARY="${PROJECT_ROOT}/Assets/DebugLog/GoapSummary_latest.txt"
 LOG_DIAG="${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"
+ARCHIVE_LABEL="${1:-}"
 
 echo "=== Phase B 敵 GOAP 確認 — 下準備 ==="
 echo ""
@@ -34,7 +35,35 @@ fi
 if grep -q "_enableEnemyGoap: 1" "${SCENE}"; then
   echo "✅ Enable Enemy Goap = ON"
 else
-  echo "⚠️  Enable Enemy Goap を確認してください"
+  echo "⚠️  Enable Enemy Goap を確認してください（Inspector: SquadControlController）"
+fi
+
+check_scene_flag() {
+  local label="$1"
+  local pattern="$2"
+  local expected="$3"
+  if grep -q "${pattern}" "${SCENE}"; then
+    local value
+    value="$(grep "${pattern}" "${SCENE}" | head -1 | awk '{print $2}')"
+    if [[ "${value}" == "${expected}" ]]; then
+      echo "✅ ${label} = ${expected}"
+    else
+      echo "⚠️  ${label} = ${value}（期待: ${expected}）"
+    fi
+  else
+    echo "ℹ️  ${label} 未シリアライズ（C# デフォルト ${expected} 想定）"
+  fi
+}
+
+check_scene_flag "Main Npc Goap Verify Mode" "_mainNpcGoapVerifyMode:" "0"
+check_scene_flag "Enable Main Npc Goap In Production" "_enableMainNpcGoapInProduction:" "1"
+
+if [[ -f "${LOG_SUMMARY}" ]]; then
+  label="phaseB"
+  if [[ -n "${ARCHIVE_LABEL}" ]]; then
+    label="${ARCHIVE_LABEL}"
+  fi
+  "${SCRIPT_DIR}/archive-goap-summary.sh" "${label}"
 fi
 
 rm -f "${LOG_SUMMARY}" "${LOG_DIAG}"
@@ -46,12 +75,12 @@ echo "   ${LOG_DIAG}"
 echo ""
 echo "--- Unity での確認手順 ---"
 echo "  推奨: MainMenu → オフライン対戦"
-echo "  DebugCharaPlace: 敵 slot0（Tiger 等）にボール保持を設定"
+echo "  DebugPlace: 敵 slot0（Tiger 等）にボール保持 + 敵ゴール寄りに配置"
 echo "  または GameScene + GoapMainNpcVerifyBootstrap:"
 echo "    Ball Target = EnemyForDefenseVerify, Enemy Ball Owner Index = 0"
-echo "    （Verify Mode OFF でも _requireMainNpcVerifyMode=1 なら Verify ON 時のみ自動付与）"
 echo ""
 echo "  Play 約 30 秒 → 停止後:"
+echo "    ./scripts/playtest/extract-goap-logs-from-editor.sh <HH:MM> owner=Tiger"
 echo "    ./scripts/playtest/analyze-enemy-main-npc-goap-log.sh Assets/DebugLog/GoapSummary_latest.txt owner=Tiger"
 echo ""
 echo "期待ログ:"
