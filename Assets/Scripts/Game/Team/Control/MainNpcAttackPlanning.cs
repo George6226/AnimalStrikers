@@ -12,8 +12,17 @@ public static class MainNpcAttackPlanning
     private const float MaxShootDistanceRatio = 0.55f;
     private const float MinShootDistanceRatio = 0.08f;
     private const float PassUnderPressureDiscount = 0.35f;
-    private const float ShootNearGoalDiscount = 0.45f;
+    private const float ShootNearGoalDiscount = 0.52f;
     private const float BlockedShotLanePenalty = 0.55f;
+    private const float VeryNearGoalDistanceRatio = 0.22f;
+    private const float VeryNearGoalPassPenalty = 0.55f;
+    private const float VeryNearGoalShootDiscount = 0.55f;
+    private const float VeryNearGoalShootPressureRelief = 0.20f;
+    private const float MidRangeNearGoalPassPenalty = 0.25f;
+    private const float MidRangeNearGoalDistanceRatio = 0.35f;
+
+    public const float DefaultPassBaseCost = 1.12f;
+    public const float DefaultShootBaseCost = 1.05f;
 
     public static bool IsBallPossessionAttackContext(PlayerBlackboard bb)
     {
@@ -59,14 +68,43 @@ public static class MainNpcAttackPlanning
 
     public static float ComputePassCostAdjustment(PlayerBlackboard bb)
     {
-        float adjustment = 0f;
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null || bb == null)
         {
-            return adjustment;
+            return 0f;
         }
 
-        int pressureCount = teamBB.BallInfo.IsBallOwnerUnderPressure;
+        bool passRouteClear = false;
+        if (GoapMainNpcAttackBridge.TryFindPassTarget(bb, out AnimalFacade target))
+        {
+            passRouteClear = PlayerBlackboardCalculator.IsPassRouteClear(
+                bb.PhysicalState.Position,
+                target.transform.position,
+                teamBB.BasicInfo.EnemyPositions,
+                teamBB.FieldInfo.FieldLength * 0.06f);
+        }
+
+        if (!TryGetDistanceToEnemyGoal(bb, out float goalDistance, out float maxDistance))
+        {
+            return 0f;
+        }
+
+        return ComputePassCostAdjustment(
+            goalDistance,
+            maxDistance,
+            teamBB.BallInfo.IsBallOwnerUnderPressure,
+            passRouteClear);
+    }
+
+    /// <summary>EditMode / 診断用: ゴール距離とプレッシャーからパスコスト補正を見積もる。</summary>
+    public static float ComputePassCostAdjustment(
+        float goalDistance,
+        float maxShootDistance,
+        int pressureCount,
+        bool passRouteClear)
+    {
+        float adjustment = 0f;
+
         if (pressureCount >= 1)
         {
             adjustment -= PassUnderPressureDiscount;
@@ -77,20 +115,19 @@ public static class MainNpcAttackPlanning
             adjustment -= 0.15f;
         }
 
-        if (GoapMainNpcAttackBridge.TryFindPassTarget(bb, out AnimalFacade target)
-            && PlayerBlackboardCalculator.IsPassRouteClear(
-                bb.PhysicalState.Position,
-                target.transform.position,
-                teamBB.BasicInfo.EnemyPositions,
-                teamBB.FieldInfo.FieldLength * 0.06f))
+        if (passRouteClear)
         {
             adjustment -= 0.20f;
         }
 
-        if (TryGetDistanceToEnemyGoal(bb, out float goalDistance, out float maxDistance)
-            && goalDistance <= maxDistance * 0.35f)
+        if (goalDistance <= maxShootDistance * MidRangeNearGoalDistanceRatio)
         {
-            adjustment += 0.25f;
+            adjustment += MidRangeNearGoalPassPenalty;
+        }
+
+        if (IsWithinVeryNearGoalShootZone(goalDistance, maxShootDistance))
+        {
+            adjustment += VeryNearGoalPassPenalty;
         }
 
         return adjustment;
@@ -98,11 +135,10 @@ public static class MainNpcAttackPlanning
 
     public static float ComputeShootCostAdjustment(PlayerBlackboard bb)
     {
-        float adjustment = 0f;
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null || bb == null)
         {
-            return adjustment;
+            return 0f;
         }
 
         if (!TryGetDistanceToEnemyGoal(bb, out float goalDistance, out float maxDistance))
@@ -110,27 +146,86 @@ public static class MainNpcAttackPlanning
             return 0.5f;
         }
 
-        float normalized = 1f - Mathf.Clamp01(goalDistance / Mathf.Max(maxDistance, 0.01f));
+        Vector3 goalPos = GoapFieldNpcPerspective.GetAttackGoalPosition(
+            teamBB,
+            GoapFieldNpcPerspective.IsMirrored(bb));
+        float laneWidth = teamBB.FieldInfo.FieldLength * 0.08f;
+        bool shotLaneClear = PlayerBlackboardCalculator.IsPassRouteClear(
+            bb.PhysicalState.Position,
+            goalPos,
+            teamBB.BasicInfo.EnemyPositions,
+            laneWidth);
+
+        return ComputeShootCostAdjustment(
+            goalDistance,
+            maxDistance,
+            teamBB.BallInfo.IsBallOwnerUnderPressure,
+            shotLaneClear);
+    }
+
+    /// <summary>EditMode / 診断用: ゴール距離とプレッシャーからシュートコスト補正を見積もる。</summary>
+    public static float ComputeShootCostAdjustment(
+        float goalDistance,
+        float maxShootDistance,
+        int pressureCount,
+        bool shotLaneClear)
+    {
+        float adjustment = 0f;
+        float normalized = 1f - Mathf.Clamp01(goalDistance / Mathf.Max(maxShootDistance, 0.01f));
         adjustment -= normalized * ShootNearGoalDiscount;
 
-        Vector3 goalPos = teamBB.FieldInfo.EnemyGoalPosition;
-        float laneWidth = teamBB.FieldInfo.FieldLength * 0.08f;
-        if (!PlayerBlackboardCalculator.IsPassRouteClear(
-                bb.PhysicalState.Position,
-                goalPos,
-                teamBB.BasicInfo.EnemyPositions,
-                laneWidth))
+        if (!shotLaneClear)
         {
             adjustment += BlockedShotLanePenalty;
         }
 
-        int pressureCount = teamBB.BallInfo.IsBallOwnerUnderPressure;
         if (pressureCount >= 2)
         {
             adjustment += 0.20f;
         }
 
+        if (IsWithinVeryNearGoalShootZone(goalDistance, maxShootDistance))
+        {
+            adjustment -= VeryNearGoalShootDiscount;
+            if (pressureCount >= 2)
+            {
+                adjustment -= VeryNearGoalShootPressureRelief;
+            }
+        }
+
         return adjustment;
+    }
+
+    public static bool IsWithinVeryNearGoalShootZone(float goalDistance, float maxShootDistance)
+    {
+        return maxShootDistance > 0.01f
+            && goalDistance <= maxShootDistance * VeryNearGoalDistanceRatio;
+    }
+
+    public static float EstimatePassCost(
+        float goalDistance,
+        float maxShootDistance,
+        int pressureCount,
+        bool passRouteClear)
+    {
+        return DefaultPassBaseCost + ComputePassCostAdjustment(
+            goalDistance,
+            maxShootDistance,
+            pressureCount,
+            passRouteClear);
+    }
+
+    public static float EstimateShootCost(
+        float goalDistance,
+        float maxShootDistance,
+        int pressureCount,
+        bool shotLaneClear)
+    {
+        return DefaultShootBaseCost + ComputeShootCostAdjustment(
+            goalDistance,
+            maxShootDistance,
+            pressureCount,
+            shotLaneClear);
     }
 
     /// <summary>
