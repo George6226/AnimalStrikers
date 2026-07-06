@@ -80,12 +80,7 @@ public class AnimalPass_Physics : MonoBehaviour
         return dir.normalized * speed;
     }
 
-    private Vector3 ApplyAccuracySpread(Vector3 dir, float passStat)
-    {
-        float clampedPass = Mathf.Clamp(passStat, 0f, 100f);
-        float inaccuracy = 1.0f - (clampedPass / 100.0f);
-        float spreadAngle = Random.Range(-ConstData.MAX_PASS_SPREAD_ANGLE, ConstData.MAX_PASS_SPREAD_ANGLE) * inaccuracy;
-        return Quaternion.AngleAxis(spreadAngle, Vector3.up) * dir.normalized;
-    }
+    private static Vector3 ApplyAccuracySpread(Vector3 dir, float passStat) =>
+        AnimalActionAccuracyPolicy.ApplyHorizontalSpread(dir, passStat, ConstData.MAX_PASS_SPREAD_ANGLE);
 }
 

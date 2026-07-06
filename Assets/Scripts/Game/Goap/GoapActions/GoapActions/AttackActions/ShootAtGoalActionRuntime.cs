@@ -23,8 +23,10 @@ public class ShootAtGoalActionRuntime : GoapActionRuntime
 
     public override bool CanExecute(PlayerBlackboard bb)
     {
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
         return MainNpcAttackPlanning.CanShootAtGoal(bb)
-            && GoapMainNpcAttackBridge.ResolveFacade(bb) != null;
+            && facade != null
+            && !GoapBallActionGuard.IsShootInProgress(facade);
     }
 
     public override void Execute(PlayerBlackboard bb)
@@ -36,6 +38,13 @@ public class ShootAtGoalActionRuntime : GoapActionRuntime
 
         if (!GoapMainNpcAttackBridge.TryExecuteShoot(bb))
         {
+            AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+            if (facade != null && GoapBallActionGuard.IsShootInProgress(facade))
+            {
+                GoapMovementDiagnostic.Log(DiagCategory, "Execute waiting: shoot already in progress", bb);
+                return;
+            }
+
             GoapMovementDiagnostic.Log(DiagCategory, "Execute failed: shoot unavailable", bb);
             _isExecuting = false;
             return;
@@ -52,15 +61,14 @@ public class ShootAtGoalActionRuntime : GoapActionRuntime
             return true;
         }
 
-        if (!_started)
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(_bb);
+        if (facade != null && GoapBallActionGuard.IsShootInProgress(facade))
         {
-            return true;
+            return false;
         }
 
-        if (_bb != null && !GoapMainNpcAttackBridge.IsHoldingBall(_bb))
+        if (!_started)
         {
-            GoapMovementDiagnostic.Log(DiagCategory, "Finish ball released", _bb);
-            _isExecuting = false;
             return true;
         }
 
@@ -71,7 +79,9 @@ public class ShootAtGoalActionRuntime : GoapActionRuntime
             return true;
         }
 
-        return false;
+        GoapMovementDiagnostic.Log(DiagCategory, "Finish shoot settled", _bb);
+        _isExecuting = false;
+        return true;
     }
 
     public override void Cancel()

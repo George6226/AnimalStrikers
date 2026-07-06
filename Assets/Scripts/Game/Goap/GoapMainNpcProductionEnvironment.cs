@@ -44,6 +44,17 @@ public static class GoapMainNpcProductionEnvironment
             return false;
         }
 
+        if (GoapBallActionGuard.IsAnyInProgress(facade))
+        {
+            return true;
+        }
+
+        var goap = AnimalGoapBrainComponents.Resolve(facade.gameObject);
+        if (goap.Agent != null && goap.Agent.HasUnfinishedCommittedBallAction)
+        {
+            return true;
+        }
+
         if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
         {
             return MainNpcAttackPlanning.IsBallPossessionAttackContext(bb);
@@ -62,9 +73,14 @@ public static class GoapMainNpcProductionEnvironment
         }
 
         var goap = AnimalGoapBrainComponents.Resolve(facade.gameObject);
+        if (goap.Agent != null && goap.Agent.HasUnfinishedCommittedBallAction)
+        {
+            return true;
+        }
+
         if (goap.Agent == null || !goap.Agent.enabled)
         {
-            return false;
+            return GoapBallActionGuard.IsAnyInProgress(facade);
         }
 
         return ShouldEnableGoap(goap.Blackboard, facade);
