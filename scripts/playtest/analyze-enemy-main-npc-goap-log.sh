@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LOG="${1:-${PROJECT_ROOT}/Assets/DebugLog/GoapSummary_latest.txt}"
-OWNER_FILTER="${2:-owner=Tiger}"
+OWNER_FILTER="${2:-owner=Elephant}"
 
 if [[ ! -f "${LOG}" ]]; then
   echo "ログが見つかりません: ${LOG}" >&2
@@ -85,4 +85,4 @@ echo "  EnemyBallDefense PlanCosts: $(grep -E 'owner=(Elephant|Gorilla)' "${LOG}
 echo "  TeamBallSupport PlanCosts: $(grep -E 'owner=(Elephant|Gorilla)' "${LOG}" | grep -c 'goal=TeamBallSupport' || true) 件"
 echo "  NoPlanFromPlanner: $(grep -E 'owner=(Elephant|Gorilla)' "${LOG}" | grep -c 'NoPlanFromPlanner' || true) 件"
 echo ""
-echo "再実行: ./scripts/playtest/analyze-enemy-main-npc-goap-log.sh <log> owner=Tiger"
+echo "再実行: ./scripts/playtest/analyze-enemy-main-npc-goap-log.sh <log> owner=Elephant"
