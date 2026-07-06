@@ -9,6 +9,8 @@ public static class GoapPassTargetSelection
     private const float FacingConeDegrees = 30f;
     private const float BlockedRouteScore = -50f;
     private const float ClearRouteBaseScore = 10f;
+    private const float MovingReceiverPenalty = 8f;
+    private const float LateralPassPressurePenalty = 6f;
 
     public struct CandidateScoreInput
     {
@@ -19,6 +21,7 @@ public static class GoapPassTargetSelection
         public List<Vector3> EnemyPositions;
         public float FieldLength;
         public int OwnerPressureCount;
+        public bool ReceiverIsMoving;
     }
 
     public static bool IsEligibleReceiver(AnimalFacade passer, AnimalFacade candidate)
@@ -71,13 +74,50 @@ public static class GoapPassTargetSelection
         }
 
         float distance = Vector3.Distance(input.PasserPosition, input.ReceiverPosition);
+        float distanceRatio = distance / fieldLength;
         float idealDistance = fieldLength * 0.28f;
         score -= Mathf.Abs(distance - idealDistance) / fieldLength * 2f;
 
-        if (routeClear && input.OwnerPressureCount >= 1)
+        if (input.ReceiverIsMoving)
         {
-            score += 1.5f;
-            score += Mathf.Clamp01(1f - distance / (fieldLength * 0.5f));
+            score -= MovingReceiverPenalty;
+        }
+
+        if (input.OwnerPressureCount >= 1)
+        {
+            if (routeClear)
+            {
+                score += 1.5f;
+                score += Mathf.Clamp01(1f - distanceRatio * 2f);
+            }
+
+            score -= distanceRatio * 12f;
+
+            if (attackDir.sqrMagnitude > 0.01f)
+            {
+                Vector3 toReceiver = input.ReceiverPosition - input.PasserPosition;
+                toReceiver.y = 0f;
+                if (toReceiver.sqrMagnitude > 0.01f)
+                {
+                    float forwardAbs = Mathf.Abs(Vector3.Dot(attackDir.normalized, toReceiver.normalized));
+                    if (forwardAbs < 0.35f)
+                    {
+                        score -= LateralPassPressurePenalty * input.OwnerPressureCount;
+                    }
+                }
+            }
+        }
+
+        if (input.OwnerPressureCount >= 2)
+        {
+            if (!routeClear)
+            {
+                score -= 40f;
+            }
+            else
+            {
+                score += (1f - Mathf.Clamp01(distanceRatio * 2.5f)) * 8f;
+            }
         }
 
         return score;
@@ -121,6 +161,7 @@ public static class GoapPassTargetSelection
                 EnemyPositions = enemies,
                 FieldLength = fieldLength,
                 OwnerPressureCount = pressure,
+                ReceiverIsMoving = ResolveReceiverIsMoving(candidate),
             };
 
             float score = ScoreCandidate(input);
@@ -189,5 +230,16 @@ public static class GoapPassTargetSelection
     {
         GameObject ballKeep = receiver.GetBallKeep();
         return ballKeep != null ? ballKeep.transform.position : receiver.transform.position;
+    }
+
+    private static bool ResolveReceiverIsMoving(AnimalFacade receiver)
+    {
+        if (receiver == null)
+        {
+            return false;
+        }
+
+        PlayerBlackboard bb = receiver.GetComponentInChildren<PlayerBlackboard>();
+        return bb != null && bb.PhysicalState.IsMoving;
     }
 }

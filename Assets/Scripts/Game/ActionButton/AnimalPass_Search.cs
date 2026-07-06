@@ -51,8 +51,7 @@ public class AnimalPass_Search : MonoBehaviour
     }
 
     /// <summary>
-    /// パスコース上に他のキャラクターが存在するかチェックする。
-    /// （元々 AnimalAction_Pass 内にあったロジックをこちらに移す想定）
+    /// パスコース上に味方または敵が存在するか（ロブキックが必要か）。
     /// </summary>
     public bool IsCharacterInPassLine(GameObject passer, GameObject receiver)
     {
@@ -61,31 +60,13 @@ public class AnimalPass_Search : MonoBehaviour
             return false;
         }
 
-        Vector3 passDirection = (receiver.transform.position - passer.transform.position).normalized;
-        float passDistance = Vector3.Distance(passer.transform.position, receiver.transform.position);
-
-        float characterRadius = 1.0f;
-
-        foreach (var character in TeamFacade.Instance.TeamRegist.AllAnimals)
+        AnimalFacade passerFacade = passer.GetComponent<AnimalFacade>();
+        AnimalFacade receiverFacade = receiver.GetComponent<AnimalFacade>();
+        if (passerFacade == null || receiverFacade == null)
         {
-            if (character.gameObject == passer || character.gameObject == receiver)
-            {
-                continue;
-            }
-
-            Vector3 characterToPasserVector = character.transform.position - passer.transform.position;
-            Vector3 projection = Vector3.Project(characterToPasserVector, passDirection);
-
-            float distanceToPassLine = Vector3.Distance(characterToPasserVector, projection);
-
-            if (distanceToPassLine < characterRadius
-                && projection.magnitude < passDistance
-                && Vector3.Dot(projection, passDirection) > 0)
-            {
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        return PassLaneKickPolicy.NeedsLob(passerFacade, receiverFacade);
     }
 }

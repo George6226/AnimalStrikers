@@ -89,5 +89,57 @@ public sealed class GoapPassTargetSelectionEditModeTests
         float diff = GoapPassTargetSelection.ComputeFacingAngleDiff(origin, straightAhead, 0f);
         Assert.That(diff, Is.LessThanOrEqualTo(1f));
     }
+
+    [Test]
+    public void ScoreCandidate_UnderPressure_PrefersShortForwardReceiver()
+    {
+        Vector3 passer = Vector3.zero;
+        Vector3 goal = new Vector3(0f, 0f, 100f);
+        Vector3 shortForward = new Vector3(0f, 0f, 18f);
+        Vector3 longLateral = new Vector3(30f, 0f, -5f);
+
+        var shortInput = BaseInput(passer, shortForward, goal);
+        shortInput.OwnerPressureCount = 2;
+        var longInput = BaseInput(passer, longLateral, goal);
+        longInput.OwnerPressureCount = 2;
+
+        float shortScore = GoapPassTargetSelection.ScoreCandidate(shortInput);
+        float longScore = GoapPassTargetSelection.ScoreCandidate(longInput);
+
+        Assert.That(shortScore, Is.GreaterThan(longScore));
+    }
+
+    [Test]
+    public void ScoreCandidate_UnderHeavyPressure_StillScoresBlockedRoute()
+    {
+        Vector3 passer = Vector3.zero;
+        Vector3 goal = new Vector3(0f, 0f, 100f);
+        Vector3 blockedReceiver = new Vector3(10f, 0f, 25f);
+        var blocker = new List<Vector3> { new Vector3(5f, 0f, 12f) };
+
+        var input = BaseInput(passer, blockedReceiver, goal, blocker);
+        input.OwnerPressureCount = 2;
+
+        float score = GoapPassTargetSelection.ScoreCandidate(input);
+
+        Assert.That(score, Is.GreaterThan(float.MinValue));
+    }
+
+    [Test]
+    public void ScoreCandidate_PenalizesMovingReceiver()
+    {
+        Vector3 passer = Vector3.zero;
+        Vector3 receiver = new Vector3(0f, 0f, 28f);
+        Vector3 goal = new Vector3(0f, 0f, 100f);
+
+        var stationary = BaseInput(passer, receiver, goal);
+        var moving = BaseInput(passer, receiver, goal);
+        moving.ReceiverIsMoving = true;
+
+        float stationaryScore = GoapPassTargetSelection.ScoreCandidate(stationary);
+        float movingScore = GoapPassTargetSelection.ScoreCandidate(moving);
+
+        Assert.That(stationaryScore, Is.GreaterThan(movingScore));
+    }
 }
 #endif
