@@ -89,3 +89,6 @@ echo "  敵 Main: prodM1:True + BallPossessionAttack + PassToTeammate/ShootAtGoa
 echo "  敵 Main パス後: prodM2:True + TeamBallSupport + サポート行動"
 echo "  敵 Sub（味方ボール時）: TeamBallSupport + GetOpen/CreateSupportAngle 等"
 echo "  味方 Sub（敵ボール時）: DefensivePositioning + MoveToDefensivePosition 等"
+echo ""
+echo "Phase B 完了後の次ステップ:"
+echo "    ./scripts/playtest/prepare-phase-c-integration-check.sh"
