@@ -4,16 +4,34 @@ using NUnit.Framework;
 public sealed class MainNpcAttackPlanningEditModeTests
 {
     private const float MaxShootDistance = 55f;
+    private const float ProductionFieldMaxShootDistance = 40f * 0.55f;
 
     [Test]
-    public void IsWithinVeryNearGoalShootZone_UsesTwentyTwoPercentOfMaxRange()
+    public void IsWithinVeryNearGoalShootZone_UsesThirtyTwoPercentOfMaxRange()
     {
         Assert.That(
             MainNpcAttackPlanning.IsWithinVeryNearGoalShootZone(12f, MaxShootDistance),
             Is.True);
         Assert.That(
-            MainNpcAttackPlanning.IsWithinVeryNearGoalShootZone(13f, MaxShootDistance),
+            MainNpcAttackPlanning.IsWithinVeryNearGoalShootZone(18f, MaxShootDistance),
             Is.False);
+    }
+
+    [Test]
+    public void EstimateCosts_ProductionGoalMouthAtZ13_PrefersShoot()
+    {
+        float passCost = MainNpcAttackPlanning.EstimatePassCost(
+            goalDistance: 6.7f,
+            maxShootDistance: ProductionFieldMaxShootDistance,
+            pressureCount: 2,
+            passRouteClear: true);
+        float shootCost = MainNpcAttackPlanning.EstimateShootCost(
+            goalDistance: 6.7f,
+            maxShootDistance: ProductionFieldMaxShootDistance,
+            pressureCount: 2,
+            shotLaneClear: false);
+
+        Assert.That(shootCost, Is.LessThan(passCost));
     }
 
     [Test]
