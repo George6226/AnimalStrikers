@@ -32,6 +32,12 @@ public static class GoapMainNpcAttackBridge
             return false;
         }
 
+        if (GoapBallActionGuard.IsPassInProgress(facade))
+        {
+            GoapPassDiagnostic.Log(facade, "Bridge rejected pass (already in progress)");
+            return false;
+        }
+
         var pass = facade.GetComponentInChildren<AnimalAction_Pass>(true);
         if (pass == null)
         {
@@ -40,9 +46,11 @@ public static class GoapMainNpcAttackBridge
 
         if (!TryFindPassTarget(bb, out AnimalFacade target))
         {
+            GoapPassDiagnostic.Log(facade, "Bridge rejected pass (no target)");
             return false;
         }
 
+        GoapPassDiagnostic.Log(facade, $"Bridge invoke pass target={target.name}");
         pass.pass(target);
         return true;
     }
@@ -51,6 +59,11 @@ public static class GoapMainNpcAttackBridge
     {
         AnimalFacade facade = ResolveFacade(bb);
         if (facade == null)
+        {
+            return false;
+        }
+
+        if (GoapBallActionGuard.IsShootInProgress(facade))
         {
             return false;
         }

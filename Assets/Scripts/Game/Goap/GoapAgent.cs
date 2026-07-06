@@ -583,6 +583,12 @@ public class GoapAgent : MonoBehaviour
 
     private void TriggerImmediateReplan(string replanReason, string summaryMessage)
     {
+        if (ShouldDeferPlanInterrupt())
+        {
+            LogSummary($"ReplanDeferred(reason={replanReason}, action={_currentAction.DisplayName})");
+            return;
+        }
+
         _lastReplanReason = replanReason;
         _nextAllowedReplanTime = 0f;
         _sameFailureStreak = 0;
@@ -644,6 +650,11 @@ public class GoapAgent : MonoBehaviour
         if (GoapMainNpcProductionEnvironment.IsActive
             && GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade))
         {
+            if (GoapBallActionGuard.IsAnyInProgress(facade) || HasUnfinishedCommittedBallAction)
+            {
+                return true;
+            }
+
             return GoapMainNpcProductionEnvironment.ShouldEnableGoap(_playerBlackboard, facade);
         }
 
@@ -1473,8 +1484,31 @@ public class GoapAgent : MonoBehaviour
         _ballContextInitialized = false;
         _lastPlanSummary =
             $"Configured(tier={_npcTier}, goals={_availableGoals.Count}, actions={_availableActions.Count}, interval={_planningInterval:F1})";
-        AbortCurrentPlan();
+        if (!ShouldDeferPlanInterrupt())
+        {
+            AbortCurrentPlan();
+        }
     }
+
+    private bool ShouldDeferPlanInterrupt()
+    {
+        if (_currentAction == null || _playerBlackboard == null)
+        {
+            return false;
+        }
+
+        if (!GoapBallActionGuard.IsCommittedGoapAction(_currentAction))
+        {
+            return false;
+        }
+
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(_playerBlackboard);
+        return GoapBallActionGuard.IsAnyInProgress(facade) || HasUnfinishedCommittedBallAction;
+    }
+
+    /// <summary>パス／シュート GOAP アクションが ActionComplete するまで Update を継続する。</summary>
+    public bool HasUnfinishedCommittedBallAction =>
+        _currentAction != null && GoapBallActionGuard.IsCommittedGoapAction(_currentAction);
 
     public GoapNpcTier DebugNpcTier => _npcTier;
 
@@ -1609,6 +1643,12 @@ public class GoapAgent : MonoBehaviour
     public void AbortCurrentPlan()
     {
         EnsureInitialized();
+
+        if (ShouldDeferPlanInterrupt())
+        {
+            LogSummary($"AbortDeferred(action={_currentAction.DisplayName})");
+            return;
+        }
 
         if (_currentAction != null)
         {

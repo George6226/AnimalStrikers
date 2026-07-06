@@ -56,7 +56,8 @@ public struct AnimalGoapBrainComponents
             ContextSwitcher.enabled = active;
         }
 
-        if (!active && Agent != null && Agent.isActiveAndEnabled)
+        if (!active && Agent != null && Agent.isActiveAndEnabled
+            && !Agent.HasUnfinishedCommittedBallAction)
         {
             Agent.AbortCurrentPlan();
         }

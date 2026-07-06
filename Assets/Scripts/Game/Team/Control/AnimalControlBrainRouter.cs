@@ -99,7 +99,8 @@ public class AnimalControlBrainRouter : MonoBehaviour
             return;
         }
 
-        bool wantGoap = GoapMainNpcProductionEnvironment.ShouldEnableGoap(_goap.Blackboard, _facade);
+        bool wantGoap = GoapMainNpcProductionEnvironment.ShouldEnableGoap(_goap.Blackboard, _facade)
+            || (_goap.Agent != null && _goap.Agent.HasUnfinishedCommittedBallAction);
         if (wantGoap == _productionGoapActive)
         {
             return;

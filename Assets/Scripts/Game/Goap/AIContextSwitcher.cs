@@ -46,10 +46,27 @@ public class AIContextSwitcher : MonoBehaviour
         
         if (nowTeamHasBall != _lastTeamHasBall || nowEnemyHasBall != _lastEnemyHasBall)
         {
-            Abort();
+            if (!ShouldDeferAbort())
+            {
+                Abort();
+            }
+
             _lastTeamHasBall = nowTeamHasBall;
             _lastEnemyHasBall = nowEnemyHasBall;
         }
+    }
+
+    private bool ShouldDeferAbort()
+    {
+        if (_agent == null)
+        {
+            return false;
+        }
+
+        var blackboard = _agent.GetComponent<PlayerBlackboard>()
+            ?? _agent.GetComponentInChildren<PlayerBlackboard>(true);
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(blackboard);
+        return GoapBallActionGuard.IsAnyInProgress(facade);
     }
 
     public void Abort()

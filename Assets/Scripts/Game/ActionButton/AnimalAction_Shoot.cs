@@ -13,6 +13,10 @@ public class AnimalAction_Shoot : AnimalAction_Base
     [SerializeField] private AnimalFacade _myFacade;
     [SerializeField] private AnimalHandler _animalHandler;
 
+    private Coroutine _shootCoroutine;
+
+    public bool IsShootInProgress => _shootCoroutine != null;
+
     /// <summary>
     /// 基底クラスのExecuteメソッドの実装（プレイヤー操作前提）
     /// </summary>
@@ -43,6 +47,11 @@ public class AnimalAction_Shoot : AnimalAction_Base
     // シュート
     public void shoot()
     {
+        if (_shootCoroutine != null)
+        {
+            return;
+        }
+
         // 自分のタグからゴールを取得（TeamFacade 経由）
         string tag = _myFacade.GetAvatar().gameObject.tag;
         var fieldHandler = TeamFacade.Instance != null ? TeamFacade.Instance.FieldObjectHandler : null;
@@ -63,32 +72,64 @@ public class AnimalAction_Shoot : AnimalAction_Base
         _animalHandler.shoot();
         _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
 
-        // シュート実行
-        StartCoroutine(executeShoot(dir, d));
+        _shootCoroutine = StartCoroutine(executeShoot(dir, d));
     }
 
     private IEnumerator executeShoot(Vector3 dir, float distance)
     {
-        Debug.Log("シュートの方向:" + dir);
-        yield return new WaitForSeconds(0.2f);
+        const float windUpSeconds = 0.2f;
+        yield return new WaitForSeconds(windUpSeconds);
 
-        BallHandler ball = TeamFacade.Instance.BallManager.Ball;
-        // ボールの所有権をフリーに
-        bool success = TeamFacade.Instance.BallManager.changeOwnership(-1, BallManager_State.BALL_STATE.SHOOT);
+        var teamFacade = TeamFacade.Instance;
+        if (_myFacade == null || teamFacade == null || teamFacade.BallManager == null)
+        {
+            _shootCoroutine = null;
+            yield break;
+        }
 
-        // ボールの同期を待機
+        int ownerID = _myFacade.GetAvatar().ViewID;
+        if (!teamFacade.BallManager.isHoldBall(ownerID))
+        {
+            _shootCoroutine = null;
+            yield break;
+        }
+
+        string tag = _myFacade.GetAvatar().gameObject.tag;
+        var fieldHandler = teamFacade.FieldObjectHandler;
+        if (fieldHandler == null)
+        {
+            _shootCoroutine = null;
+            yield break;
+        }
+
+        GameObject targetGoal = fieldHandler.GetGoal(tag);
+        if (targetGoal == null)
+        {
+            _shootCoroutine = null;
+            yield break;
+        }
+
+        Vector3 myPos = _myFacade.transform.position;
+        Vector3 targetPos = targetGoal.transform.position;
+        dir = (targetPos - myPos).normalized;
+        distance = Vector3.Distance(myPos, targetPos);
+        _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
+
+        BallHandler ball = teamFacade.BallManager.Ball;
+        bool success = teamFacade.BallManager.changeOwnership(-1, BallManager_State.BALL_STATE.SHOOT);
+
         yield return new WaitUntil(() => !ball.SynchronizedNow);
 
         Vector3 kickDir = BuildShootKickVector(dir, distance);
-
         ball.kick(kickDir);
-        // スペシャルゲージの増加
+
         var specialGauge = _myFacade.GetSpecialGauge();
         if (specialGauge != null)
         {
             specialGauge.AddGaugeValue(ConstData.SPECIAL_GAUGE_VALUE);
         }
 
+        _shootCoroutine = null;
         yield return null;
     }
 
@@ -105,11 +146,10 @@ public class AnimalAction_Shoot : AnimalAction_Base
         float shootTime = baseShoot + (increaseShoot * spritShoot / 100.0f);
         shootTime = Mathf.Max(0.01f, shootTime);
 
-        // Shoot(0-100)に応じて水平方向のブレを付与（100ならブレなし）
-        float clampedShoot = Mathf.Clamp(spritShoot, 0f, 100f);
-        float inaccuracy = 1.0f - (clampedShoot / 100.0f);
-        float spreadAngle = Random.Range(-ConstData.MAX_SHOOT_SPREAD_ANGLE, ConstData.MAX_SHOOT_SPREAD_ANGLE) * inaccuracy;
-        Vector3 adjustedDir = Quaternion.AngleAxis(spreadAngle, Vector3.up) * dir.normalized;
+        Vector3 adjustedDir = AnimalActionAccuracyPolicy.ApplyHorizontalSpread(
+            dir,
+            spritShoot,
+            ConstData.MAX_SHOOT_SPREAD_ANGLE);
 
         float speed = distance / shootTime;
         return adjustedDir * speed;

@@ -22,7 +22,8 @@ echo ""
 
 FILTER_CMD=(cat "${LOG}")
 if [[ -n "${OWNER_FILTER}" ]]; then
-  FILTER_CMD=(grep -F "${OWNER_FILTER}" "${LOG}")
+  NAME="${OWNER_FILTER#owner=}"
+  FILTER_CMD=(grep -E "(owner=${NAME}|passer=${NAME})" "${LOG}")
 fi
 
 echo "--- Main tier ActionStart 集計 ---"
@@ -115,6 +116,52 @@ else:
     print(f"該当 {len(flags)} 件:")
     for selected, tail in flags[-10:]:
         print(f"  selected={selected}")
+PY
+
+echo ""
+echo "--- パス診断 [GOAP_PASS]（直近 15 件） ---"
+"${FILTER_CMD[@]}" | grep '\[GOAP_PASS\]' | tail -15 || echo "(該当なし — コード更新後に再プレイしてください)"
+echo ""
+
+echo "--- パス結果サマリ [GOAP_PASS] ---"
+python3 - "${LOG}" "${OWNER_FILTER}" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+owner_filter = sys.argv[2]
+name = owner_filter.replace("owner=", "") if owner_filter else ""
+kick = 0
+skipped = 0
+cancelled = 0
+aim_shifts = []
+
+def matches_filter(line: str) -> bool:
+    if not name:
+        return True
+    return f"owner={name}" in line or f"passer={name}" in line
+
+with open(path, encoding="utf-8", errors="replace") as f:
+    for line in f:
+        if not matches_filter(line):
+            continue
+        if "[GOAP_PASS]" not in line:
+            continue
+        if "Kicked " in line or line.rstrip().endswith("Kicked"):
+            kick += 1
+        if "Skipped duplicate" in line:
+            skipped += 1
+        if "Cancelled reason=" in line:
+            cancelled += 1
+        m = re.search(r"aimDeltaDeg=([0-9.]+)", line)
+        if m:
+            aim_shifts.append(float(m.group(1)))
+
+print(f"kick={kick} skipped_duplicate={skipped} cancelled={cancelled}")
+if aim_shifts:
+    print(f"aimDeltaDeg avg={sum(aim_shifts)/len(aim_shifts):.1f} max={max(aim_shifts):.1f} (起動→キックの向き変化)")
+else:
+    print("aimDeltaDeg=(Kick 行なし)")
 PY
 
 echo ""
