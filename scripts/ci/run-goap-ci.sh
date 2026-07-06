@@ -125,16 +125,24 @@ run_editmode_tests() {
   "${unity_bin}" \
     -batchmode \
     -nographics \
-    -quit \
     -projectPath "${PROJECT_ROOT}" \
     -runTests \
     -testPlatform EditMode \
     -testFilter "${GOAP_EDITMODE_TEST_FILTER}" \
     -testResults "${LOG_DIR}/goap-editmode-results.xml" \
     -logFile "${log_file}"
+  local exit_code=$?
+
+  if [[ "${exit_code}" -ne 0 ]]; then
+    echo "[goap-ci] EditMode tests FAILED (exit=${exit_code})" >&2
+    return 1
+  fi
 
   if [[ -f "${LOG_DIR}/goap-editmode-results.xml" ]]; then
     grep -E 'test-run.*(passed|failed)' "${LOG_DIR}/goap-editmode-results.xml" | head -1 || true
+  else
+    echo "[goap-ci] EditMode results XML not found" >&2
+    return 1
   fi
   echo "[goap-ci] EditMode tests PASSED"
 }
