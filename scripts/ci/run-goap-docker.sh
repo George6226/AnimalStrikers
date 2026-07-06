@@ -11,7 +11,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 IMAGE="${GOAP_DOCKER_IMAGE}"
 LOG_DIR="${PROJECT_ROOT}/Logs"
 EDITMODE_TIMEOUT="${GOAP_EDITMODE_DOCKER_TIMEOUT:-600}"
-BATCH_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-2400}"
+BATCH_TIMEOUT="${GOAP_UNITY_DOCKER_TIMEOUT:-900}"
 mkdir -p "${LOG_DIR}"
 
 if ! goap_ci_mode_valid "${MODE}"; then
@@ -127,16 +127,39 @@ while IFS= read -r token; do
   [[ -n "\${token}" ]] && batch_tokens+=("\${token}")
 done < <(goap_ci_batch_profiles_for_mode "\${MODE}")
 
+source /project/scripts/ci/resolve-batch-verify-result.sh
+
 for token in "\${batch_tokens[@]}"; do
   goap_ci_resolve_batch_profile "\${token}"
   goap_ci_clear_profile_markers /project/Logs "\${token}"
-  set +e
-  run_batch_profile "\${GOAP_PROFILE_FLAG}" "\${GOAP_PROFILE_LOG_FILE}"
-  batch_exit=\$?
-  set -e
-  if [[ "\${batch_exit}" -ne 0 ]]; then
-    echo "[goap-ci] batch verify failed (\${GOAP_PROFILE_LABEL}, exit=\${batch_exit})" >&2
-    exit "\${batch_exit}"
+  batch_ok=false
+  final_exit=1
+  for batch_attempt in 1 2; do
+    set +e
+    run_batch_profile "\${GOAP_PROFILE_FLAG}" "\${GOAP_PROFILE_LOG_FILE}"
+    batch_exit=\$?
+    set -e
+    if [[ "\${batch_exit}" -eq 0 ]]; then
+      batch_ok=true
+      break
+    fi
+    if resolve_batch_verify_success /project "\${GOAP_PROFILE_TOKEN}"; then
+      echo "[goap-ci] batch verify passed from markers after exit=\${batch_exit} (\${GOAP_PROFILE_LABEL})"
+      batch_ok=true
+      break
+    fi
+    if [[ "\${batch_attempt}" -lt 2 && "\${batch_exit}" -eq 124 ]]; then
+      echo "[goap-ci] batch timed out (exit=124); retrying once after marker cleanup (\${GOAP_PROFILE_LABEL})" >&2
+      goap_ci_clear_profile_markers /project/Logs "\${token}"
+      rm -f "/project/Logs/\${GOAP_PROFILE_RESULT_FILE}" "/project/Logs/\${GOAP_PROFILE_LOG_FILE}"
+      continue
+    fi
+    final_exit="\${batch_exit}"
+    break
+  done
+  if [[ "\${batch_ok}" != "true" ]]; then
+    echo "[goap-ci] batch verify failed (\${GOAP_PROFILE_LABEL}, exit=\${final_exit})" >&2
+    exit "\${final_exit}"
   fi
 done
 INNER
@@ -159,23 +182,20 @@ while IFS= read -r token; do
 done < <(goap_ci_batch_profiles_for_mode "${MODE}")
 
 for token in "${batch_tokens[@]}"; do
-  if [[ "${docker_exit}" -ne 0 ]]; then
-    break
-  fi
-
   goap_ci_resolve_batch_profile "${token}"
 
   if [[ -f "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}" ]]; then
     cat "${LOG_DIR}/${GOAP_PROFILE_RESULT_FILE}"
   fi
 
-  if resolve_batch_verify_success "${PROJECT_ROOT}" "${GOAP_PROFILE_TOKEN}"; then
+  if [[ "${docker_exit}" -eq 0 ]] || resolve_batch_verify_success "${PROJECT_ROOT}" "${GOAP_PROFILE_TOKEN}"; then
     echo "[goap-ci] docker batch verify passed (${GOAP_PROFILE_LABEL})"
     docker_exit=0
   else
     docker_exit=1
     goap_ci_report_batch_failure "${PROJECT_ROOT}" "${GOAP_PROFILE_TOKEN}" "${LOG_DIR}/${GOAP_PROFILE_LOG_FILE}"
     echo "[goap-ci] docker batch verify failed (${GOAP_PROFILE_LABEL})" >&2
+    break
   fi
 done
 
