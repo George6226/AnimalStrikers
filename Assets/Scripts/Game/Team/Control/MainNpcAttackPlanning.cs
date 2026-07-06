@@ -14,7 +14,7 @@ public static class MainNpcAttackPlanning
     private const float PassUnderPressureDiscount = 0.35f;
     private const float ShootNearGoalDiscount = 0.52f;
     private const float BlockedShotLanePenalty = 0.55f;
-    private const float VeryNearGoalDistanceRatio = 0.22f;
+    private const float VeryNearGoalDistanceRatio = 0.32f;
     private const float VeryNearGoalPassPenalty = 0.55f;
     private const float VeryNearGoalShootDiscount = 0.55f;
     private const float VeryNearGoalShootPressureRelief = 0.20f;
