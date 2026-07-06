@@ -8,6 +8,7 @@ public sealed class AnimalActionAccuracyPolicyEditModeTests
     public void TearDown()
     {
         GoapMainNpcVerifyEnvironment.Sync(false, 0);
+        GoapMainNpcProductionEnvironment.Sync(false);
     }
 
     [Test]
@@ -22,6 +23,14 @@ public sealed class AnimalActionAccuracyPolicyEditModeTests
     public void UseDeterministicDirection_MainNpcVerify_IsTrue()
     {
         GoapMainNpcVerifyEnvironment.Sync(true, 0);
+
+        Assert.That(AnimalActionAccuracyPolicy.UseDeterministicDirection, Is.True);
+    }
+
+    [Test]
+    public void UseDeterministicDirection_MainNpcProductionGoapVerify_IsTrue()
+    {
+        GoapMainNpcProductionEnvironment.Sync(true);
 
         Assert.That(AnimalActionAccuracyPolicy.UseDeterministicDirection, Is.True);
     }

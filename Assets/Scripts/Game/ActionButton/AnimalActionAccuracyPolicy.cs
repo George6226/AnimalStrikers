@@ -2,12 +2,15 @@ using UnityEngine;
 
 /// <summary>
 /// パス・シュートのパラメーター由来角度ブレ。
-/// GOAP 検証では再現性のためブレなし、本番プレイでは従来どおり適用する。
+/// GOAP 検証（バッチ / M0 / 本番 GOAP プレイテスト）では再現性のためブレなし。
+/// 製品プレイ（GOAP 検証フラグがすべて OFF）では従来どおり適用する。
 /// </summary>
 public static class AnimalActionAccuracyPolicy
 {
     public static bool UseDeterministicDirection =>
-        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsActive;
+        GoapBatchVerifyEnvironment.IsActive
+        || GoapMainNpcVerifyEnvironment.IsActive
+        || GoapMainNpcProductionEnvironment.IsActive;
 
     public static Vector3 ApplyHorizontalSpread(Vector3 dir, float stat0to100, float maxSpreadAngle)
     {
