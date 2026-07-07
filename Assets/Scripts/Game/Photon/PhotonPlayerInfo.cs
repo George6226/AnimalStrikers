@@ -54,7 +54,9 @@ public class PhotonPlayerInfo : MonoBehaviourPunCallbacks
     public void InitializeForAutomatedVerify(Player player)
     {
         Initialize(player);
-        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
+        if (GoapBatchVerifyEnvironment.IsActive
+            || GoapMainNpcVerifyEnvironment.IsCliActive
+            || GoapPhaseDPlaytestEnvironment.IsActive)
         {
             _battleMode = ConstData.BATTLE_MODE.NPC;
         }
