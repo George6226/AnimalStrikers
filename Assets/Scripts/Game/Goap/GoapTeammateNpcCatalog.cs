@@ -11,6 +11,7 @@ public static class GoapTeammateNpcCatalog
     public static bool IsAllowedGoal(GoapGoalSO goal)
     {
         return goal is FreeBallRecoveryGoalSO
+            || goal is IncomingPassReceiveGoalSO
             || goal is TeamBallSupportGoalSO
             || goal is EnemyBallDefenseGoalSO
             || goal is DefensivePositioningGoalSO;
@@ -19,6 +20,7 @@ public static class GoapTeammateNpcCatalog
     public static bool IsAllowedAction(GoapActionSO action)
     {
         return action is MoveToFreeBallActionSO
+            || action is MoveToReceivePassActionSO
             || action is MoveToSupportPositionActionSO
             || action is MoveToDefensivePositionActionSO
             || action is MarkOpponentActionSO
@@ -65,6 +67,11 @@ public static class GoapTeammateNpcCatalog
             return actions.Where(a => a is MoveToFreeBallActionSO).ToList();
         }
 
+        if (goal is IncomingPassReceiveGoalSO)
+        {
+            return actions.Where(a => a is MoveToReceivePassActionSO).ToList();
+        }
+
         return actions;
     }
 
@@ -88,6 +95,7 @@ public static class GoapTeammateNpcCatalog
     public static bool IsTacticalMoveRuntime(GoapActionRuntime runtime)
     {
         return runtime is MoveToFreeBallActionRuntime
+            or MoveToReceivePassActionRuntime
             or MoveToSupportPositionActionRuntime
             or MoveToDefensivePositionActionRuntime
             or MarkOpponentActionRuntime
@@ -116,10 +124,12 @@ public static class GoapTeammateNpcCatalog
 
         EnsureGoal<FreeBallRecoveryGoalSO>(goals);
         EnsureGoal<TeamBallSupportGoalSO>(goals);
+        EnsureGoal<IncomingPassReceiveGoalSO>(goals);
         EnsureGoal<EnemyBallDefenseGoalSO>(goals);
         EnsureGoal<DefensivePositioningGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
+        EnsureAction<MoveToReceivePassActionSO>(actions);
         EnsureAction<MoveToSupportPositionActionSO>(actions);
         EnsureAction<MoveToDefensivePositionActionSO>(actions);
         EnsureAction<MarkOpponentActionSO>(actions);

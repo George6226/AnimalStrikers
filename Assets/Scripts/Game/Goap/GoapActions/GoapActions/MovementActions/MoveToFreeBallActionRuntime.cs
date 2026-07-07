@@ -6,8 +6,9 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
     private bool _isExecuting;
     private float _startTime;
     private float _maxChaseDuration = 8f;
-    private float _nearBallDistance = 1.2f;
+    private float _nearBallDistance = 0.55f;
     private float _moveIntensity = 1f;
+    private const float PickupAssistDistance = 0.65f;
 
     private PlayerBlackboard _bb;
     private bool _motorResolved;
@@ -81,6 +82,7 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return;
 
+        TryPickupBallIfClose();
         GoapNpcMotor.MoveToward(_bb, teamBB.BallInfo.BallPosition, _moveIntensity, "FreeBall");
     }
 
@@ -138,6 +140,12 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
             return false;
         }
 
+        if (_bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            FinishFreeBallChase(false);
+            return true;
+        }
+
         if (!IsFreeBallSituation())
         {
             FinishFreeBallChase(false);
@@ -161,11 +169,43 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         float distance = Vector3.Distance(_bb.PhysicalState.Position, teamBB.BallInfo.BallPosition);
         if (distance <= _nearBallDistance)
         {
-            FinishFreeBallChase(true);
-            return true;
+            _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+            _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "false"), false);
         }
 
         return false;
+    }
+
+    private void TryPickupBallIfClose()
+    {
+        if (_bb == null
+            || _bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true
+            || !IsFreeBallSituation())
+        {
+            return;
+        }
+
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        var hBall = ballManager != null ? ballManager.Ball : null;
+        if (hBall == null)
+        {
+            return;
+        }
+
+        float distance = Vector3.Distance(_bb.PhysicalState.Position, hBall.transform.position);
+        if (distance > PickupAssistDistance)
+        {
+            return;
+        }
+
+        if (_bb.BasicData?.Self == null)
+        {
+            return;
+        }
+
+        var body = _bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?.GetComponentInChildren<AnimalCollider_Body>(true);
+        body?.TryAcquireBall(hBall);
     }
 
     private bool IsFreeBallSituation()

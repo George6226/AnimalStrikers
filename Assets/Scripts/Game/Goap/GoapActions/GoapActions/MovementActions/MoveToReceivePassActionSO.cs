@@ -1,15 +1,15 @@
-using UnityEngine;
 using Game.Goap;
+using UnityEngine;
 
 /// <summary>
-/// ボールがFREEの間、ボール近傍まで移動する最小アクション。
+/// パス飛行中、指定された受け手がボール（または受け位置）へ移動する。
 /// </summary>
-[CreateAssetMenu(menuName = "GOAP/Action/Movement/MoveToFreeBall", fileName = "MoveToFreeBallActionSO")]
-public class MoveToFreeBallActionSO : GoapActionSO
+[CreateAssetMenu(menuName = "GOAP/Action/Movement/MoveToReceivePass", fileName = "MoveToReceivePassActionSO")]
+public class MoveToReceivePassActionSO : GoapActionSO
 {
     [Header("Move Settings")]
-    [SerializeField] private float _maxChaseDuration = 8f;
-    [SerializeField] private float _nearBallDistance = 0.55f;
+    [SerializeField] private float _maxChaseDuration = 3f;
+    [SerializeField] private float _nearBallDistance = 1.1f;
     [SerializeField] private float _moveIntensity = 1f;
 
     public float MaxChaseDuration => _maxChaseDuration;
@@ -19,10 +19,10 @@ public class MoveToFreeBallActionSO : GoapActionSO
     protected override void OnEnable()
     {
         base.OnEnable();
-        _actionName = "MoveToFreeBall";
-        if (Mathf.Approximately(_baseCost, 1f))
+        _actionName = "MoveToReceivePass";
+        if (Mathf.Approximately(_baseCost, 1f) || _baseCost <= 0.01f)
         {
-            _baseCost = 0.8f;
+            _baseCost = 0.35f;
         }
 
         _preconditions.Clear();
@@ -41,13 +41,6 @@ public class MoveToFreeBallActionSO : GoapActionSO
 
     public override GoapActionRuntime CreateRuntime(string debugName)
     {
-        return new MoveToFreeBallActionRuntime(this, debugName);
-    }
-
-    protected override float CalculateSituationalAdjustment(PlayerBlackboard bb)
-    {
-        float cost = TeammateNpcGoapRoleDifferentiation.AdjustActionCost(
-            _baseCost, bb, TeammateNpcTacticalMode.ChaseBall);
-        return cost - _baseCost;
+        return new MoveToReceivePassActionRuntime(this, debugName);
     }
 }

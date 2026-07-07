@@ -32,7 +32,7 @@ namespace Game.Goap.Goals
                 return _basePriority;
             }
 
-            if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
             {
                 return _basePriority;
             }
@@ -59,7 +59,12 @@ namespace Game.Goap.Goals
                 return false;
             }
 
-            if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+            {
+                return false;
+            }
+
+            if (IncomingPassPlanning.IsIncomingPassTarget(bb))
             {
                 return false;
             }

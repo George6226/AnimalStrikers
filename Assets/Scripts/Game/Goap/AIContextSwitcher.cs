@@ -63,6 +63,11 @@ public class AIContextSwitcher : MonoBehaviour
             return false;
         }
 
+        if (_agent.ShouldDeferExternalPlanInterrupt)
+        {
+            return true;
+        }
+
         var blackboard = _agent.GetComponent<PlayerBlackboard>()
             ?? _agent.GetComponentInChildren<PlayerBlackboard>(true);
         AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(blackboard);

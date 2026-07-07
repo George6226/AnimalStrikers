@@ -14,9 +14,7 @@ public static class GoapMainNpcAttackBridge
             return false;
         }
 
-        PhotonAvatarContainerChild avatar = facade.GetAvatar();
-        string tag = avatar != null ? avatar.gameObject.tag : null;
-        if (tag == ConstData.NPC_TAG)
+        if (GoapFieldNpcPerspective.IsEnemyFieldNpc(facade))
         {
             return GoapPassTargetSelection.TrySelectBestEnemyTeammate(facade, out target);
         }
@@ -29,6 +27,12 @@ public static class GoapMainNpcAttackBridge
         AnimalFacade facade = ResolveFacade(bb);
         if (facade == null)
         {
+            return false;
+        }
+
+        if (!IsHoldingBall(bb))
+        {
+            GoapPassDiagnostic.Log(facade, "Bridge rejected pass (not holding ball)");
             return false;
         }
 
@@ -50,6 +54,7 @@ public static class GoapMainNpcAttackBridge
             return false;
         }
 
+        MainNpcAttackPlanning.RecordPassExecution(bb, target);
         GoapPassDiagnostic.Log(facade, $"Bridge invoke pass target={target.name}");
         pass.pass(target);
         return true;

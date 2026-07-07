@@ -115,7 +115,10 @@ public class TeamBallInfo
         if (changed)
         {
             LastPossessionSwitchTime = Time.time;
-            LastPossessionBelongTeam = belongTeam;
+            if (belongTeam != BallManager_State.BELONG_TEAM.FREE)
+            {
+                LastPossessionBelongTeam = belongTeam;
+            }
         }
     }
 

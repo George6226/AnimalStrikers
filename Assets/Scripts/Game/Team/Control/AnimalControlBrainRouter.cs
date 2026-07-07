@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// 操作ロールに応じて子階層の GOAP（GoapAgent / AIContextSwitcher）の有効/無効を切り替える。
@@ -6,7 +7,19 @@ using UnityEngine;
 [RequireComponent(typeof(AnimalControlAssignment))]
 public class AnimalControlBrainRouter : MonoBehaviour
 {
+    private enum LocalGoapDebugSide
+    {
+        Both = 0,
+        AllyOnly = 1,
+        EnemyOnly = 2,
+    }
+
     [SerializeField] private AnimalControlAssignment _assignment;
+    [Header("Local Debug")]
+    [SerializeField] private bool _enableLocalGoapFilter;
+    [SerializeField] private LocalGoapDebugSide _localGoapDebugSide = LocalGoapDebugSide.Both;
+    [Tooltip("空の場合はサイド条件のみ。指定すると PlayerID 一致のみ GOAP 有効。")]
+    [SerializeField] private List<int> _localGoapAllowedPlayerIds = new();
 
     private AnimalFacade _facade;
     private AnimalGoapBrainComponents _goap;
@@ -49,6 +62,14 @@ public class AnimalControlBrainRouter : MonoBehaviour
 
     public void ApplyRole(AnimalControlRole role)
     {
+        if (!PassesLocalGoapDebugFilter(role))
+        {
+            _productionGoapActive = false;
+            _enemyMainGoapActive = false;
+            _goap.SetActive(false);
+            return;
+        }
+
         bool useGoap = role == AnimalControlRole.TeammateNpc && ShouldUseGoapPilot();
         if (role == AnimalControlRole.EnemyFieldNpc)
         {
@@ -93,7 +114,8 @@ public class AnimalControlBrainRouter : MonoBehaviour
         if (!GoapMainNpcProductionEnvironment.IsActive
             || _facade == null
             || _assignment == null
-            || !_assignment.IsHumanControlled)
+            || !_assignment.IsHumanControlled
+            || !PassesLocalGoapDebugFilter(_assignment.Role))
         {
             _productionGoapActive = false;
             return;
@@ -122,7 +144,8 @@ public class AnimalControlBrainRouter : MonoBehaviour
     {
         if (_facade == null
             || _assignment == null
-            || _assignment.Role != AnimalControlRole.EnemyFieldNpc)
+            || _assignment.Role != AnimalControlRole.EnemyFieldNpc
+            || !PassesLocalGoapDebugFilter(_assignment.Role))
         {
             return;
         }
@@ -206,5 +229,49 @@ public class AnimalControlBrainRouter : MonoBehaviour
 
         enemySquad.ApplyGoapConfiguration(_goap.Agent, _facade);
         _goapConfigured = true;
+    }
+
+    private bool PassesLocalGoapDebugFilter(AnimalControlRole role)
+    {
+        if (!_enableLocalGoapFilter)
+        {
+            return true;
+        }
+
+        bool isAllyRole = role == AnimalControlRole.TeammateNpc || role == AnimalControlRole.Human;
+        bool isEnemyRole = role == AnimalControlRole.EnemyFieldNpc;
+        if (!isAllyRole && !isEnemyRole)
+        {
+            return false;
+        }
+
+        if (_localGoapDebugSide == LocalGoapDebugSide.AllyOnly && !isAllyRole)
+        {
+            return false;
+        }
+
+        if (_localGoapDebugSide == LocalGoapDebugSide.EnemyOnly && !isEnemyRole)
+        {
+            return false;
+        }
+
+        if (_localGoapAllowedPlayerIds == null || _localGoapAllowedPlayerIds.Count == 0)
+        {
+            return true;
+        }
+
+        int playerId = ResolveCurrentPlayerId();
+        return playerId > 0 && _localGoapAllowedPlayerIds.Contains(playerId);
+    }
+
+    private int ResolveCurrentPlayerId()
+    {
+        if (_goap.Blackboard?.BasicData != null && _goap.Blackboard.BasicData.PlayerID > 0)
+        {
+            return _goap.Blackboard.BasicData.PlayerID;
+        }
+
+        var avatar = _facade != null ? _facade.GetAvatar() : null;
+        return avatar != null ? avatar.ViewID : -1;
     }
 }

@@ -29,7 +29,160 @@ public static class GoapPassTargetSelection
         return candidate != null
             && passer != null
             && candidate != passer
-            && !candidate.IsGK();
+            && !IsFieldGoalkeeper(candidate);
+    }
+
+    private static bool IsFieldGoalkeeper(AnimalFacade facade)
+    {
+        if (facade == null)
+        {
+            return true;
+        }
+
+        AnimalInfo info = facade.GetAnimalInfo();
+        return info != null && info.IsGK;
+    }
+
+    public static bool IsAllySideFieldRole(AnimalControlRole role)
+    {
+        return role == AnimalControlRole.Human || role == AnimalControlRole.TeammateNpc;
+    }
+
+    public static bool IsEnemySideFieldRole(AnimalControlRole role)
+    {
+        return role == AnimalControlRole.EnemyFieldNpc;
+    }
+
+    /// <summary>
+    /// TeamRegistar のタグではなく AnimalControlAssignment で同一陣営か判定する。
+    /// （オフライン GOAP 対戦で敵 Master が PlayerAgent タグのまま Allys に入る誤登録を防ぐ）
+    /// </summary>
+    public static bool IsSameTeamFieldReceiver(AnimalFacade passer, AnimalFacade candidate)
+    {
+        if (!IsEligibleReceiver(passer, candidate))
+        {
+            return false;
+        }
+
+        return IsAllySidePasser(passer) == IsAllySidePasser(candidate);
+    }
+
+    /// <summary>
+    /// フィールドパスの有効先。Human は味方 NPC（TeammateNpc）へだけ渡し、
+    /// 敵 Master が Human ロールのまま誤登録されていてもパス先に選ばない。
+    /// </summary>
+    public static bool IsFieldPassReceiver(AnimalFacade passer, AnimalFacade candidate)
+    {
+        if (!IsSameTeamFieldReceiver(passer, candidate))
+        {
+            return false;
+        }
+
+        var assignment = candidate.GetComponent<AnimalControlAssignment>();
+        if (assignment == null)
+        {
+            return false;
+        }
+
+        if (IsAllySidePasser(passer))
+        {
+            return assignment.Role == AnimalControlRole.TeammateNpc;
+        }
+
+        return assignment.Role == AnimalControlRole.EnemyFieldNpc;
+    }
+
+    public static IEnumerable<AnimalFacade> EnumerateSameTeamFieldReceivers(AnimalFacade passer)
+    {
+        if (passer == null)
+        {
+            yield break;
+        }
+
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            yield break;
+        }
+
+        bool passerOnAllySide = IsAllySidePasser(passer);
+        foreach (AnimalFacade facade in regist.AllAnimals)
+        {
+            if (facade == null || IsFieldGoalkeeper(facade))
+            {
+                continue;
+            }
+
+            if (IsAllySidePasser(facade) != passerOnAllySide)
+            {
+                continue;
+            }
+
+            if (!IsEligibleReceiver(passer, facade))
+            {
+                continue;
+            }
+
+            yield return facade;
+        }
+    }
+
+    public static bool IsAllySidePasser(AnimalFacade facade)
+    {
+        if (facade == null)
+        {
+            return false;
+        }
+
+        var assignment = facade.GetComponent<AnimalControlAssignment>();
+        if (assignment != null)
+        {
+            if (assignment.Role == AnimalControlRole.TeammateNpc)
+            {
+                return true;
+            }
+
+            if (assignment.Role == AnimalControlRole.EnemyFieldNpc)
+            {
+                return false;
+            }
+
+            if (assignment.Role == AnimalControlRole.Human)
+            {
+                var registForHuman = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+                if (registForHuman != null)
+                {
+                    if (registForHuman.Enemies.Contains(facade))
+                    {
+                        return false;
+                    }
+
+                    if (registForHuman.Allys.Contains(facade))
+                    {
+                        return true;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist != null)
+        {
+            if (regist.Enemies.Contains(facade))
+            {
+                return false;
+            }
+
+            if (regist.Allys.Contains(facade))
+            {
+                return true;
+            }
+        }
+
+        string tag = facade.GetAvatar() != null ? facade.GetAvatar().tag : string.Empty;
+        return tag == ConstData.PLAYER_TAG || tag == ConstData.NPC_TAG;
     }
 
     public static float ScoreCandidate(in CandidateScoreInput input)
@@ -147,7 +300,7 @@ public static class GoapPassTargetSelection
 
         foreach (AnimalFacade candidate in pool)
         {
-            if (!IsEligibleReceiver(passer, candidate))
+            if (!IsFieldPassReceiver(passer, candidate))
             {
                 continue;
             }
@@ -178,16 +331,15 @@ public static class GoapPassTargetSelection
     public static bool TrySelectBestAlly(AnimalFacade passer, out AnimalFacade best)
     {
         best = null;
-        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (regist == null || teamBB == null)
+        if (teamBB == null || passer == null)
         {
             return false;
         }
 
         return TrySelectBest(
             passer,
-            regist.Allys,
+            EnumerateSameTeamFieldReceivers(passer),
             teamBB.FieldInfo.EnemyGoalPosition,
             out best);
     }
@@ -195,16 +347,15 @@ public static class GoapPassTargetSelection
     public static bool TrySelectBestEnemyTeammate(AnimalFacade passer, out AnimalFacade best)
     {
         best = null;
-        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (regist == null || teamBB == null)
+        if (teamBB == null || passer == null)
         {
             return false;
         }
 
         return TrySelectBest(
             passer,
-            regist.Enemies,
+            EnumerateSameTeamFieldReceivers(passer),
             teamBB.FieldInfo.OwnGoalPosition,
             out best);
     }

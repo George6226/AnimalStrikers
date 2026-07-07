@@ -141,5 +141,71 @@ public sealed class GoapPassTargetSelectionEditModeTests
 
         Assert.That(stationaryScore, Is.GreaterThan(movingScore));
     }
+
+    [Test]
+    public void IsSameTeamFieldReceiver_RejectsEnemyFieldNpcForHumanPasser()
+    {
+        var passerGo = new GameObject("passer");
+        var passerAssignment = passerGo.AddComponent<AnimalControlAssignment>();
+        passerGo.AddComponent<AnimalFacade>();
+        passerAssignment.SetRole(AnimalControlRole.Human);
+
+        var enemyGo = new GameObject("enemy");
+        var enemyAssignment = enemyGo.AddComponent<AnimalControlAssignment>();
+        enemyGo.AddComponent<AnimalFacade>();
+        enemyAssignment.SetRole(AnimalControlRole.EnemyFieldNpc);
+
+        var allyGo = new GameObject("ally");
+        var allyAssignment = allyGo.AddComponent<AnimalControlAssignment>();
+        allyGo.AddComponent<AnimalFacade>();
+        allyAssignment.SetRole(AnimalControlRole.TeammateNpc);
+
+        try
+        {
+            Assert.That(GoapPassTargetSelection.IsSameTeamFieldReceiver(
+                passerGo.GetComponent<AnimalFacade>(),
+                enemyGo.GetComponent<AnimalFacade>()), Is.False);
+            Assert.That(GoapPassTargetSelection.IsSameTeamFieldReceiver(
+                passerGo.GetComponent<AnimalFacade>(),
+                allyGo.GetComponent<AnimalFacade>()), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(passerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(allyGo);
+        }
+    }
+
+    [Test]
+    public void IsFieldPassReceiver_RejectsHumanEvenWhenRegisteredAsAlly()
+    {
+        var passerGo = new GameObject("passer");
+        passerGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.Human);
+        passerGo.AddComponent<AnimalFacade>();
+
+        var humanAllyGo = new GameObject("human_ally");
+        humanAllyGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.Human);
+        humanAllyGo.AddComponent<AnimalFacade>();
+
+        var npcAllyGo = new GameObject("npc_ally");
+        npcAllyGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.TeammateNpc);
+        npcAllyGo.AddComponent<AnimalFacade>();
+
+        try
+        {
+            var passer = passerGo.GetComponent<AnimalFacade>();
+            Assert.That(GoapPassTargetSelection.IsFieldPassReceiver(passer, humanAllyGo.GetComponent<AnimalFacade>()),
+                Is.False);
+            Assert.That(GoapPassTargetSelection.IsFieldPassReceiver(passer, npcAllyGo.GetComponent<AnimalFacade>()),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(passerGo);
+            Object.DestroyImmediate(humanAllyGo);
+            Object.DestroyImmediate(npcAllyGo);
+        }
+    }
 }
 #endif

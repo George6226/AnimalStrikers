@@ -14,8 +14,8 @@ public static class TeammateNpcGoapRoleDifferentiation
     private const float GoalOverlapPenaltyScale = 3.5f;
     private const float SlotAffinityMaxBonus = 8f;
     /// <summary>MoveToFreeBall の到達距離と揃える（これより遠いときだけ追跡ゴールを立てる）。</summary>
-    public const float FreeBallChaseArriveDistance = 1.2f;
-    public const float FreeBallPursueMinDistance = 1.35f;
+    public const float FreeBallChaseArriveDistance = 0.55f;
+    public const float FreeBallPursueMinDistance = 0.55f;
 
     /// <summary>条件A: この距離より人間がボールから遠いときのみ NPC 追跡を開始（m）。</summary>
     public const float FreeBallHumanFarEngageDistance = 10f;
@@ -253,10 +253,16 @@ public static class TeammateNpcGoapRoleDifferentiation
 
         Vector3 ballPos = teamBB.BallInfo.BallPosition;
         bool enemySide = requester != null && GoapFieldNpcPerspective.IsEnemyFieldNpc(requester);
+        if (!enemySide
+            && GoapMainNpcProductionEnvironment.IsActive
+            && requester != null)
+        {
+            return IsClosestAllyFieldPlayerToBall(requester, ballPos);
+        }
+
         if (enemySide)
         {
-            return TryGetNearestFieldNpcBallDistance(ballPos, enemySide: true, out float nearestEnemyNpcDist)
-                && nearestEnemyNpcDist < FreeBallNpcNearBallDistance;
+            return TryGetNearestFieldNpcBallDistance(ballPos, enemySide: true, out _);
         }
 
         if (!TryGetNearestFieldNpcBallDistance(ballPos, enemySide: false, out float nearestNpcDist))
@@ -297,6 +303,11 @@ public static class TeammateNpcGoapRoleDifferentiation
         }
 
         bool enemySide = requester != null && GoapFieldNpcPerspective.IsEnemyFieldNpc(requester);
+        if (!enemySide && GoapMainNpcProductionEnvironment.IsActive)
+        {
+            return ResolveClosestAllyFieldPlayerToBall(teamBB.BallInfo.BallPosition);
+        }
+
         if (!ShouldDelegateFreeBallChaseToNpc(requester))
         {
             ClearFreeBallChaseLeaderLock();
@@ -394,6 +405,64 @@ public static class TeammateNpcGoapRoleDifferentiation
             ? bb.BasicData.Self.transform.position
             : bb.PhysicalState.Position;
         return HorizontalDistance(selfPos, teamBB.BallInfo.BallPosition);
+    }
+
+    /// <summary>本番 GOAP: 味方フィールド（Human + NPC）のうちボールに最も近い個体か。</summary>
+    public static bool IsClosestAllyFieldPlayerToBall(AnimalFacade facade, Vector3 ballPos)
+    {
+        if (facade == null)
+        {
+            return false;
+        }
+
+        var closest = ResolveClosestAllyFieldPlayerToBall(ballPos);
+        return closest != null && closest == facade;
+    }
+
+    private static AnimalFacade ResolveClosestAllyFieldPlayerToBall(Vector3 ballPos)
+    {
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return null;
+        }
+
+        AnimalFacade leader = null;
+        float leaderDist = float.MaxValue;
+        int leaderPlayerId = int.MaxValue;
+        foreach (var facade in regist.Allys)
+        {
+            if (facade == null || facade.IsGK())
+            {
+                continue;
+            }
+
+            var assignment = facade.GetComponent<AnimalControlAssignment>();
+            if (assignment == null)
+            {
+                continue;
+            }
+
+            if (assignment.Role != AnimalControlRole.TeammateNpc
+                && assignment.Role != AnimalControlRole.Human)
+            {
+                continue;
+            }
+
+            float dist = HorizontalDistance(facade.transform.position, ballPos);
+            int playerId = ResolvePlayerId(facade);
+            bool isCloser = dist < leaderDist - FreeBallLeaderTieBreakEpsilon;
+            bool isTieAndLowerId = Mathf.Abs(dist - leaderDist) <= FreeBallLeaderTieBreakEpsilon
+                && playerId < leaderPlayerId;
+            if (isCloser || isTieAndLowerId)
+            {
+                leader = facade;
+                leaderDist = dist;
+                leaderPlayerId = playerId;
+            }
+        }
+
+        return leader;
     }
 
     public static float ComputeFreeBallChaseAdjustment(PlayerBlackboard bb, bool forGoalPriority)

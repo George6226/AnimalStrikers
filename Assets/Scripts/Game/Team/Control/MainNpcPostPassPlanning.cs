@@ -14,7 +14,7 @@ public static class MainNpcPostPassPlanning
             return false;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
         {
             return false;
         }
@@ -30,7 +30,7 @@ public static class MainNpcPostPassPlanning
             return false;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
         {
             return false;
         }
@@ -86,7 +86,7 @@ public static class MainNpcPostPassPlanning
             return diagnostic;
         }
 
-        bool hasBall = bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true;
+        bool hasBall = MainNpcAttackPlanning.IsSelfBallOwner(bb);
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         diagnostic.Pressure = teamBB != null ? teamBB.BallInfo.IsBallOwnerUnderPressure : 0;
 

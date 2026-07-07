@@ -45,7 +45,8 @@ namespace Game.Goap.Goals
             }
 
             return MainNpcAttackPlanning.CanPassToTeammate(bb)
-                || MainNpcAttackPlanning.CanShootAtGoal(bb);
+                || MainNpcAttackPlanning.CanShootAtGoal(bb)
+                || MainNpcAttackPlanning.CanDribbleTowardGoal(bb);
         }
     }
 }
