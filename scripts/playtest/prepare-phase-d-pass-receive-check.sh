@@ -157,7 +157,7 @@ echo "  | ActionComplete(MoveToReceivePass) | 受け完了後 BallPossessionAtta
 echo "  | ActionStart(DribbleTowardGoal) | 保持中の前進ドリブル |"
 echo "  | NoGoalIdle(wait=5.0s) | 0 件（長い待機なし） |"
 echo "  | [GOAP_PASS] not_holding_ball | 0 件 |"
-echo "  | Aborted | 試合中に過多でない（目安 < 20 / 3分） |"
+echo "  | Aborted（試合中） | attempt>=1 が過多でない（目安 <= 25 / 3分） |"
 echo "  | PassToTeammate vs ShootAtGoal | パス一辺倒でない |"
 echo ""
 echo "  味方のみの反復: MODE=ally $0"

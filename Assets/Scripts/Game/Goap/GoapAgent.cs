@@ -1560,7 +1560,7 @@ public class GoapAgent : MonoBehaviour
             $"Configured(tier={_npcTier}, goals={_availableGoals.Count}, actions={_availableActions.Count}, interval={_planningInterval:F1})";
         if (!ShouldDeferPlanInterrupt())
         {
-            AbortCurrentPlan();
+            ClearPlanForReconfigure();
         }
     }
 
@@ -1772,6 +1772,16 @@ public class GoapAgent : MonoBehaviour
     // === プラン中断 ===
     public void AbortCurrentPlan()
     {
+        ClearCurrentPlanState(logAsAbort: true, summaryReason: "Abort");
+    }
+
+    private void ClearPlanForReconfigure()
+    {
+        ClearCurrentPlanState(logAsAbort: false, summaryReason: "ConfigurePilot");
+    }
+
+    private void ClearCurrentPlanState(bool logAsAbort, string summaryReason)
+    {
         EnsureInitialized();
 
         if (ShouldDeferPlanInterrupt())
@@ -1780,6 +1790,9 @@ public class GoapAgent : MonoBehaviour
             return;
         }
 
+        bool hadAction = _currentAction != null;
+        bool hadPlan = _currentPlan != null && _currentPlan.Count > 0;
+
         if (_currentAction != null)
         {
             _currentAction.Cancel();
@@ -1787,14 +1800,30 @@ public class GoapAgent : MonoBehaviour
         }
 
         _currentPlan?.Clear();
-        _planFailed = true;
-        _lastReplanReason = "Abort";
-        _lastFailureCategory = "Abort";
-        _lastFailureDetails = "AbortCurrentPlan called";
-        _lastPlanSummary = $"Aborted(attempt={_planningAttemptCount}, t={Time.time:F1})";
-        LogSummary(_lastPlanSummary);
 
-        DebugLogger.Log($"[{this.name}(GoapAgent)] プラン中断");
+        if (!hadAction && !hadPlan)
+        {
+            return;
+        }
+
+        _planFailed = true;
+        _lastReplanReason = summaryReason;
+        _lastFailureCategory = logAsAbort ? "Abort" : "None";
+        _lastFailureDetails = logAsAbort ? "AbortCurrentPlan called" : summaryReason;
+
+        if (logAsAbort)
+        {
+            _lastPlanSummary = $"Aborted(attempt={_planningAttemptCount}, t={Time.time:F1})";
+            LogSummary(_lastPlanSummary);
+            DebugLogger.Log($"[{this.name}(GoapAgent)] プラン中断");
+            return;
+        }
+
+        _lastPlanSummary = $"PlanCleared(reason={summaryReason}, t={Time.time:F1})";
+        if (hadAction)
+        {
+            LogSummary(_lastPlanSummary);
+        }
     }
 
     /// <summary>検証レイアウト適用後: クールダウンを解除して即再プランニング可能にする。</summary>
