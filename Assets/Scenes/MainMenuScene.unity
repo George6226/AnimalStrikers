@@ -2686,7 +2686,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _execute: {fileID: 1699508278}
-  MATCHING_TIMEOUT: 100
+  MATCHING_TIMEOUT: 5
 --- !u!114 &1699508276
 MonoBehaviour:
   m_ObjectHideFlags: 0

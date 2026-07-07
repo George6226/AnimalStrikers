@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCENE="${PROJECT_ROOT}/Assets/Scenes/GameScene.unity"
+MAIN_MENU_SCENE="${PROJECT_ROOT}/Assets/Scenes/MainMenuScene.unity"
+UNITY_LAST_SCENE="${PROJECT_ROOT}/Library/LastSceneManagerSetup.txt"
 LOG_SUMMARY="${PROJECT_ROOT}/Assets/DebugLog/GoapSummary_latest.txt"
 LOG_DIAG="${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"
 ALLY_OWNER="${ALLY_OWNER:-Lion}"
@@ -63,6 +65,33 @@ if grep -q "GoapCombinedSupportRegressionDebugSetup" "${SCENE}"; then
   fi
 fi
 
+if grep -q "_requireMainNpcVerifyMode: 1" "${SCENE}" && grep -q "_mainNpcGoapVerifyMode: 0" "${SCENE}"; then
+  echo "✅ GoapMainNpcVerifyBootstrap は verify 時のみ（本番統合では起動しない）"
+fi
+
+if [[ -f "${MAIN_MENU_SCENE}" ]]; then
+  if grep -q "MATCHING_TIMEOUT: 5" "${MAIN_MENU_SCENE}"; then
+    echo "✅ MainMenu MATCHING_TIMEOUT = 5（オフライン対戦がすぐ開始）"
+  elif grep -q "MATCHING_TIMEOUT:" "${MAIN_MENU_SCENE}"; then
+    sed -i '' 's/MATCHING_TIMEOUT: [0-9]*/MATCHING_TIMEOUT: 5/' "${MAIN_MENU_SCENE}"
+    echo "✅ MainMenu MATCHING_TIMEOUT を 5 に更新（オフライン対戦の待ち時間短縮）"
+  else
+    echo "ℹ️  MainMenu MATCHING_TIMEOUT 未検出（手動でオフライン対戦を開始）"
+  fi
+else
+  echo "⚠️  MainMenuScene が見つかりません: ${MAIN_MENU_SCENE}"
+fi
+
+mkdir -p "$(dirname "${UNITY_LAST_SCENE}")"
+cat > "${UNITY_LAST_SCENE}" <<'EOF'
+sceneSetups:
+- path: Assets/Scenes/MainMenuScene.unity
+  isLoaded: 1
+  isActive: 1
+  isSubScene: 0
+EOF
+echo "✅ Unity 起動シーン = MainMenuScene（Play でオフライン対戦フロー）"
+
 if [[ -f "${LOG_SUMMARY}" ]]; then
   "${SCRIPT_DIR}/archive-goap-summary.sh" "${ARCHIVE_LABEL}"
 fi
@@ -87,7 +116,10 @@ echo "       Main Npc Goap Verify Mode = OFF"
 echo "       Enable Main Npc Goap In Production = ON"
 echo "       Enable Enemy Goap = ON"
 echo "  3. Play → READY→GAME（キックオフ UI 完了まで約 5 秒待つ）"
-echo "  4. 2〜3 分プレイ（ボール奪取・パス・シュート・守備を自然に発生させる）"
+echo "  4. 1 試合プレイ（約 3 分・試合時間いっぱいまで）"
+echo "     ボール奪取・パス・シュート・守備を自然に発生させる"
+echo ""
+echo "  ▶ Unity を開き直していない場合: MainMenuScene が開いていればそのまま Play"
 echo ""
 echo "  【手動操作について】"
 echo "    M1/M2 稼働中は手動入力オフ（GOAP 同士の試合のため）。"
@@ -138,7 +170,7 @@ echo "  見つからないときの切り分け:"
 echo "    | ログの様子 | 意味 |"
 echo "    | NoGoal のみ | 味方/敵が保持中で FREE になっていない |"
 echo "    | ctx:Support のみ | 味方が先にボール取得（Main はサポート役） |"
-echo "    | キックオフ直後のみ | FREE 時間が短い → プレイ時間を延ばす |"
+echo "    | キックオフ直後のみ | FREE 時間が短い → 複数試合 or タックルでルーズボールを増やす |"
 echo "    | 敵 Main が先に MoveToFreeBall | 取り合いで負けた（正常） |"
 echo ""
 echo "  敵 Main の owner は編成により ${ENEMY_OWNER} 以外（例: Crocodile）のことがある。"
