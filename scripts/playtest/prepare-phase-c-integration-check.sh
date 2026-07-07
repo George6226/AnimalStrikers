@@ -180,3 +180,7 @@ echo "  ログの tier=Main, slot=0 を確認して analyze の owner= を合わ
 echo ""
 echo "  M1/Shoot を確実に見たいだけなら（統合とは別）:"
 echo "    ./scripts/playtest/prepare-phase-a-shoot-check.sh  # DebugPlace + Lion にボール"
+echo ""
+echo "  #37 マージ後（パス受け・攻撃安定化の観察）:"
+echo "    MODE=ally ./scripts/playtest/prepare-phase-d-pass-receive-check.sh   # 味方 GOAP のみ"
+echo "    MODE=full ./scripts/playtest/prepare-phase-d-pass-receive-check.sh   # 統合+新指標"

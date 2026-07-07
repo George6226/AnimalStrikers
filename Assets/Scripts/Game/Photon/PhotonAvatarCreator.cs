@@ -35,7 +35,9 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        if (GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive)
+        if (GoapBatchVerifyEnvironment.IsActive
+            || GoapMainNpcVerifyEnvironment.IsCliActive
+            || GoapPhaseDPlaytestEnvironment.IsActive)
         {
             return;
         }
@@ -145,7 +147,9 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
     }
 
     private static bool UsesAutomatedVerifySpawn() =>
-        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive;
+        GoapBatchVerifyEnvironment.IsActive
+        || GoapMainNpcVerifyEnvironment.IsCliActive
+        || GoapPhaseDPlaytestEnvironment.IsActive;
 
     // キャラクタの生成
     private void SpawnCharacters(PlayerType playerType)

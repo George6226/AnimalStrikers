@@ -31,7 +31,9 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             : _spawnWaitTimeoutSeconds;
 
     private static bool UsesAutomatedVerifySpawn() =>
-        GoapBatchVerifyEnvironment.IsActive || GoapMainNpcVerifyEnvironment.IsCliActive;
+        GoapBatchVerifyEnvironment.IsActive
+        || GoapMainNpcVerifyEnvironment.IsCliActive
+        || GoapPhaseDPlaytestEnvironment.IsActive;
 
     private bool _completed;
 
@@ -106,11 +108,21 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
         yield return null;
         yield return WaitForPrefabPoolReady();
 
+        if (PhotonNetwork.IsConnectedAndReady && PhotonNetwork.InRoom)
+        {
+            Log("batch verify: reusing existing Photon room after reload");
+            yield return EnsurePlayersInConnectedRoomCoroutine();
+            yield break;
+        }
+
         Log("batch verify: starting offline Photon session");
 
-        PhotonNetwork.OfflineMode = true;
-        PhotonNetwork.IsMessageQueueRunning = true;
-        PhotonNetwork.ConnectUsingSettings();
+        if (!PhotonNetwork.IsConnected)
+        {
+            PhotonNetwork.OfflineMode = true;
+            PhotonNetwork.IsMessageQueueRunning = true;
+            PhotonNetwork.ConnectUsingSettings();
+        }
 
         float connectElapsed = 0f;
         while (connectElapsed < ConnectTimeoutSeconds && !PhotonNetwork.IsConnectedAndReady)
@@ -152,6 +164,11 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
             yield break;
         }
 
+        yield return EnsurePlayersInConnectedRoomCoroutine();
+    }
+
+    private IEnumerator EnsurePlayersInConnectedRoomCoroutine()
+    {
         Player local = PhotonNetwork.LocalPlayer;
         if (local == null)
         {
@@ -288,7 +305,7 @@ public class GoapDebugPlayBootstrap : MonoBehaviour
 
     private static void TryForceGameStateForBatchVerify()
     {
-        if (!GoapBatchVerifyEnvironment.IsActive)
+        if (!GoapBatchVerifyEnvironment.IsActive && !GoapPhaseDPlaytestEnvironment.IsActive)
         {
             return;
         }
