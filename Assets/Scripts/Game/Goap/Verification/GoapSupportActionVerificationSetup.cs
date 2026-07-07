@@ -803,6 +803,7 @@ public abstract class GoapSupportActionVerificationSetup : MonoBehaviour
 
     private bool TryApplyVerificationPatternLayout(GoapSupportLayoutPatternId pattern)
     {
+        GoapPassFlightTracker.Clear();
         TeammateNpcSupportPlanning.SetVerificationOnlySupportAction(EffectiveVerificationOnlyAction);
 
         if (pattern == GoapSupportLayoutPatternId.Baseline)

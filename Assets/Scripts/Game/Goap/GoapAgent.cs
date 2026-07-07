@@ -1600,6 +1600,10 @@ public class GoapAgent : MonoBehaviour
     /// <summary>AIContextSwitcher 等の外部中断判定用。</summary>
     public bool ShouldDeferExternalPlanInterrupt => ShouldDeferPlanInterrupt();
 
+    /// <summary>
+    /// プレイ中に途中中断すると破綻するアクションのみ Abort を遅延する。
+    /// サポート移動（GetOpen/CSA/MTS 等）はバッチ検証のパターン切替で即 Abort できるよう対象外。
+    /// </summary>
     private static bool ShouldDeferInterruptForRuntime(GoapActionRuntime action)
     {
         if (action == null)
@@ -1608,7 +1612,7 @@ public class GoapAgent : MonoBehaviour
         }
 
         return action is DribbleTowardGoalActionRuntime
-            || GoapTeammateNpcCatalog.IsTacticalMoveRuntime(action);
+            || action is MoveToReceivePassActionRuntime;
     }
 
     public GoapNpcTier DebugNpcTier => _npcTier;
