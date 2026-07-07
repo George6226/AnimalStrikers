@@ -99,20 +99,11 @@ check_max "NoGoalIdle(wait>=3.0s)" "${nogoal_long}" 2
 not_holding=$(grep -c 'not_holding_ball' "${LOG}" || true)
 check_max "[GOAP_PASS] not_holding_ball" "${not_holding}" 0
 
-aborted_total=$(grep -c 'Aborted(' "${LOG}" || true)
-aborted_gameplay=$(grep -Ec 'Aborted\(attempt=[1-9][0-9]*,' "${LOG}" || true)
-aborted_configure_noise=$(grep -c 'Aborted(attempt=0,' "${LOG}" || true)
-plan_cleared=$(grep -c 'PlanCleared(reason=ConfigurePilot' "${LOG}" || true)
+aborted=$(grep -c 'Aborted(' "${LOG}" || true)
 replan_deferred=$(grep -c 'ReplanDeferred' "${LOG}" || true)
 abort_deferred=$(grep -c 'AbortDeferred' "${LOG}" || true)
-check_max "Aborted（試合中・attempt>=1）" "${aborted_gameplay}" 25
-if [[ "${aborted_configure_noise}" -gt 0 ]]; then
-  echo "  ℹ️  Aborted(attempt=0) 設定ノイズ（旧ログ）: ${aborted_configure_noise} 件 — 新ビルドでは PlanCleared / 無ログに分離"
-fi
-if [[ "${plan_cleared}" -gt 0 ]]; then
-  echo "  ℹ️  PlanCleared(ConfigurePilot): ${plan_cleared} 件"
-fi
-echo "  ℹ️  Aborted 合計（参考）: ${aborted_total} / ReplanDeferred: ${replan_deferred} / AbortDeferred: ${abort_deferred}"
+check_max "Aborted" "${aborted}" 25
+echo "  ℹ️  ReplanDeferred: ${replan_deferred} / AbortDeferred: ${abort_deferred}"
 
 echo ""
 echo "--- 攻撃バランス（味方 Main: ${ALLY_OWNER}） ---"
