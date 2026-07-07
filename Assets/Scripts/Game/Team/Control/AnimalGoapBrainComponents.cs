@@ -57,7 +57,8 @@ public struct AnimalGoapBrainComponents
         }
 
         if (!active && Agent != null && Agent.isActiveAndEnabled
-            && !Agent.HasUnfinishedCommittedBallAction)
+            && !Agent.HasUnfinishedCommittedBallAction
+            && !Agent.HasUnfinishedDeferredTacticalAction)
         {
             Agent.AbortCurrentPlan();
         }

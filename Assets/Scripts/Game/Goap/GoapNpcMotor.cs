@@ -54,7 +54,9 @@ public static class GoapNpcMotor
             return;
         }
 
-        if (!StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME))
+        if (!StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME)
+            && debugCategory != "FreeBall"
+            && debugCategory != "Dribble")
         {
             GoapMovementDiagnostic.LogThrottled(
                 debugCategory,

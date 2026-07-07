@@ -73,6 +73,11 @@ public static class GoapFieldNpcPerspective
         }
 
         bool mirrored = IsMirrored(bb);
+        if (IsPassOrShootTransition(ball))
+        {
+            return ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
+        }
+
         return EffectiveTeamHasBall(teamBB, mirrored) && !EffectiveEnemyHasBall(teamBB, mirrored);
     }
 
@@ -90,7 +95,39 @@ public static class GoapFieldNpcPerspective
         }
 
         bool mirrored = IsMirrored(bb);
+        if (IsPassOrShootTransition(ball))
+        {
+            return ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored);
+        }
+
         return EffectiveEnemyHasBall(teamBB, mirrored) && !EffectiveTeamHasBall(teamBB, mirrored);
+    }
+
+    private static bool IsPassOrShootTransition(TeamBallInfo ball)
+    {
+        if (ball == null)
+        {
+            return false;
+        }
+
+        return (ball.BallState == BallManager_State.BALL_STATE.PASS
+                || ball.BallState == BallManager_State.BALL_STATE.SHOOT)
+            && !ball.TeamHasBall
+            && !ball.EnemyHasBall;
+    }
+
+    private static BallManager_State.BELONG_TEAM ResolveGlobalOwnTeam(bool mirrored)
+    {
+        return mirrored
+            ? BallManager_State.BELONG_TEAM.ENEMY
+            : BallManager_State.BELONG_TEAM.PLAYER;
+    }
+
+    private static BallManager_State.BELONG_TEAM ResolveGlobalOpponentTeam(bool mirrored)
+    {
+        return mirrored
+            ? BallManager_State.BELONG_TEAM.PLAYER
+            : BallManager_State.BELONG_TEAM.ENEMY;
     }
 
     public static bool IsFreeBallContext(TeamBlackboard teamBB)

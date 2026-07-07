@@ -1,11 +1,11 @@
 /// <summary>
-/// Phase B: 敵メイン NPC（slot0）の GOAP 稼働文脈（味方 Phase A の鏡像・手動入力なし）。
+/// Phase C: 敵サブ NPC の GOAP 稼働文脈（保持時攻撃・オフボール支援/守備/フリーボール）。
 /// </summary>
-public static class GoapEnemyMainNpcPlanning
+public static class GoapEnemySubNpcPlanning
 {
-    public static bool IsEnemyMainPlayer(AnimalFacade facade)
+    public static bool ShouldEnableGoap(PlayerBlackboard bb, AnimalFacade facade)
     {
-        if (facade == null)
+        if (bb == null || facade == null)
         {
             return false;
         }
@@ -17,14 +17,9 @@ public static class GoapEnemyMainNpcPlanning
         }
 
         var enemySquad = TeamFacade.Instance != null ? TeamFacade.Instance.EnemySquadControl : null;
-        return enemySquad != null
-            && enemySquad.ShouldUseGoapFor(facade)
-            && enemySquad.ResolveNpcTier(facade) == GoapNpcTier.Main;
-    }
-
-    public static bool ShouldEnableGoap(PlayerBlackboard bb, AnimalFacade facade)
-    {
-        if (!IsEnemyMainPlayer(facade) || bb == null)
+        if (enemySquad == null
+            || !enemySquad.ShouldUseGoapFor(facade)
+            || enemySquad.ResolveNpcTier(facade) != GoapNpcTier.Sub)
         {
             return false;
         }
@@ -43,21 +38,5 @@ public static class GoapEnemyMainNpcPlanning
             || TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(
                 TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null,
                 bb);
-    }
-
-    /// <summary>デバッグラベル用: M1 / M2 / なし。</summary>
-    public static string ResolveEnemyGoapPhaseTag(PlayerBlackboard bb, AnimalFacade facade)
-    {
-        if (!ShouldEnableGoap(bb, facade))
-        {
-            return string.Empty;
-        }
-
-        if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
-        {
-            return "M1";
-        }
-
-        return "M2";
     }
 }

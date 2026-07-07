@@ -25,6 +25,7 @@ public class PassToTeammateActionRuntime : GoapActionRuntime
     {
         AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
         return MainNpcAttackPlanning.CanPassToTeammate(bb)
+            && GoapMainNpcAttackBridge.IsHoldingBall(bb)
             && facade != null
             && !GoapBallActionGuard.IsPassInProgress(facade);
     }
@@ -35,6 +36,13 @@ public class PassToTeammateActionRuntime : GoapActionRuntime
         _isExecuting = true;
         _started = false;
         _startTime = Time.time;
+
+        if (!GoapMainNpcAttackBridge.IsHoldingBall(bb))
+        {
+            GoapMovementDiagnostic.Log(DiagCategory, "Execute skipped: not holding ball", bb);
+            _isExecuting = false;
+            return;
+        }
 
         if (!GoapMainNpcAttackBridge.TryExecutePass(bb))
         {

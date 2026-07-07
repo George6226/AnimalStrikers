@@ -210,6 +210,7 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
             // NPC側のデータを読み込む
             characterPositions = ES3.Load<List<Vector3>>(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_VECTOR3_CHARACTER_POSITION_NPC);
             characterTypes = ES3.Load<List<Param_AnimalInfo.AnimalType>>(DataKey.DATAKEY_GAME_INFO + DataKey.ARRAY_INT_TEAM_FORMATION_NPC);
+            EnsureGoalkeeperAtSlotThree(characterTypes);
             Debug.Log($"[PhotonAvatarCreator] NPC側のチーム編成を読み込みました。characterTypes: [{string.Join(", ", characterTypes)}]");
             Debug.Log($"[PhotonAvatarCreator] NPC側のキャラクタ配置リストを読み込みました。characterPositions: [{string.Join(", ", characterPositions)}]");
         }
@@ -218,6 +219,7 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
             // MasterとSubはPlayer側のデータを読み込む
             characterPositions = ES3.Load<List<Vector3>>(DataKey.DATAKEY_GAME_INFO + DataKey.LIST_VECTOR3_CHARACTER_POSITION_PLAYER);
             characterTypes = ES3.Load<List<Param_AnimalInfo.AnimalType>>(DataKey.DATAKEY_GAME_INFO + DataKey.ARRAY_INT_TEAM_FORMATION_PLAYER);
+            EnsureGoalkeeperAtSlotThree(characterTypes);
         }
         
         // 位置だけがない場合
@@ -258,6 +260,24 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
 
         
         return (characterPositions, characterTypes);
+    }
+
+    /// <summary>編成スロット3は GK 固定。保存データがフィールド動物になっている場合は Bear に差し替える。</summary>
+    private static void EnsureGoalkeeperAtSlotThree(List<Param_AnimalInfo.AnimalType> characterTypes)
+    {
+        if (characterTypes == null || characterTypes.Count < 4)
+        {
+            return;
+        }
+
+        if (characterTypes[3] == Param_AnimalInfo.AnimalType.Bear)
+        {
+            return;
+        }
+
+        Debug.LogWarning(
+            $"[PhotonAvatarCreator] formation slot3={characterTypes[3]} is not GK; forcing Bear.");
+        characterTypes[3] = Param_AnimalInfo.AnimalType.Bear;
     }
     
     /// <summary>

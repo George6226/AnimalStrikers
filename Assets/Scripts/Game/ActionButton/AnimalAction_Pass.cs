@@ -86,6 +86,7 @@ public class AnimalAction_Pass : AnimalAction_Base
         bool needsLob = _animalPassSearch != null && _animalPassSearch.IsCharacterInPassLine(_myFacade.gameObject, ally.gameObject);
 
         GoapPassDiagnostic.LogPhase(_myFacade, ally, "Start", myPos, allyPos, d, needsLob);
+        GoapPassFlightTracker.RegisterPass(_myFacade, ally);
 
         // 味方に選択を移す
         var allyAvatar = ally.GetAvatar();
@@ -111,6 +112,7 @@ public class AnimalAction_Pass : AnimalAction_Base
         if (target == null || _myFacade == null || teamFacade == null || teamFacade.BallManager == null)
         {
             GoapPassDiagnostic.Log(_myFacade, "Cancelled reason=missing_refs");
+            GoapPassFlightTracker.Clear();
             _passCoroutine = null;
             yield break;
         }
@@ -121,6 +123,7 @@ public class AnimalAction_Pass : AnimalAction_Base
             GoapPassDiagnostic.Log(
                 _myFacade,
                 $"Cancelled reason=not_holding_ball windUp={(Time.time - windUpStart) * 1000f:F0}ms");
+            GoapPassFlightTracker.Clear();
             _passCoroutine = null;
             yield break;
         }

@@ -18,11 +18,12 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(goals.Exists(g => g is BallPossessionAttackGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is FreeBallRecoveryGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is TeamBallSupportGoalSO), Is.True);
+        Assert.That(goals.Exists(g => g is IncomingPassReceiveGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is DefensivePositioningGoalSO), Is.False);
     }
 
     [Test]
-    public void FilterActionsForGoal_BallPossessionAttack_UsesPassAndShootOnly()
+    public void FilterActionsForGoal_BallPossessionAttack_UsesPassShootAndDribble()
     {
         var goals = new List<GoapGoalSO>();
         var actions = new List<GoapActionSO>();
@@ -34,6 +35,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(filtered, Has.All.Matches<GoapActionSO>(GoapMainNpcCatalog.IsBallPossessionAttackAction));
         Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is ShootAtGoalActionSO), Is.True);
+        Assert.That(filtered.Exists(a => a is DribbleTowardGoalActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is GetOpenActionSO), Is.False);
     }
 

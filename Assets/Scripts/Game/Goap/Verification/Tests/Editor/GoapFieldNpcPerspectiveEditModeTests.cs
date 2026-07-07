@@ -175,5 +175,49 @@ public sealed class GoapFieldNpcPerspectiveEditModeTests
             Object.DestroyImmediate(enemyGo);
         }
     }
+
+    [Test]
+    public void IsOpponentBallDefenseContext_TrueDuringOpponentPassTransition()
+    {
+        var teamGo = new GameObject("teamBB");
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var enemyGo = new GameObject("enemy");
+        var enemyAssignment = enemyGo.AddComponent<AnimalControlAssignment>();
+        enemyGo.AddComponent<AnimalFacade>();
+        enemyAssignment.SetRole(AnimalControlRole.EnemyFieldNpc);
+        var enemyBbGo = new GameObject("PlayerBlackboard");
+        enemyBbGo.transform.SetParent(enemyGo.transform, false);
+        var enemyBb = enemyBbGo.AddComponent<PlayerBlackboard>();
+        enemyBb.BasicData.init(enemyBbGo);
+
+        var allyGo = new GameObject("ally");
+        var allyAssignment = allyGo.AddComponent<AnimalControlAssignment>();
+        allyGo.AddComponent<AnimalFacade>();
+        allyAssignment.SetRole(AnimalControlRole.TeammateNpc);
+        var allyBbGo = new GameObject("PlayerBlackboard");
+        allyBbGo.transform.SetParent(allyGo.transform, false);
+        var allyBb = allyBbGo.AddComponent<PlayerBlackboard>();
+        allyBb.BasicData.init(allyBbGo);
+
+        try
+        {
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, enemyBb), Is.True);
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, allyBb), Is.False);
+            Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, allyBb), Is.True);
+            Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, enemyBb), Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(allyGo);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
 }
 #endif

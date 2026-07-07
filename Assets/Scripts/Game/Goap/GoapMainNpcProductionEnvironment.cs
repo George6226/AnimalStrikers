@@ -60,8 +60,18 @@ public static class GoapMainNpcProductionEnvironment
             return MainNpcAttackPlanning.IsBallPossessionAttackContext(bb);
         }
 
-        return MainNpcPostPassPlanning.IsTeamBallSupportContext(bb)
-            || MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb);
+        if (MainNpcPostPassPlanning.IsTeamBallSupportContext(bb))
+        {
+            return true;
+        }
+
+        if (IncomingPassPlanning.IsIncomingPassReceiveContext(bb)
+            || IncomingPassPlanning.IsAnticipatedBallOwner(bb))
+        {
+            return true;
+        }
+
+        return MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb);
     }
 
     /// <summary>本番 Main GOAP 稼働中は手動入力を抑止（GOAP とプレイヤー操作の二重実行防止）。</summary>

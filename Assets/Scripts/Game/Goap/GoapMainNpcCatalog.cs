@@ -12,20 +12,30 @@ public static class GoapMainNpcCatalog
     {
         return goal is FreeBallRecoveryGoalSO
             || goal is BallPossessionAttackGoalSO
+            || goal is IncomingPassReceiveGoalSO
             || goal is TeamBallSupportGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
     {
         return action is MoveToFreeBallActionSO
+            || action is MoveToReceivePassActionSO
             || action is PassToTeammateActionSO
             || action is ShootAtGoalActionSO
+            || action is DribbleTowardGoalActionSO
             || IsTeamBallSupportAction(action);
+    }
+
+    public static bool IsIncomingPassReceiveAction(GoapActionSO action)
+    {
+        return action is MoveToReceivePassActionSO;
     }
 
     public static bool IsBallPossessionAttackAction(GoapActionSO action)
     {
-        return action is PassToTeammateActionSO or ShootAtGoalActionSO;
+        return action is PassToTeammateActionSO
+            or ShootAtGoalActionSO
+            or DribbleTowardGoalActionSO;
     }
 
     public static bool IsTeamBallSupportAction(GoapActionSO action)
@@ -56,6 +66,11 @@ public static class GoapMainNpcCatalog
         if (goal is FreeBallRecoveryGoalSO)
         {
             return actions.Where(a => a is MoveToFreeBallActionSO).ToList();
+        }
+
+        if (goal is IncomingPassReceiveGoalSO)
+        {
+            return actions.Where(IsIncomingPassReceiveAction).ToList();
         }
 
         return actions;
@@ -92,15 +107,18 @@ public static class GoapMainNpcCatalog
 
         EnsureGoal<FreeBallRecoveryGoalSO>(goals);
         EnsureGoal<TeamBallSupportGoalSO>(goals);
+        EnsureGoal<IncomingPassReceiveGoalSO>(goals);
         EnsureGoal<BallPossessionAttackGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
+        EnsureAction<MoveToReceivePassActionSO>(actions);
         EnsureAction<MoveToSupportPositionActionSO>(actions);
         EnsureAction<GetOpenActionSO>(actions);
         EnsureAction<CreateSupportAngleActionSO>(actions);
         EnsureAction<MakeRunBehindActionSO>(actions);
         EnsureAction<PassToTeammateActionSO>(actions);
         EnsureAction<ShootAtGoalActionSO>(actions);
+        EnsureAction<DribbleTowardGoalActionSO>(actions);
 
         foreach (GoapActionSO action in actions)
         {

@@ -35,6 +35,12 @@ public class GoapAgent : MonoBehaviour
     [SerializeField] private float _planningInterval = 20.0f;        // プラン再生成間隔
     [Tooltip("SHOOT/PASS・所属未確定など遷移中の NoGoal 待機（秒）")]
     [SerializeField] private float _transitionNoGoalIdleSeconds = 0.35f;
+    [Tooltip("安定局面で有効ゴールが無いときの NoGoal 待機（秒）。_planningInterval とは別。")]
+    [SerializeField] private float _defaultNoGoalIdleSeconds = 0.6f;
+    [Tooltip("パス受け完了直後の NoGoal 待機（秒）")]
+    [SerializeField] private float _postReceiveNoGoalIdleSeconds = 0.12f;
+    [Tooltip("パス受け完了後、この秒数は遷移優先で再計画する")]
+    [SerializeField] private float _postReceiveTransitionWindowSeconds = 1.25f;
     [SerializeField] private bool _debugMode = false;               // デバッグモード
     
     // === 内部状態 ===
@@ -58,6 +64,7 @@ public class GoapAgent : MonoBehaviour
     private float _nextNoConfigLogTime;
     private const float NoConfigLogInterval = 1.0f;
     private float _nextAllowedReplanTime;
+    private float _lastReceiveActionCompleteTime = -999f;
     private string _lastFailureSignature = "-";
     private int _sameFailureStreak;
     private bool _ballContextInitialized;
@@ -610,20 +617,48 @@ public class GoapAgent : MonoBehaviour
 
     private float GetNoGoalIdleDelay()
     {
+        if (IsInPostReceiveTransitionWindow())
+        {
+            return Mathf.Max(0.05f, _postReceiveNoGoalIdleSeconds);
+        }
+
+        if (IsVolatileNoGoalReplanReason())
+        {
+            return Mathf.Max(0.1f, _transitionNoGoalIdleSeconds);
+        }
+
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null || !teamBB.BallInfo.IsExistBall)
         {
-            return Mathf.Max(0.5f, _planningInterval);
+            return Mathf.Max(0.15f, _defaultNoGoalIdleSeconds);
         }
 
         var ball = teamBB.BallInfo;
         bool inTransition = ball.BallState == BallManager_State.BALL_STATE.SHOOT
             || ball.BallState == BallManager_State.BALL_STATE.PASS
-            || (!ball.TeamHasBall && !ball.EnemyHasBall && ball.BallState != BallManager_State.BALL_STATE.FREE);
+            || ball.BallState == BallManager_State.BALL_STATE.FREE
+            || (!ball.TeamHasBall && !ball.EnemyHasBall);
 
         return inTransition
-            ? Mathf.Max(0.15f, _transitionNoGoalIdleSeconds)
-            : Mathf.Max(0.5f, _planningInterval);
+            ? Mathf.Max(0.1f, _transitionNoGoalIdleSeconds)
+            : Mathf.Max(0.15f, _defaultNoGoalIdleSeconds);
+    }
+
+    private bool IsInPostReceiveTransitionWindow()
+    {
+        return Time.time - _lastReceiveActionCompleteTime <= Mathf.Max(0.1f, _postReceiveTransitionWindowSeconds);
+    }
+
+    private bool IsVolatileNoGoalReplanReason()
+    {
+        return _lastReplanReason == "BallContextChanged"
+            || _lastReplanReason == "BallStateChanged"
+            || _lastReplanReason == "BallPossessionChanged"
+            || _lastReplanReason == "PlanQueueEmpty"
+            || _lastReplanReason == "EnemyLayoutChanged"
+            || _lastReplanReason == "BallOwnerMoved"
+            || _lastReplanReason == "BallOwnerChanged"
+            || _lastReplanReason == "PassReceiveEligibilityChanged";
     }
 
     /// <summary>味方フィールドNPC向け GOAP のみ Update を許可（操作キャラ・非対象は除外）。</summary>
@@ -673,7 +708,7 @@ public class GoapAgent : MonoBehaviour
                 return GoapEnemyMainNpcPlanning.ShouldEnableGoap(_playerBlackboard, facade);
             }
 
-            return true;
+            return GoapEnemySubNpcPlanning.ShouldEnableGoap(_playerBlackboard, facade);
         }
 
         if (IsActiveHumanSelectedPlayer(facade))
@@ -908,6 +943,7 @@ public class GoapAgent : MonoBehaviour
         {
             // 複数のプランから一番コストが低いものを選択
             var bestPlan = SelectBestPlanFromPlans(plans);
+            bestPlan = PreferForcedBallPossessionAttackPlan(bestGoal, goalActions, bestPlan);
             if ((bestPlan == null || bestPlan.Count == 0)
                 && TryBuildForcedTacticalPlanForGoal(_playerBlackboard, goalActions, out var forcedPlan))
             {
@@ -935,6 +971,10 @@ public class GoapAgent : MonoBehaviour
             && forcedPlanWhenNoCandidates != null
             && forcedPlanWhenNoCandidates.Count > 0)
         {
+            forcedPlanWhenNoCandidates = PreferForcedBallPossessionAttackPlan(
+                bestGoal,
+                goalActions,
+                forcedPlanWhenNoCandidates);
             LogSummary("ForcedTacticalSupportPlan(action=" +
                 forcedPlanWhenNoCandidates.Peek().ActionName + ", reason=noPlannerPlans)");
             return (forcedPlanWhenNoCandidates, bestGoal);
@@ -1099,6 +1139,35 @@ public class GoapAgent : MonoBehaviour
         LogSummary("ForcedMainAttackPlan(action=" +
             (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlan)");
         return true;
+    }
+
+    /// <summary>
+    /// BallPossessionAttack は後方連鎖プランにドリブルが入らないため、Pass/Shoot/Dribble の最低コスト強制プランと比較する。
+    /// </summary>
+    private Queue<GoapActionSO> PreferForcedBallPossessionAttackPlan(
+        GoapGoalSO goal,
+        List<GoapActionSO> goalActions,
+        Queue<GoapActionSO> plannerPlan)
+    {
+        if (goal is not BallPossessionAttackGoalSO
+            || !MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return plannerPlan;
+        }
+
+        if (plannerPlan == null || plannerPlan.Count == 0)
+        {
+            return forcedPlan;
+        }
+
+        float forcedCost = ComputePlanTotalCost(forcedPlan);
+        float plannerCost = ComputePlanTotalCost(plannerPlan);
+        return forcedCost < plannerCost ? forcedPlan : plannerPlan;
     }
 
     private static bool TryBuildForcedTacticalPlanForGoal(
@@ -1383,6 +1452,11 @@ public class GoapAgent : MonoBehaviour
         // アクションが完了したかチェック
         if (_currentAction.IsComplete())
         {
+            if (_currentAction is MoveToReceivePassActionRuntime)
+            {
+                _lastReceiveActionCompleteTime = Time.time;
+            }
+
             DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション完了 -> {_currentAction.DisplayName}");
             LogSummary($"ActionComplete(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName})");
 
@@ -1497,6 +1571,11 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
+        if (ShouldDeferInterruptForRuntime(_currentAction))
+        {
+            return true;
+        }
+
         if (!GoapBallActionGuard.IsCommittedGoapAction(_currentAction))
         {
             return false;
@@ -1510,12 +1589,45 @@ public class GoapAgent : MonoBehaviour
     public bool HasUnfinishedCommittedBallAction =>
         _currentAction != null && GoapBallActionGuard.IsCommittedGoapAction(_currentAction);
 
+    /// <summary>パス受け移動中は外部からの Abort / 再計画を抑止する。</summary>
+    public bool HasUnfinishedIncomingPassReceive =>
+        _currentAction is MoveToReceivePassActionRuntime;
+
+    /// <summary>ドリブル・戦術移動中は外部からの Abort を抑止する。</summary>
+    public bool HasUnfinishedDeferredTacticalAction =>
+        ShouldDeferInterruptForRuntime(_currentAction);
+
+    /// <summary>AIContextSwitcher 等の外部中断判定用。</summary>
+    public bool ShouldDeferExternalPlanInterrupt => ShouldDeferPlanInterrupt();
+
+    /// <summary>
+    /// プレイ中に途中中断すると破綻するアクションのみ Abort を遅延する。
+    /// サポート移動（GetOpen/CSA/MTS 等）はバッチ検証のパターン切替で即 Abort できるよう対象外。
+    /// </summary>
+    private static bool ShouldDeferInterruptForRuntime(GoapActionRuntime action)
+    {
+        if (action == null)
+        {
+            return false;
+        }
+
+        return action is DribbleTowardGoalActionRuntime
+            || action is MoveToReceivePassActionRuntime;
+    }
+
     public GoapNpcTier DebugNpcTier => _npcTier;
 
-    private List<GoapActionSO> FilterActionsForGoal(GoapGoalSO goal, List<GoapActionSO> actions) =>
-        _npcTier == GoapNpcTier.Main
+    private List<GoapActionSO> FilterActionsForGoal(GoapGoalSO goal, List<GoapActionSO> actions)
+    {
+        if (IsEnemyGoapFieldNpc())
+        {
+            return GoapEnemyNpcCatalog.FilterActionsForGoal(goal, actions, _npcTier);
+        }
+
+        return _npcTier == GoapNpcTier.Main
             ? GoapMainNpcCatalog.FilterActionsForGoal(goal, actions)
             : GoapTeammateNpcCatalog.FilterActionsForGoal(goal, actions);
+    }
 
     private static bool IsMovementActionStaleReject(GoapActionRuntime action)
     {
@@ -1590,6 +1702,12 @@ public class GoapAgent : MonoBehaviour
             _availableActions = new List<GoapActionSO>();
         }
 
+        if (IsEnemyGoapFieldNpc())
+        {
+            GoapEnemyNpcCatalog.NormalizeLists(_availableGoals, _availableActions, _npcTier);
+            return;
+        }
+
         if (_npcTier == GoapNpcTier.Main)
         {
             GoapMainNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
@@ -1597,6 +1715,18 @@ public class GoapAgent : MonoBehaviour
         }
 
         GoapTeammateNpcCatalog.NormalizeLists(_availableGoals, _availableActions);
+    }
+
+    private bool IsEnemyGoapFieldNpc()
+    {
+        if (_playerBlackboard?.BasicData?.Self == null)
+        {
+            return false;
+        }
+
+        var facade = _playerBlackboard.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?? _playerBlackboard.BasicData.Self.GetComponent<AnimalFacade>();
+        return GoapFieldNpcPerspective.IsEnemyFieldNpc(facade);
     }
 
     private bool IsEnemyMainNpc()
