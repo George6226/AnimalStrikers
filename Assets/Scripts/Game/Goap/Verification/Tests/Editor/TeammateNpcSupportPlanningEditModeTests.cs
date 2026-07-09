@@ -339,18 +339,18 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
     [Test]
     public void CfOwnerHeld_Slot0UsesCentralWidthLayout_AndBlocksCreateSupportAngle()
     {
-        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.RwOwner_WingHold);
 
         PlayerBlackboard slot0 = _fixture.GetBlackboard(0);
         Assert.IsTrue(
             TeammateNpcSupportPlanning.ShouldUseWidthLayoutSupportPosition(slot0),
-            "slot0 should use central width layout under CF hold");
+            "slot0 should use central width layout when wing holds");
         Assert.IsTrue(
             TeammateNpcSupportPlanning.BlocksCreateSupportAngleForCentralWidthLayout(slot0),
             "slot0 should block CSA under central width layout");
         Assert.IsFalse(
             TeammateNpcSupportPlanning.BlocksCreateSupportAngleForCentralWidthLayout(_fixture.GetBlackboard(1)),
-            "wing slots should not block CSA via central width layout");
+            "ball owner wing should not block CSA via central width layout");
     }
 
     [Test]

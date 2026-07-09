@@ -49,7 +49,8 @@ public static class GoapRuntimeDiagnostics
 
         if (message.StartsWith("PlanCosts("))
         {
-            return false;
+            // バッチ本番選出検証は PlanCosts の selected= を参照する。
+            return GoapBatchVerifyEnvironment.IsActive;
         }
 
         if (message.StartsWith("PlanningStart(")

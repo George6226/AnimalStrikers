@@ -80,7 +80,7 @@ public static class TeammateNpcSupportPlanning
     /// <summary>味方ボール時にスロット別コストを適用する対象（TeammateNpc 以外の味方フィールドプレイヤーも含む）。</summary>
     public static bool ShouldApplySupportActionCostDifferentiation(PlayerBlackboard bb)
     {
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
@@ -172,7 +172,7 @@ public static class TeammateNpcSupportPlanning
             return false;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
@@ -618,7 +618,7 @@ public static class TeammateNpcSupportPlanning
     /// </summary>
     public static bool ShouldUseWidthLayoutSupportPosition(PlayerBlackboard bb)
     {
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
@@ -737,7 +737,7 @@ public static class TeammateNpcSupportPlanning
             return false;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
