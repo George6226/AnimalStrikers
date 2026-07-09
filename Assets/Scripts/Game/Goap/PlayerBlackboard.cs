@@ -89,10 +89,14 @@ public class PlayerBlackboard : MonoBehaviour
                 float distance = Vector3.Distance(pos, ballPos);
                 // ボールの方向を計算（正規化されたベクトル）
                 Vector3 ballDirection = (ballPos - pos).normalized;
-                // ボール保持状態: BallOwnerID と ViewID の一致のみ（位置フォールバックは使わない）
+                // ボール保持状態: BallOwnerID（ViewID）との一致
                 int ownerId = teamBB.BallInfo.BallOwnerID;
                 int playerId = BasicData.PlayerID;
-                bool idMatch = ownerId >= 0 && ownerId == playerId;
+                var facade = BasicData.Self.GetComponentInParent<AnimalFacade>()
+                    ?? BasicData.Self.GetComponent<AnimalFacade>();
+                var avatar = facade != null ? facade.GetAvatar() : null;
+                int viewId = avatar != null ? avatar.ViewID : -1;
+                bool idMatch = ownerId >= 0 && (ownerId == playerId || ownerId == viewId);
                 bool isHoldState = teamBB.BallInfo.BallState == BallManager_State.BALL_STATE.HOLD;
                 bool previousHasBall = BallState.HasBall;
                 bool hasBall = previousHasBall;

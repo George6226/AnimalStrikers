@@ -32,7 +32,7 @@ namespace Game.Goap.Goals
                 return _basePriority;
             }
 
-            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+            if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
             {
                 return _basePriority;
             }
@@ -59,7 +59,7 @@ namespace Game.Goap.Goals
                 return false;
             }
 
-            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+            if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
             {
                 return false;
             }

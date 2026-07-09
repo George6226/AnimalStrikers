@@ -69,6 +69,9 @@ public class GoapAgent : MonoBehaviour
     private const float NoConfigLogInterval = 1.0f;
     private float _nextAllowedReplanTime;
     private float _lastReceiveActionCompleteTime = -999f;
+    private string _lastReceiveFinishReason = string.Empty;
+    private bool _lastReceiveOutcomeReceived;
+    private bool _pendingReceivePassTransitionLog;
     private string _lastFailureSignature = "-";
     private int _sameFailureStreak;
     private bool _ballContextInitialized;
@@ -802,7 +805,9 @@ public class GoapAgent : MonoBehaviour
     // プラン作成コルーチン
     private IEnumerator GeneratePlanCoroutine()
     {
-        // DebugLogger.Log($"[{this.name}(GoapAgent)] ボール所持状況(プラン作成前): {_playerBlackboard.BallState.HasBall}");
+        bool shouldLogReceiveTransition = _pendingReceivePassTransitionLog;
+        string receiveTransition = "unknown";
+        _pendingReceivePassTransitionLog = false;
 
         // 各ゴールに対してプランを作成し、成功したプランの中から最適なものを選択
         var bestPlan = SelectBestPlanWithGoal();
@@ -831,6 +836,7 @@ public class GoapAgent : MonoBehaviour
                 _nextAllowedReplanTime = Time.time + _planningInterval;
                 _lastPlanSummary = $"GoalAlreadyAchieved(goal={_lastSelectedGoalName}, attempt={_planningAttemptCount})";
                 LogSummary(_lastPlanSummary);
+                receiveTransition = "goal_already_achieved";
                 DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: ゴール既達成（空プラン）");
             }
             else
@@ -868,6 +874,7 @@ public class GoapAgent : MonoBehaviour
                     : "(alreadyAchieved)";
                 _lastPlanSummary = $"PlanSuccess(goal={_lastSelectedGoalName}, actions={_currentPlan.Count}, path={actionPath}, attempt={_planningAttemptCount})";
                 LogSummary(_lastPlanSummary);
+                receiveTransition = ResolveReceivePassTransition(_lastSelectedGoalName);
                 
                 DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: プラン生成成功 ({_currentPlan.Count}個のアクション)");
             }
@@ -884,6 +891,7 @@ public class GoapAgent : MonoBehaviour
                 _nextAllowedReplanTime = Time.time + idleDelay;
                 _lastPlanSummary = $"NoGoalIdle(wait={idleDelay:F1}s, reason={_lastReplanReason}, attempt={_planningAttemptCount})";
                 LogSummary(_lastPlanSummary);
+                receiveTransition = "nogal";
                 DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: 有効ゴールなしのため待機");
             }
             else
@@ -893,8 +901,14 @@ public class GoapAgent : MonoBehaviour
                 ApplyFailureCooldown();
                 _lastPlanSummary = $"PlanFailure(goal={_lastSelectedGoalName}, reason={_lastReplanReason}, category={_lastFailureCategory}, details={_lastFailureDetails}, attempt={_planningAttemptCount})";
                 LogSummary(_lastPlanSummary);
+                receiveTransition = "plan_failure";
                 DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: 全てのゴールでプラン生成失敗");
             }
+        }
+
+        if (shouldLogReceiveTransition)
+        {
+            LogReceivePassTransition(receiveTransition);
         }
         
         _isPlanning = false;
@@ -906,6 +920,15 @@ public class GoapAgent : MonoBehaviour
     // 最適なプランとゴールの選択
     private (Queue<GoapActionSO> plan, GoapGoalSO goal) SelectBestPlanWithGoal()
     {
+        if (_lastReplanReason == "PassIssued")
+        {
+            var postPassPlan = TrySelectPostPassSupportPlan();
+            if (postPassPlan.plan != null)
+            {
+                return postPassPlan;
+            }
+        }
+
         // DebugLogger.Log($"[{this.name}(GoapAgent)] 可能ゴール数:" + _availableGoals.Count);
         
         // 可能ゴールがない
@@ -1174,7 +1197,7 @@ public class GoapAgent : MonoBehaviour
         Queue<GoapActionSO> plannerPlan)
     {
         if (goal is not BallPossessionAttackGoalSO
-            || !MainNpcAttackPlanning.IsSelfBallOwner(_playerBlackboard)
+            || !MainNpcAttackPlanning.IsActivelyHoldingBall(_playerBlackboard)
             || !MainNpcAttackPlanning.TryBuildForcedAttackPlan(
                 _playerBlackboard,
                 goalActions,
@@ -1210,8 +1233,57 @@ public class GoapAgent : MonoBehaviour
             return true;
         }
 
-        return MainNpcAttackPlanning.IsSelfBallOwner(bb)
+        return MainNpcAttackPlanning.IsActivelyHoldingBall(bb)
             && MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, goalActions, out plan);
+    }
+
+    /// <summary>パス出し直後は TeamBallSupport を優先して選ぶ。</summary>
+    private (Queue<GoapActionSO> plan, GoapGoalSO goal) TrySelectPostPassSupportPlan()
+    {
+        var supportGoal = _availableGoals.FirstOrDefault(g => g is TeamBallSupportGoalSO);
+        if (supportGoal == null || !supportGoal.IsAchievable(_playerBlackboard))
+        {
+            return (null, null);
+        }
+
+        _lastSelectedGoalName = supportGoal.GoalName;
+        var goalActions = FilterActionsForGoal(supportGoal, _availableActions);
+        if (goalActions == null || goalActions.Count == 0)
+        {
+            return (null, supportGoal);
+        }
+
+        foreach (GoapActionSO action in goalActions)
+        {
+            action?.EnsurePlanningFactsConfigured();
+        }
+
+        var plans = _planner.Plan(
+            goalActions,
+            _playerBlackboard,
+            supportGoal.GetPlanningRequiredFacts(_playerBlackboard));
+        if (plans != null && plans.Count > 0)
+        {
+            var bestPlan = SelectBestPlanFromPlans(plans);
+            if (bestPlan != null && bestPlan.Count > 0)
+            {
+                LogPlanCostSummary(supportGoal, goalActions, plans, bestPlan);
+                return (bestPlan, supportGoal);
+            }
+        }
+
+        if (MainNpcPostPassPlanning.TryBuildForcedPostPassSupportPlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> forcedPlan)
+            && forcedPlan != null
+            && forcedPlan.Count > 0)
+        {
+            LogSummary("ForcedMainPostPassSupportPlan(action=" + forcedPlan.Peek().ActionName + ", reason=PassIssued)");
+            return (forcedPlan, supportGoal);
+        }
+
+        return (null, supportGoal);
     }
 
     /// <summary>
@@ -1485,18 +1557,31 @@ public class GoapAgent : MonoBehaviour
 
             if (wasReceivePass)
             {
+                _pendingReceivePassTransitionLog = true;
                 _lastReceiveActionCompleteTime = Time.time;
-                bool received = IncomingPassPlanning.HasReceivedIncomingPass(_playerBlackboard);
+                var receiveAction = (MoveToReceivePassActionRuntime)_currentAction;
+                _lastReceiveFinishReason = string.IsNullOrEmpty(receiveAction.LastFinishReason)
+                    ? "unknown"
+                    : receiveAction.LastFinishReason;
+                _lastReceiveOutcomeReceived = IncomingPassPlanning.HasReceivedIncomingPass(_playerBlackboard);
                 // 受け切れなくてもトラッカーを残すと IncomingPassTarget で Support が塞がり NoGoal 固着する。
                 GoapPassFlightTracker.Clear();
 
+                LogSummary(
+                    "ReceivePassOutcome("
+                    + $"finishReason={_lastReceiveFinishReason}, "
+                    + $"received={_lastReceiveOutcomeReceived.ToString().ToLower()}, "
+                    + $"hasBallFact={(_playerBlackboard.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true).ToString().ToLower()}"
+                    + ")");
+
                 TriggerImmediateReplan(
                     "PassReceiveComplete",
-                    $"PassReceiveComplete(received={received})",
+                    $"PassReceiveComplete(received={_lastReceiveOutcomeReceived.ToString().ToLower()}, reason={_lastReceiveFinishReason})",
                     allowDuringDeferredAction: true);
             }
             else if (wasPassIssued)
             {
+                _currentGoal = null;
                 TriggerImmediateReplan(
                     "PassIssued",
                     "PassIssued(passer_released_ball)",
@@ -1886,6 +1971,35 @@ public class GoapAgent : MonoBehaviour
         _lastReplanReason = "VerificationReset";
         _lastFailureCategory = "None";
         _lastFailureDetails = "-";
+    }
+
+    private static string ResolveReceivePassTransition(string goalName)
+    {
+        if (string.IsNullOrEmpty(goalName))
+        {
+            return "other";
+        }
+
+        return goalName switch
+        {
+            "BallPossessionAttack" => "attack",
+            "TeamBallSupport" => "support",
+            "FreeBallRecovery" => "freeball",
+            "IncomingPassReceive" => "receive_retry",
+            _ => "other",
+        };
+    }
+
+    private void LogReceivePassTransition(string transition)
+    {
+        string goal = _lastSelectedGoalName ?? "-";
+        LogSummary(
+            "ReceivePassTransition("
+            + $"received={_lastReceiveOutcomeReceived.ToString().ToLower()}, "
+            + $"finishReason={_lastReceiveFinishReason}, "
+            + $"goal={goal}, "
+            + $"transition={transition}"
+            + ")");
     }
 
     private void LogSummary(string message)

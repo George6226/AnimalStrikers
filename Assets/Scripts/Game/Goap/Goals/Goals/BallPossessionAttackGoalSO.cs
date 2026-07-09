@@ -49,14 +49,12 @@ namespace Game.Goap.Goals
                 return true;
             }
 
-            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+            if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
             {
                 return true;
             }
 
-            return MainNpcAttackPlanning.CanPassToTeammate(bb)
-                || MainNpcAttackPlanning.CanShootAtGoal(bb)
-                || MainNpcAttackPlanning.CanDribbleTowardGoal(bb);
+            return false;
         }
     }
 }

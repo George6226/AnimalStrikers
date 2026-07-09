@@ -455,7 +455,9 @@ public sealed class MainNpcAttackPlanningEditModeTests
         try
         {
             Assert.That(MainNpcAttackPlanning.IsBallPossessionAttackContext(bb), Is.True);
-            Assert.That(new BallPossessionAttackGoalSO().IsAchievable(bb), Is.True);
+            Assert.That(MainNpcAttackPlanning.IsActivelyHoldingBall(bb), Is.False);
+            var attackGoal = ScriptableObject.CreateInstance<BallPossessionAttackGoalSO>();
+            Assert.That(attackGoal.IsAchievable(bb), Is.False);
         }
         finally
         {

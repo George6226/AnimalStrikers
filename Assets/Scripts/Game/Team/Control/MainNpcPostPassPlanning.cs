@@ -14,7 +14,7 @@ public static class MainNpcPostPassPlanning
             return false;
         }
 
-        if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
@@ -30,7 +30,7 @@ public static class MainNpcPostPassPlanning
             return false;
         }
 
-        if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }

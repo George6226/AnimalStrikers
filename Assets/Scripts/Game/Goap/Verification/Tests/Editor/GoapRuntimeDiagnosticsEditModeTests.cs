@@ -20,6 +20,15 @@ public class GoapRuntimeDiagnosticsEditModeTests
     }
 
     [Test]
+    public void ShouldIncludeInSummaryLog_KeepsPassReceiveLifecycle()
+    {
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("PassReceiveComplete(received=true, reason=received)"), Is.True);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("PassIssued(passer_released_ball)"), Is.True);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReceivePassOutcome(finishReason=timeout, received=false, hasBallFact=false)"), Is.True);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReceivePassTransition(received=true, finishReason=received, goal=BallPossessionAttack, transition=attack)"), Is.True);
+    }
+
+    [Test]
     public void ShouldIncludeInSummaryLog_KeepsPlanOutcome()
     {
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("PlanSuccess(goal=Attack, actions=2, path=Pass>Shoot, attempt=1)"), Is.True);

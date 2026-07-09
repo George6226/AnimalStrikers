@@ -13,6 +13,9 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
     private PlayerBlackboard _bb;
     private bool _motorResolved;
 
+    /// <summary>直近の受けアクション完了理由（received / timeout / pass_ended / cancelled）。</summary>
+    public string LastFinishReason { get; private set; } = string.Empty;
+
     public MoveToReceivePassActionRuntime(GoapActionSO origin, string debugName) : base(origin, debugName)
     {
         if (origin is MoveToReceivePassActionSO receiveSO)
@@ -113,6 +116,7 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
             GoapMovementDiagnostic.Log(DiagCategory, $"Finish reason={reason}", _bb);
         }
 
+        LastFinishReason = reason;
         _isExecuting = false;
         _bb = null;
         _motorResolved = false;

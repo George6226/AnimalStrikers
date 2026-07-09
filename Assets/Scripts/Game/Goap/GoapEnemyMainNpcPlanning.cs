@@ -31,6 +31,11 @@ public static class GoapEnemyMainNpcPlanning
 
         if (MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
         {
+            if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
+            {
+                return true;
+            }
+
             return MainNpcAttackPlanning.CanPassToTeammate(bb)
                 || MainNpcAttackPlanning.CanShootAtGoal(bb)
                 || MainNpcAttackPlanning.CanDribbleTowardGoal(bb);

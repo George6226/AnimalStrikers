@@ -54,6 +54,70 @@ public static class MainNpcAttackPlanning
     private const float MaxRepeatPassPenalty = 2.2f;
     private static readonly Dictionary<int, RecentPassInfo> RecentPassByPasser = new();
 
+    /// <summary>BallManager 上で実際に保持しているか（パス直後の HAS_BALL 同期ズレを除外）。</summary>
+    public static bool IsActivelyHoldingBall(PlayerBlackboard bb)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        var teamFacade = TeamFacade.Instance;
+        var teamBB = teamFacade != null ? teamFacade.TeamBlackboard : null;
+        if (teamFacade?.BallManager != null)
+        {
+            if (GoapMainNpcAttackBridge.IsHoldingBall(bb))
+            {
+                return true;
+            }
+
+            // pickup 直後の BallManager 同期ズレ: TeamBlackboard が自分 HOLD なら保持扱い。
+            // PASS/SHOOT 中はパス出し後の HAS_BALL 残りを拾わない。
+            return IsTeamBlackboardHoldOwner(bb, teamBB);
+        }
+
+        // EditMode 等 BallManager 未接続時: TeamBlackboard の HOLD のみ（HAS_BALL ファクト単体は除外）
+        return IsTeamBlackboardHoldOwner(bb, teamBB);
+    }
+
+    private static bool IsTeamBlackboardHoldOwner(PlayerBlackboard bb, TeamBlackboard teamBB)
+    {
+        if (teamBB == null || bb?.BasicData == null)
+        {
+            return false;
+        }
+
+        var ball = teamBB.BallInfo;
+        if (ball.BallState == BallManager_State.BALL_STATE.PASS
+            || ball.BallState == BallManager_State.BALL_STATE.SHOOT)
+        {
+            return false;
+        }
+
+        int playerId = bb.BasicData.PlayerID;
+        return playerId > 0
+            && MatchesBallOwnerId(bb, ball.BallOwnerID)
+            && ball.BallState == BallManager_State.BALL_STATE.HOLD;
+    }
+
+    /// <summary>TeamBlackboard の BallOwnerID（ViewID）が自分か。</summary>
+    private static bool MatchesBallOwnerId(PlayerBlackboard bb, int ballOwnerId)
+    {
+        if (bb?.BasicData == null || ballOwnerId < 0)
+        {
+            return false;
+        }
+
+        if (ballOwnerId == bb.BasicData.PlayerID)
+        {
+            return true;
+        }
+
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+        var avatar = facade != null ? facade.GetAvatar() : null;
+        return avatar != null && ballOwnerId == avatar.ViewID;
+    }
+
     /// <summary>
     /// TeamBlackboard の ownerId が自分か（HAS_BALL Fact 更新前の1フレームずれを吸収）。
     /// </summary>
@@ -76,9 +140,7 @@ public static class MainNpcAttackPlanning
         }
 
         var ball = teamBB.BallInfo;
-        int playerId = bb.BasicData.PlayerID;
-        return playerId > 0
-            && ball.BallOwnerID == playerId
+        return MatchesBallOwnerId(bb, ball.BallOwnerID)
             && ball.BallState == BallManager_State.BALL_STATE.HOLD;
     }
 
@@ -92,7 +154,7 @@ public static class MainNpcAttackPlanning
 
     public static bool IsBallPossessionAttackContext(PlayerBlackboard bb)
     {
-        if (!IsEffectiveBallOwner(bb))
+        if (!IsActivelyHoldingBall(bb) && !IsEffectiveBallOwner(bb))
         {
             return false;
         }
@@ -104,7 +166,7 @@ public static class MainNpcAttackPlanning
         }
 
         // TeamBlackboard 追随前の HAS_BALL / HOLD 同期ズレでも M1 を維持する。
-        return IsSelfBallOwner(bb);
+        return IsActivelyHoldingBall(bb) || IsSelfBallOwner(bb);
     }
 
     public static bool CanPassToTeammate(PlayerBlackboard bb)
@@ -162,7 +224,7 @@ public static class MainNpcAttackPlanning
     /// <summary>Pass/Shoot が選べない局面でも保持者を止めない最低限の前進ドリブル。</summary>
     public static bool CanForceDribbleWhileHolding(PlayerBlackboard bb)
     {
-        if (!IsBallPossessionAttackContext(bb) || !IsSelfBallOwner(bb))
+        if (!IsBallPossessionAttackContext(bb) || !IsActivelyHoldingBall(bb))
         {
             return false;
         }
@@ -696,7 +758,7 @@ public static class MainNpcAttackPlanning
         out Queue<GoapActionSO> plan)
     {
         plan = null;
-        if (!IsBallPossessionAttackContext(bb) || scopedActions == null)
+        if (!IsActivelyHoldingBall(bb) || !IsBallPossessionAttackContext(bb) || scopedActions == null)
         {
             return false;
         }
@@ -757,11 +819,7 @@ public static class MainNpcAttackPlanning
 
     public static bool NeedsForcedAttackPlan(PlayerBlackboard bb)
     {
-        return IsBallPossessionAttackContext(bb)
-            && (IsSelfBallOwner(bb)
-                || CanPassToTeammate(bb)
-                || CanShootAtGoal(bb)
-                || CanDribbleTowardGoal(bb));
+        return IsActivelyHoldingBall(bb) && IsBallPossessionAttackContext(bb);
     }
 
     public static bool TryGetDistanceToEnemyGoal(

@@ -134,9 +134,81 @@ else
 fi
 
 echo ""
+echo "--- 受け結果の内訳 ---"
+python3 - <<PY
+import re
+from collections import Counter
+
+log_path = "${LOG}"
+lines = open(log_path, encoding="utf-8", errors="replace").read().splitlines()
+
+outcomes = Counter()
+transitions = Counter()
+by_finish = Counter()
+received_attack = 0
+received_nogal = 0
+miss_nogal = 0
+
+for line in lines:
+    m = re.search(r"ReceivePassOutcome\(([^)]+)\)", line)
+    if m:
+        body = m.group(1)
+        finish = re.search(r"finishReason=([^,]+)", body)
+        received = re.search(r"received=(true|false)", body)
+        finish_reason = finish.group(1) if finish else "unknown"
+        is_received = received.group(1) == "true" if received else False
+        outcomes["total"] += 1
+        by_finish[finish_reason] += 1
+        outcomes["received" if is_received else "missed"] += 1
+        continue
+
+    m = re.search(r"ReceivePassTransition\(([^)]+)\)", line)
+    if not m:
+        continue
+    body = m.group(1)
+    transition = re.search(r"transition=([^,]+)", body)
+    received = re.search(r"received=(true|false)", body)
+    if not transition:
+        continue
+    t = transition.group(1)
+    is_received = received.group(1) == "true" if received else False
+    transitions[t] += 1
+    if t == "attack" and is_received:
+        received_attack += 1
+    elif t == "nogal" and is_received:
+        received_nogal += 1
+    elif t == "nogal" and not is_received:
+        miss_nogal += 1
+
+pass_receive_complete = sum(1 for l in lines if "PassReceiveComplete(" in l)
+pass_issued = sum(1 for l in lines if "PassIssued(" in l)
+
+print(f"  PassReceiveComplete ログ: {pass_receive_complete} 件")
+print(f"  PassIssued ログ:           {pass_issued} 件")
+print(f"  ReceivePassOutcome 合計:   {outcomes['total']} 件")
+if outcomes["total"] == 0:
+    print("  ⬜ 新ビルド未適用、または Summary ログなし")
+else:
+    print(f"    受け切り (received=true):  {outcomes['received']} 件")
+    print(f"    受け失敗 (received=false): {outcomes['missed']} 件")
+    print("    finishReason 内訳:")
+    for reason, count in sorted(by_finish.items(), key=lambda x: (-x[1], x[0])):
+        print(f"      {reason}: {count}")
+
+print(f"  ReceivePassTransition 合計: {sum(transitions.values())} 件")
+if sum(transitions.values()) > 0:
+    print("    transition 内訳:")
+    for t, count in sorted(transitions.items(), key=lambda x: (-x[1], x[0])):
+        print(f"      {t}: {count}")
+    print(f"    受け成功→攻撃 (received+attack): {received_attack} 件")
+    print(f"    受け成功→NoGoal (received+nogal): {received_nogal} 件  ← 要調査")
+    print(f"    受け失敗→NoGoal (missed+nogal):   {miss_nogal} 件  ← 想定内")
+PY
+
+echo ""
 echo "--- 受け→攻撃遷移（直近） ---"
-grep -E 'ActionComplete\(action=MoveToReceivePass|GoalChanged\(goal=BallPossessionAttack|ActionStart\(action=(PassToTeammate|ShootAtGoal|DribbleTowardGoal)' "${LOG}" \
-  | tail -20 || echo "(該当なし)"
+grep -E 'ReceivePassOutcome|PassReceiveComplete|ReceivePassTransition|ActionComplete\(action=MoveToReceivePass|GoalChanged\(goal=BallPossessionAttack|ActionStart\(action=(PassToTeammate|ShootAtGoal|DribbleTowardGoal)' "${LOG}" \
+  | tail -24 || echo "(該当なし)"
 echo ""
 
 echo "--- サマリ ---"
