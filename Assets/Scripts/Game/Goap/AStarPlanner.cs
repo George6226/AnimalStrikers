@@ -280,7 +280,6 @@ public class AStarPlanner
             }
             
             debugInfo.AppendLine($"  Result: SatisfiesAnyGoal={satisfiesAnyGoal}, ConflictsAnyGoal={conflictsAnyGoal}");
-            UnityEngine.Debug.Log(debugInfo.ToString());
 
             if (satisfiesAnyGoal && !conflictsAnyGoal)
             {

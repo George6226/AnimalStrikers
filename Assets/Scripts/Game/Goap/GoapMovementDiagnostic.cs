@@ -10,6 +10,11 @@ public static class GoapMovementDiagnostic
 
     public static void Log(string category, string message, PlayerBlackboard bb = null, float throttleSeconds = 0f)
     {
+        if (!GoapRuntimeDiagnostics.VerboseLoggingEnabled)
+        {
+            return;
+        }
+
         string actor = FormatActor(bb);
         string line = $"[GOAP_MOVE][{category}] [{actor}] {message}";
         Debug.Log(line);

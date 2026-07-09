@@ -44,6 +44,16 @@ namespace Game.Goap.Goals
                 return false;
             }
 
+            if (IncomingPassPlanning.IsReceiveCatchPhase(bb))
+            {
+                return true;
+            }
+
+            if (MainNpcAttackPlanning.IsSelfBallOwner(bb))
+            {
+                return true;
+            }
+
             return MainNpcAttackPlanning.CanPassToTeammate(bb)
                 || MainNpcAttackPlanning.CanShootAtGoal(bb)
                 || MainNpcAttackPlanning.CanDribbleTowardGoal(bb);

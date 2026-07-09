@@ -11,9 +11,20 @@ public static class GoapDiagnosticLog
     private const string FileName = "GoapDiag_latest.txt";
     private static string _filePath;
     private static bool _initialized;
+    private static bool _enabled;
+
+    public static void SetEnabled(bool enabled)
+    {
+        _enabled = enabled;
+    }
 
     public static void Write(string message)
     {
+        if (!_enabled)
+        {
+            return;
+        }
+
         try
         {
             EnsureInitialized();
@@ -33,6 +44,7 @@ public static class GoapDiagnosticLog
     /// <summary>バッチ検証開始時など、診断ログを空にして再初期化する。</summary>
     public static void ResetSession()
     {
+        GoapRuntimeDiagnostics.EnableVerboseLogging();
         try
         {
             string dir = Path.Combine(Application.dataPath, "DebugLog");

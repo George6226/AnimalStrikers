@@ -38,6 +38,97 @@ public sealed class GoapFieldNpcPerspectiveEditModeTests
     }
 
     [Test]
+    public void FreeBall_LastTeamPossession_RemainsAttackContext()
+    {
+        var teamGo = new GameObject("teamBB");
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(1, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.FREE);
+
+        try
+        {
+            Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB), Is.True);
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB), Is.False);
+            Assert.That(GoapFieldNpcPerspective.IsFreeBallContext(teamBB), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void FreeBall_LastEnemyPossession_RemainsDefenseContext()
+    {
+        var teamGo = new GameObject("teamBB");
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(1005, BallManager_State.BELONG_TEAM.ENEMY, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.FREE);
+
+        try
+        {
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB), Is.True);
+            Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB), Is.False);
+            Assert.That(GoapFieldNpcPerspective.IsFreeBallContext(teamBB), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void FreeBallRecovery_IsAchievable_WhenNearBallAsChaseLeader()
+    {
+        var teamGo = new GameObject("teamRoot");
+        var teamFacade = teamGo.AddComponent<TeamFacade>();
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        BindTeamFacadeSingleton(teamFacade, teamBB);
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.FREE);
+        teamBB.BallInfo.updateBallPhysics(Vector3.zero, Vector3.zero);
+
+        var humanGo = new GameObject("human");
+        humanGo.AddComponent<AnimalFacade>();
+        humanGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.Human);
+        var humanBbGo = new GameObject("bb");
+        humanBbGo.transform.SetParent(humanGo.transform, false);
+        var humanBb = humanBbGo.AddComponent<PlayerBlackboard>();
+        humanBb.BasicData.init(humanBbGo);
+        humanBb.PhysicalState.updatePhysicalInfo(Vector3.forward * 20f, Vector3.zero);
+        humanBb.BallState.updateBallInfo(false, 20f, Vector3.zero);
+        humanBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        humanBb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+
+        var goal = ScriptableObject.CreateInstance<Game.Goap.Goals.FreeBallRecoveryGoalSO>();
+        bool roleDiffEnabled = TeammateNpcGoapRoleDifferentiation.Enabled;
+        TeammateNpcGoapRoleDifferentiation.Enabled = false;
+
+        try
+        {
+            Assert.That(goal.IsAchievable(humanBb), Is.True);
+        }
+        finally
+        {
+            TeammateNpcGoapRoleDifferentiation.Enabled = roleDiffEnabled;
+            ClearTeamFacadeSingleton();
+            Object.DestroyImmediate(goal);
+            Object.DestroyImmediate(humanGo);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
     public void MirroredContext_EnemyTeamBall_IsAttackForEnemyNpc_DefenseForAlly()
     {
         var teamGo = new GameObject("teamBB");

@@ -41,12 +41,7 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
             return false;
         }
 
-        if (TeammateNpcGoapRoleDifferentiation.GetDistanceToBall(bb)
-            <= TeammateNpcGoapRoleDifferentiation.FreeBallPursueMinDistance)
-        {
-            return false;
-        }
-
+        // 近傍でもピックアップ補助のため実行可（旧: minDistance 未満で CanExecute=false → NoGoal）
         return GoapNpcMotor.TryResolve(bb, out _, out _, out _);
     }
 
@@ -167,10 +162,19 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         }
 
         float distance = Vector3.Distance(_bb.PhysicalState.Position, teamBB.BallInfo.BallPosition);
-        if (distance <= _nearBallDistance)
+        if (distance > _nearBallDistance)
         {
-            _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
-            _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "false"), false);
+            return false;
+        }
+
+        _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+        _bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "false"), false);
+
+        // 近傍で拾えない場合は一度完了して再計画（同一アクション滞留で固着しない）
+        if (Time.time - _startTime >= Mathf.Min(1.25f, _maxChaseDuration * 0.25f))
+        {
+            FinishFreeBallChase(true);
+            return true;
         }
 
         return false;

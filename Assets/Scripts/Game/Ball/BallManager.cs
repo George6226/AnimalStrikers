@@ -29,6 +29,12 @@ public class BallManager : MonoBehaviour
         get { return _ball; }
     }
 
+    private const float DefaultKickoffPickupSuppressSeconds = 1.5f;
+    private float _kickoffPickupSuppressUntil;
+
+    public bool IsKickoffBallPickupSuppressed =>
+        BallKickoffResetRules.ShouldRejectOwnershipClaim(1, _kickoffPickupSuppressUntil, Time.time);
+
     // ボールを登録する
     public void RegisterBall(BallHandler ball)
     {
@@ -52,9 +58,28 @@ public class BallManager : MonoBehaviour
         }
     }
 
+    public void BeginKickoffPickupSuppress(float seconds = DefaultKickoffPickupSuppressSeconds)
+    {
+        _kickoffPickupSuppressUntil = Time.time + Mathf.Max(0f, seconds);
+    }
+
+    private bool ShouldRejectKickoffOwnershipClaim(int ownerID)
+    {
+        return BallKickoffResetRules.ShouldRejectOwnershipClaim(
+            ownerID,
+            _kickoffPickupSuppressUntil,
+            Time.time);
+    }
+
     // 所有権の変更
     public bool changeOwnership(int ownerID, BallManager_State.BALL_STATE bState)
     {
+        if (ShouldRejectKickoffOwnershipClaim(ownerID))
+        {
+            Debug.Log($"[BallManager] changeOwnership ignored during kickoff reset: ownerID={ownerID}, state={bState}");
+            return false;
+        }
+
         Debug.Log($"[BallManager] changeOwnership called. ownerID: {ownerID}, bState: {bState}, currentOwnerID: {_photon.BallOwnerID}");
 
         // 所有権を変更できた場合
@@ -82,12 +107,21 @@ public class BallManager : MonoBehaviour
     // ボール所持者のIDとチームを設定
     public void setBallOwnerIDAndTeam(int ownerID)
     {
+        if (ShouldRejectKickoffOwnershipClaim(ownerID))
+        {
+            Debug.Log($"[BallManager] setBallOwnerIDAndTeam ignored during kickoff reset: ownerID={ownerID}");
+            return;
+        }
+
         var character = _photon.FindCharacterByOwnerId(ownerID);
         Vector3 ownerPosition = _state.getBallOwnerPosition(character);
         int resolvedViewId = character != null ? character.ViewID : -1;
         string diagLine = $"[GOAP_DIAG][BallOwnerSync] inputOwnerID={ownerID} resolvedViewID={resolvedViewId} belongTeam={_state.BelongTeam}";
-        Debug.Log(diagLine);
-        GoapDiagnosticLog.Write(diagLine);
+        if (GoapRuntimeDiagnostics.VerboseLoggingEnabled)
+        {
+            Debug.Log(diagLine);
+            GoapDiagnosticLog.Write(diagLine);
+        }
         _goap.updateBallID(ownerID, _state.BelongTeam, ownerPosition);
     }
 
@@ -114,22 +148,70 @@ public class BallManager : MonoBehaviour
         }
     }
 
-    // ボールの位置をリセット
-    public void ResetBallPosition()
+    /// <summary>キックオフ先頭へボールを渡す（意図的な所有権変更は抑制ガードを通す）。</summary>
+    public bool AssignKickoffPossession(int ownerViewId)
     {
+        if (ownerViewId <= 0)
+        {
+            return false;
+        }
+
+        _kickoffPickupSuppressUntil = 0f;
+        _photon.ClearBallOwnerForKickoff();
+
         if (_ball != null)
         {
-            _ball.transform.position = new Vector3(0f, 0.5f, 0f);
-            _ball.GetComponent<Rigidbody>().linearVelocity = Vector3.zero;
-            _ball.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-            _ball.transform.SetParent(_parent.transform);
-
-            // ボールの状態をリセット
-            _state.BallState = BallManager_State.BALL_STATE.FREE;
-            // ボールのIDと状態を更新
-            _goap.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
-            _goap.updateBallState(_state.BallState);
             _ball.SetBallBuff(BallBuffKind.None);
+            _ball.stop();
+        }
+
+        if (!changeOwnership(ownerViewId, BallManager_State.BALL_STATE.HOLD))
+        {
+            return false;
+        }
+
+        BeginKickoffPickupSuppress();
+        return true;
+    }
+
+    // ゴール後キックオフ: 失点側の先頭へボールを渡す
+    public bool ResetBallPositionForKickoff(int storedOwnerIndex)
+    {
+        if (BallKickoffAssignment.TryAssignFromStoredIndex(this, storedOwnerIndex, out _))
+        {
+            return true;
+        }
+
+        ResetBallPositionToCenterFree();
+        return false;
+    }
+
+    // ボールをセンター FREE に戻す（フォールバック）
+    public void ResetBallPositionToCenterFree()
+    {
+        BeginKickoffPickupSuppress();
+        _state.ResetToKickoffFree();
+        _photon.ClearBallOwnerForKickoff();
+
+        if (_ball != null)
+        {
+            _ball.SetBallBuff(BallBuffKind.None);
+            _ball.stop();
+            changeBallParent();
+            _ball.transform.position = new Vector3(0f, 0.5f, 0f);
+            Rigidbody rb = _ball.Rigid;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+
+        if (!changeOwnership(-1, BallManager_State.BALL_STATE.FREE))
+        {
+            _goap.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
+            _goap.updateBallState(BallManager_State.BALL_STATE.FREE);
+            _ball?.ApplyFreeBallStateLocal();
         }
     }
 }

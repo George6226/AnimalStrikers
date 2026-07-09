@@ -42,6 +42,20 @@ public class BallHandler : MonoBehaviourPunCallbacks, IPunOwnershipCallbacks
         TeamFacade.Instance.BallManager.RegisterBall(this);
     }
 
+    /// <summary>RPC なしでフリーボール表示へ戻す（キックオフ再同期のフォールバック）。</summary>
+    public void ApplyFreeBallStateLocal()
+    {
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        if (ballManager == null)
+        {
+            return;
+        }
+
+        ballManager.setBallOwnerIDAndTeam(-1);
+        changeBallCollider(-1);
+        changeBallParent(-1);
+    }
+
     // ボールの状態を同期する
     public void synchronizedBallState(int ownerID)
     {

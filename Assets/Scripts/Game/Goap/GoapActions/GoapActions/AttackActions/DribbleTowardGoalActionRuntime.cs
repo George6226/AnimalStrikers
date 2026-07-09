@@ -12,6 +12,7 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
     private float _startTime;
     private float _burstDuration;
     private float _moveIntensity;
+    private const float MinBurstBeforeShootReadySeconds = 0.25f;
     private PlayerBlackboard _bb;
 
     public DribbleTowardGoalActionRuntime(GoapActionSO origin, string debugName) : base(origin, debugName)
@@ -25,7 +26,7 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
 
     public override bool CanExecute(PlayerBlackboard bb)
     {
-        return MainNpcAttackPlanning.CanDribbleTowardGoal(bb)
+        return MainNpcAttackPlanning.CanExecuteDribbleTowardGoal(bb)
             && GoapNpcMotor.TryResolve(bb, out _, out _, out _);
     }
 
@@ -74,7 +75,8 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
             return true;
         }
 
-        if (MainNpcAttackPlanning.CanShootAtGoal(_bb))
+        if (MainNpcAttackPlanning.CanShootAtGoal(_bb)
+            && Time.time - _startTime >= MinBurstBeforeShootReadySeconds)
         {
             FinishDribble("shoot_ready");
             return true;

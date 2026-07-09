@@ -17,6 +17,10 @@ public class GoapAgent : MonoBehaviour
     /// <summary>GoapSummary_latest.txt を外部で初期化済みにする（バッチ検証のログリセット用）。</summary>
     public static void MarkSummaryLogSessionActive()
     {
+        if (GoapRuntimeDiagnostics.Level < GoapDiagnosticLevel.Summary)
+        {
+            GoapRuntimeDiagnostics.SetLevel(GoapDiagnosticLevel.Summary);
+        }
         string dir = Path.Combine(Application.dataPath, "DebugLog");
         if (!Directory.Exists(dir))
         {
@@ -175,7 +179,8 @@ public class GoapAgent : MonoBehaviour
         if (!enabled || _playerBlackboard == null) return;
 
         // P3: 人間操作キャラ・非対象NPCでは GOAP を動かさない（enabled が誤って true でも安全）
-        if (!IsEnabledForTeammateNpcGoap())
+        bool goapContextEnabled = IsEnabledForTeammateNpcGoap();
+        if (!goapContextEnabled && _currentAction == null)
         {
             return;
         }
@@ -588,9 +593,12 @@ public class GoapAgent : MonoBehaviour
         return maxDelta;
     }
 
-    private void TriggerImmediateReplan(string replanReason, string summaryMessage)
+    private void TriggerImmediateReplan(
+        string replanReason,
+        string summaryMessage,
+        bool allowDuringDeferredAction = false)
     {
-        if (ShouldDeferPlanInterrupt())
+        if (!allowDuringDeferredAction && ShouldDeferPlanInterrupt())
         {
             LogSummary($"ReplanDeferred(reason={replanReason}, action={_currentAction.DisplayName})");
             return;
@@ -624,7 +632,14 @@ public class GoapAgent : MonoBehaviour
 
         if (IsVolatileNoGoalReplanReason())
         {
-            return Mathf.Max(0.1f, _transitionNoGoalIdleSeconds);
+            // 連続 NoGoal では待機を伸ばしスパムと固着感を抑える
+            float baseDelay = Mathf.Max(0.1f, _transitionNoGoalIdleSeconds);
+            if (_planningAttemptCount >= 8)
+            {
+                return Mathf.Min(1.5f, baseDelay * (1f + _planningAttemptCount * 0.15f));
+            }
+
+            return baseDelay;
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
@@ -639,9 +654,16 @@ public class GoapAgent : MonoBehaviour
             || ball.BallState == BallManager_State.BALL_STATE.FREE
             || (!ball.TeamHasBall && !ball.EnemyHasBall);
 
-        return inTransition
+        float delay = inTransition
             ? Mathf.Max(0.1f, _transitionNoGoalIdleSeconds)
             : Mathf.Max(0.15f, _defaultNoGoalIdleSeconds);
+
+        if (_planningAttemptCount >= 8)
+        {
+            delay = Mathf.Min(2f, delay * (1f + _planningAttemptCount * 0.12f));
+        }
+
+        return delay;
     }
 
     private bool IsInPostReceiveTransitionWindow()
@@ -658,7 +680,9 @@ public class GoapAgent : MonoBehaviour
             || _lastReplanReason == "EnemyLayoutChanged"
             || _lastReplanReason == "BallOwnerMoved"
             || _lastReplanReason == "BallOwnerChanged"
-            || _lastReplanReason == "PassReceiveEligibilityChanged";
+            || _lastReplanReason == "PassReceiveEligibilityChanged"
+            || _lastReplanReason == "PassReceiveComplete"
+            || _lastReplanReason == "PassIssued";
     }
 
     /// <summary>味方フィールドNPC向け GOAP のみ Update を許可（操作キャラ・非対象は除外）。</summary>
@@ -1150,6 +1174,7 @@ public class GoapAgent : MonoBehaviour
         Queue<GoapActionSO> plannerPlan)
     {
         if (goal is not BallPossessionAttackGoalSO
+            || !MainNpcAttackPlanning.IsSelfBallOwner(_playerBlackboard)
             || !MainNpcAttackPlanning.TryBuildForcedAttackPlan(
                 _playerBlackboard,
                 goalActions,
@@ -1185,7 +1210,8 @@ public class GoapAgent : MonoBehaviour
             return true;
         }
 
-        return MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, goalActions, out plan);
+        return MainNpcAttackPlanning.IsSelfBallOwner(bb)
+            && MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, goalActions, out plan);
     }
 
     /// <summary>
@@ -1452,13 +1478,33 @@ public class GoapAgent : MonoBehaviour
         // アクションが完了したかチェック
         if (_currentAction.IsComplete())
         {
-            if (_currentAction is MoveToReceivePassActionRuntime)
+            string completedActionName = _currentAction.DisplayName;
+            string completedGoalName = DebugCurrentGoalName;
+            bool wasReceivePass = _currentAction is MoveToReceivePassActionRuntime;
+            bool wasPassIssued = _currentAction is PassToTeammateActionRuntime;
+
+            if (wasReceivePass)
             {
                 _lastReceiveActionCompleteTime = Time.time;
+                bool received = IncomingPassPlanning.HasReceivedIncomingPass(_playerBlackboard);
+                // 受け切れなくてもトラッカーを残すと IncomingPassTarget で Support が塞がり NoGoal 固着する。
+                GoapPassFlightTracker.Clear();
+
+                TriggerImmediateReplan(
+                    "PassReceiveComplete",
+                    $"PassReceiveComplete(received={received})",
+                    allowDuringDeferredAction: true);
+            }
+            else if (wasPassIssued)
+            {
+                TriggerImmediateReplan(
+                    "PassIssued",
+                    "PassIssued(passer_released_ball)",
+                    allowDuringDeferredAction: true);
             }
 
-            DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション完了 -> {_currentAction.DisplayName}");
-            LogSummary($"ActionComplete(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName})");
+            DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション完了 -> {completedActionName}");
+            LogSummary($"ActionComplete(action={completedActionName}, goal={completedGoalName})");
 
             _currentAction = null;
 
@@ -1844,9 +1890,24 @@ public class GoapAgent : MonoBehaviour
 
     private void LogSummary(string message)
     {
+        if (!GoapRuntimeDiagnostics.SummaryLoggingEnabled)
+        {
+            return;
+        }
+
+        if (!GoapRuntimeDiagnostics.VerboseLoggingEnabled
+            && !GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog(message))
+        {
+            return;
+        }
+
         string actor = GetActorIdentity();
         string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{SummaryTag}] [{actor}] {message}";
-        Debug.Log(line);
+        if (GoapRuntimeDiagnostics.VerboseLoggingEnabled)
+        {
+            Debug.Log(line);
+        }
+
         AppendSummaryToFile(line);
     }
 

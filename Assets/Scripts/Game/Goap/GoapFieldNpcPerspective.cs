@@ -67,12 +67,19 @@ public static class GoapFieldNpcPerspective
         }
 
         var ball = teamBB.BallInfo;
+        bool mirrored = IsMirrored(bb);
         if (ball.BallState == BallManager_State.BALL_STATE.FREE)
         {
-            return false;
+            if (GoapPassFlightTracker.TryGetActivePass(out GoapPassFlightTracker.PassFlight _)
+                && ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored))
+            {
+                return true;
+            }
+
+            // 味方最終保持のルーズボール: 非リーダーが Support できず NoGoal 固着しないよう攻撃文脈を残す。
+            return ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
         }
 
-        bool mirrored = IsMirrored(bb);
         if (IsPassOrShootTransition(ball))
         {
             return ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
@@ -89,12 +96,14 @@ public static class GoapFieldNpcPerspective
         }
 
         var ball = teamBB.BallInfo;
+        bool mirrored = IsMirrored(bb);
         if (ball.BallState == BallManager_State.BALL_STATE.FREE)
         {
-            return false;
+            // フリーボール追従の非リーダーが NoGoal で止まらないよう、相手最終保持なら守備文脈を残す。
+            return ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored)
+                && !EffectiveTeamHasBall(teamBB, mirrored);
         }
 
-        bool mirrored = IsMirrored(bb);
         if (IsPassOrShootTransition(ball))
         {
             return ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored);

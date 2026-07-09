@@ -122,5 +122,12 @@ public class BallManager_Photon : MonoBehaviour
         _guardID = -1;
         _guardTimer = -1.0f;
     }
+
+    /// <summary>キックオフ再開時に Photon 側の保持者 ID をクリアする。</summary>
+    public void ClearBallOwnerForKickoff()
+    {
+        BallOwnerID = -1;
+        resetGuardID();
+    }
 }
 

@@ -354,7 +354,6 @@ public class PlayerBlackboardCalculator
     {
         // 基本条件チェック
         if (!teamHasBall || hasBall || isStunned) {
-            Debug.Log($"パス受信位置判定: 基本条件を満たさない (teamHasBall:{teamHasBall}, hasBall:{hasBall}, isStunned:{isStunned})");
             return false;
         }
         
@@ -364,32 +363,27 @@ public class PlayerBlackboardCalculator
         float maxDistance = fieldLength * 0.55f;  // 55%
         
         if (ballDistance < minDistance || ballDistance > maxDistance) {
-            Debug.Log($"パス受信位置判定: 距離が不適切 (ballDistance:{ballDistance:F1}, min:{minDistance:F1}, max:{maxDistance:F1})");
             return false;
         }
         
         // 敵からの距離チェック
         float minEnemyDistance = GetMinEnemyDistance(playerPosition, enemyPositions);
         if (minEnemyDistance < fieldLength * 0.035f) { // 3.5%以内は危険
-            Debug.Log($"パス受信位置判定: 敵が近すぎる (minEnemyDistance:{minEnemyDistance:F1})");
             return false;
         }
         
         // パスコースチェック
         if (!IsPassRouteClear(playerPosition, ballOwnerPosition, enemyPositions, fieldLength * 0.06f)) {
-            Debug.Log("パス受信位置判定: パスコースが確保できない");
             return false;
         }
         
         // 戦術的位置チェック
         if (!IsInTacticalPosition(playerPosition, ballOwnerPosition, enemyGoalPosition, 75f, 105f)) {
-            Debug.Log("パス受信位置判定: 戦術的位置が不適切");
             return false;
         }
 
         // 保持者の移動に対してサポート関係を維持しているか（到達後にその場に留まるのを防ぐ）
         if (!IsMaintainingSupportRelationship(playerPosition, ballOwnerPosition, enemyGoalPosition, fieldLength)) {
-            Debug.Log("パス受信位置判定: 保持者とのサポート関係が崩れている");
             return false;
         }
         
@@ -462,11 +456,55 @@ public class PlayerBlackboardCalculator
             float distanceToPassLine = GetDistanceToLine(enemyPos, ballOwnerPosition, playerPosition);
             if (distanceToPassLine < blockingRange) // 指定範囲以内なら遮断
             {
-                Debug.Log($"パス受信位置判定: パスコースが遮断されている (enemyPos: {enemyPos}, distanceToPassLine: {distanceToPassLine:F1})");
                 return false;
             }
         }
         
+        return true;
+    }
+
+    /// <summary>
+    /// 保持者からゴールまでの射線上にブロッカー（GK 以外のフィールドプレイヤー想定）がいないか。
+    /// </summary>
+    public static bool IsShotRouteClear(
+        Vector3 shooterPosition,
+        Vector3 goalPosition,
+        IList<Vector3> blockerPositions,
+        float blockingRange = 2f,
+        float endpointMargin = 0.08f)
+    {
+        if (blockerPositions == null || blockerPositions.Count == 0)
+        {
+            return true;
+        }
+
+        Vector3 segment = goalPosition - shooterPosition;
+        segment.y = 0f;
+        float segmentLenSq = segment.sqrMagnitude;
+        if (segmentLenSq < 0.0001f)
+        {
+            return true;
+        }
+
+        Vector3 flatStart = shooterPosition;
+        flatStart.y = 0f;
+
+        foreach (Vector3 blockerPos in blockerPositions)
+        {
+            Vector3 flatBlocker = blockerPos;
+            flatBlocker.y = 0f;
+            float t = Vector3.Dot(flatBlocker - flatStart, segment) / segmentLenSq;
+            if (t <= endpointMargin || t >= 1f - endpointMargin)
+            {
+                continue;
+            }
+
+            if (GetDistanceToLine(flatBlocker, shooterPosition, goalPosition) < blockingRange)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
     
@@ -489,9 +527,6 @@ public class PlayerBlackboardCalculator
         // toGoalを基準(0度)として、toPlayerの角度を計算
         float angle = Vector3.Angle(toGoal, toPlayer);
 
-        // デバッグ表示
-        Debug.Log($"パス受信位置判定: 角度計算結果: {angle:F1}度, toGoal: {toGoal}, toPlayer: {toPlayer}");
-        
         // 前方（0-60度）または後方（120-180度）の位置
         return angle <= maxAngle || angle >= minAngle;
     }

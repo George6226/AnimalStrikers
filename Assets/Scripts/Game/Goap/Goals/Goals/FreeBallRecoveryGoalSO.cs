@@ -66,18 +66,7 @@ namespace Game.Goap.Goals
             if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true) return false;
             if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true) return false;
 
-            if (bb.GetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true")) == true
-                && TeammateNpcGoapRoleDifferentiation.GetDistanceToBall(bb) <= 3f)
-            {
-                return false;
-            }
-
-            if (TeammateNpcGoapRoleDifferentiation.GetDistanceToBall(bb)
-                <= TeammateNpcGoapRoleDifferentiation.FreeBallPursueMinDistance)
-            {
-                return false;
-            }
-
+            // 近傍にいても拾い切るまで達成可能のままにする（旧: near_ball で false → NoGoal 固着）
             if (TeammateNpcGoapRoleDifferentiation.Enabled
                 && !TeammateNpcGoapRoleDifferentiation.ShouldLeadFreeBallChase(bb))
             {

@@ -46,6 +46,12 @@ public class AnimalCollider_Body : MonoBehaviour
             else
             {
                 var avatar = _animalFacade != null ? _animalFacade.GetAvatar() : null;
+                var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+                if (ballManager != null && ballManager.IsKickoffBallPickupSuppressed)
+                {
+                    return;
+                }
+
                 if (GoapDefenseVerificationBallHelper.SuppressAllyBallPickup
                     && avatar != null
                     && !avatar.tag.Equals(ConstData.ENEMY_TAG))

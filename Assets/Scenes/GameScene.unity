@@ -6071,6 +6071,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquadControlController
   _debugOverlayEnabled: 1
+  _goapDiagnosticLevel: 1
   _humanFormationSlot: 0
   _enableGoapPilot: 1
   _allowGoapIdleFallback: 0

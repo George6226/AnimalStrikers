@@ -14,6 +14,7 @@ public class GetOpenActionRuntime : GoapActionRuntime
     private bool _isExecuting = false;
     private float _executionStartTime;
     private float _executionTime;
+    private const float MinArriveSeconds = 0.35f;
     private float _movementSpeed;
     private float _optimalDistanceRatio;
     private float _minDistanceRatio;
@@ -58,6 +59,11 @@ public class GetOpenActionRuntime : GoapActionRuntime
         _motorResolved = GoapTacticalMoveHelper.TryResolveMotor(bb);
         _moveIntensity = Mathf.Clamp(_movementSpeed / 5f, 0.5f, 1f);
         _targetPosition = CalculateTargetPosition(bb);
+        if (_motorResolved
+            && Vector3.Distance(bb.PhysicalState.Position, _targetPosition) < 0.65f)
+        {
+            _targetPosition = OffsetTargetFromCurrent(bb, _targetPosition);
+        }
         _isExecuting = true;
         _executionStartTime = Time.time;
         GoapMovementDiagnostic.Log(DiagCategory, $"Execute target={GoapMovementDiagnostic.FormatVector(_targetPosition)}", bb);
@@ -76,6 +82,7 @@ public class GetOpenActionRuntime : GoapActionRuntime
         if (!_isExecuting) return true;
         
         bool arrived = _motorResolved
+            && Time.time - _executionStartTime >= MinArriveSeconds
             && GoapTacticalMoveHelper.MoveToward(_playerBlackboard, _targetPosition, _moveIntensity, DiagCategory, 0.5f);
         bool timedOut = Time.time - _executionStartTime >= _executionTime;
         if (!arrived && !timedOut) return false;
@@ -236,6 +243,27 @@ public class GetOpenActionRuntime : GoapActionRuntime
         DebugLogger.Log($"  - Total Score: {score:F2}");
         
         return score;
+    }
+
+    private Vector3 OffsetTargetFromCurrent(PlayerBlackboard bb, Vector3 fallback)
+    {
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null)
+        {
+            return fallback + Vector3.forward;
+        }
+
+        Vector3 myPosition = bb.PhysicalState.Position;
+        Vector3 ballOwnerPosition = teamBB.BallInfo.BallOwnerPosition;
+        Vector3 awayFromOwner = myPosition - ballOwnerPosition;
+        awayFromOwner.y = 0f;
+        if (awayFromOwner.sqrMagnitude < 0.01f)
+        {
+            awayFromOwner = Vector3.right;
+        }
+
+        float step = Mathf.Max(2f, teamBB.FieldInfo.FieldLength * 0.08f);
+        return myPosition + awayFromOwner.normalized * step;
     }
     
 }

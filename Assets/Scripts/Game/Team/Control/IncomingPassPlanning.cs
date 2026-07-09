@@ -43,9 +43,19 @@ public static class IncomingPassPlanning
             return false;
         }
 
+        if (HasReceivedIncomingPass(bb))
+        {
+            return false;
+        }
+
         if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
         {
             return false;
+        }
+
+        if (IsReceiveCatchPhase(bb))
+        {
+            return true;
         }
 
         if (IsBallArrivingForReceive(bb))
@@ -53,7 +63,18 @@ public static class IncomingPassPlanning
             return false;
         }
 
-        return true;
+        return TryGetReceiveMoveTarget(bb, out _);
+    }
+
+    /// <summary>受け手がボール近傍で保持同期を待っているフェーズ（near_ball 完了後のデッドゾーン防止）。</summary>
+    public static bool IsReceiveCatchPhase(PlayerBlackboard bb)
+    {
+        if (bb == null || HasReceivedIncomingPass(bb) || !IsNearIncomingBall(bb))
+        {
+            return false;
+        }
+
+        return IsIncomingPassTarget(bb) || IsBallArrivingForReceive(bb);
     }
 
     /// <summary>HAS_BALL 同期前に保持者として扱う（受け切り直前のみ）。</summary>
@@ -93,8 +114,22 @@ public static class IncomingPassPlanning
             return false;
         }
 
-        return ball.BallState == BallManager_State.BALL_STATE.PASS
-            || (ball.BallState == BallManager_State.BALL_STATE.FREE && ball.BallVelocity.sqrMagnitude > 0.05f);
+        if (ball.BallState == BallManager_State.BALL_STATE.PASS)
+        {
+            return true;
+        }
+
+        if (ball.BallState == BallManager_State.BALL_STATE.FREE)
+        {
+            if (ball.BallVelocity.sqrMagnitude > 0.05f)
+            {
+                return true;
+            }
+
+            return GoapPassFlightTracker.IsTargetPlayer(bb.BasicData.PlayerID);
+        }
+
+        return false;
     }
 
     public static bool TryGetReceiveMoveTarget(PlayerBlackboard bb, out Vector3 target)
@@ -114,6 +149,14 @@ public static class IncomingPassPlanning
         var ball = teamBB.BallInfo;
         if (ball.BallState == BallManager_State.BALL_STATE.PASS
             || (ball.BallFree && ball.BallVelocity.sqrMagnitude > 0.05f))
+        {
+            target = ball.BallPosition;
+            return true;
+        }
+
+        if (ball.BallState == BallManager_State.BALL_STATE.FREE
+            && GoapPassFlightTracker.IsTargetPlayer(bb.BasicData.PlayerID)
+            && IsNearIncomingBall(bb))
         {
             target = ball.BallPosition;
             return true;

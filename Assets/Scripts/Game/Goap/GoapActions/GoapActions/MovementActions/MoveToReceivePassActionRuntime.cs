@@ -61,27 +61,27 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
             return true;
         }
 
-        if (IncomingPassPlanning.HasReceivedIncomingPass(_bb))
+        if (IncomingPassPlanning.HasReceivedIncomingPass(_bb)
+            || MainNpcAttackPlanning.IsSelfBallOwner(_bb))
         {
             Finish("received");
-            return true;
-        }
-
-        if (!IncomingPassPlanning.IsIncomingPassTarget(_bb))
-        {
-            Finish("pass_ended");
-            return true;
-        }
-
-        if (_bb.BallState.BallDistance <= _nearBallDistance)
-        {
-            Finish("near_ball");
             return true;
         }
 
         if (Time.time - _startTime >= _maxChaseDuration)
         {
             Finish("timeout");
+            return true;
+        }
+
+        if (!IncomingPassPlanning.IsIncomingPassTarget(_bb))
+        {
+            if (IncomingPassPlanning.IsReceiveCatchPhase(_bb))
+            {
+                return false;
+            }
+
+            Finish("pass_ended");
             return true;
         }
 
@@ -102,6 +102,14 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
 
         if (_isExecuting && _bb != null)
         {
+            // 受け切れなかった場合もトラッカーを残すと IncomingPassTarget が再発火し NoGoal 固着する。
+            if (reason != "received"
+                && _bb.BasicData != null
+                && GoapPassFlightTracker.IsTargetPlayer(_bb.BasicData.PlayerID))
+            {
+                GoapPassFlightTracker.Clear();
+            }
+
             GoapMovementDiagnostic.Log(DiagCategory, $"Finish reason={reason}", _bb);
         }
 

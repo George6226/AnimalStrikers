@@ -143,7 +143,23 @@ public static class TeammateNpcSupportPlanning
 
     public static bool ShouldIgnorePassReceivePositionGate(PlayerBlackboard bb)
     {
-        return ShouldUseTacticalSupportGoal(bb);
+        if (ShouldUseTacticalSupportGoal(bb))
+        {
+            return true;
+        }
+
+        // 本番 Main（Human）は GetOpen 後に sticky な ISR を抱えたままで TeamBallSupport が無くなるためゲートを無視する。
+        if (bb?.BasicData?.Self == null || !GoapMainNpcProductionEnvironment.IsActive)
+        {
+            return false;
+        }
+
+        var facade = bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?? bb.BasicData.Self.GetComponent<AnimalFacade>();
+        return GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade)
+            && IsTeamBallAttackContext(
+                TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null,
+                bb);
     }
 
     /// <summary>

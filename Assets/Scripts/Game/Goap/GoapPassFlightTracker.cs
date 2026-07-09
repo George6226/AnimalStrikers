@@ -71,6 +71,12 @@ public static class GoapPassFlightTracker
             return;
         }
 
+        if (ball.BallState == BallManager_State.BALL_STATE.SHOOT)
+        {
+            Clear();
+            return;
+        }
+
         if (ball.BallState == BallManager_State.BALL_STATE.HOLD)
         {
             if (ball.BallOwnerID == flight.TargetPlayerId)
@@ -98,8 +104,45 @@ public static class GoapPassFlightTracker
             && ball.BallVelocity.sqrMagnitude < 0.05f
             && Time.time - flight.StartedAt > 1.5f)
         {
+            if (TryGetReceiverNearLooseBall(flight.TargetPlayerId, ball))
+            {
+                return;
+            }
+
             Clear();
         }
+    }
+
+    private static bool TryGetReceiverNearLooseBall(int targetPlayerId, TeamBallInfo ball)
+    {
+        if (ball == null || targetPlayerId <= 0)
+        {
+            return false;
+        }
+
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return false;
+        }
+
+        foreach (var facade in regist.Allys)
+        {
+            if (facade == null)
+            {
+                continue;
+            }
+
+            var bb = facade.GetComponentInChildren<PlayerBlackboard>(true);
+            if (bb?.BasicData == null || bb.BasicData.PlayerID != targetPlayerId)
+            {
+                continue;
+            }
+
+            return IncomingPassPlanning.IsNearIncomingBall(bb);
+        }
+
+        return false;
     }
 
     private static int ResolvePlayerId(AnimalFacade facade)

@@ -39,9 +39,14 @@ namespace Game.Goap.Goals
                 return false;
             }
 
-            if (IncomingPassPlanning.IsNearIncomingBall(bb))
+            if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
             {
                 return false;
+            }
+
+            if (IncomingPassPlanning.IsReceiveCatchPhase(bb))
+            {
+                return true;
             }
 
             return IncomingPassPlanning.TryGetReceiveMoveTarget(bb, out _);

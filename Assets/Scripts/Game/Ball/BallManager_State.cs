@@ -39,6 +39,14 @@ public class BallManager_State : MonoBehaviour
     private const float TIME_BALLSTATE_RESET = 1.0f;    // ボールの状態をリセットする時間
 
 
+    /// <summary>キックオフ再開用にボール状態・所属を FREE に戻す。</summary>
+    public void ResetToKickoffFree()
+    {
+        _ballState = BALL_STATE.FREE;
+        _belongTeam = BELONG_TEAM.FREE;
+        _ballStateTimer = 0f;
+    }
+
     // ボールがフリー状態になるかを更新
     public bool updateBallFree()
     {

@@ -29,7 +29,8 @@ public static class MainNpcAttackPlanning
     private const float LightPressurePassDiscount = 0.18f;
     private const float BackwardPassPenalty = 0.30f;
     private const float ShootNearGoalDiscount = 0.52f;
-    private const float BlockedShotLanePenalty = 0.55f;
+    private const float BlockedShotLanePenalty = 0.90f;
+    private const float ShotLaneEndpointMargin = 0.08f;
     private const float VeryNearGoalDistanceRatio = 0.32f;
     private const float VeryNearGoalPassPenalty = 0.55f;
     private const float VeryNearGoalShootDiscount = 0.55f;
@@ -84,7 +85,9 @@ public static class MainNpcAttackPlanning
     /// <summary>パス受け直前の HAS_BALL 同期ズレを吸収する。</summary>
     public static bool IsEffectiveBallOwner(PlayerBlackboard bb)
     {
-        return IsSelfBallOwner(bb) || IncomingPassPlanning.IsAnticipatedBallOwner(bb);
+        return IsSelfBallOwner(bb)
+            || IncomingPassPlanning.IsAnticipatedBallOwner(bb)
+            || IncomingPassPlanning.IsReceiveCatchPhase(bb);
     }
 
     public static bool IsBallPossessionAttackContext(PlayerBlackboard bb)
@@ -95,7 +98,13 @@ public static class MainNpcAttackPlanning
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        return teamBB != null && TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb);
+        if (teamBB != null && TeammateNpcSupportPlanning.IsTeamBallAttackContext(teamBB, bb))
+        {
+            return true;
+        }
+
+        // TeamBlackboard 追随前の HAS_BALL / HOLD 同期ズレでも M1 を維持する。
+        return IsSelfBallOwner(bb);
     }
 
     public static bool CanPassToTeammate(PlayerBlackboard bb)
@@ -136,7 +145,7 @@ public static class MainNpcAttackPlanning
             return false;
         }
 
-        if (CanShootAtGoal(bb))
+        if (CanShootAtGoal(bb) && !IsShotLaneBlocked(bb))
         {
             return false;
         }
@@ -148,6 +157,33 @@ public static class MainNpcAttackPlanning
 
         float minDistance = maxDistance * (MinShootDistanceRatio / MaxShootDistanceRatio);
         return distance > minDistance;
+    }
+
+    /// <summary>Pass/Shoot が選べない局面でも保持者を止めない最低限の前進ドリブル。</summary>
+    public static bool CanForceDribbleWhileHolding(PlayerBlackboard bb)
+    {
+        if (!IsBallPossessionAttackContext(bb) || !IsSelfBallOwner(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (!TryGetDistanceToEnemyGoal(bb, out float distance, out float maxDistance))
+        {
+            return false;
+        }
+
+        float minDistance = maxDistance * (MinShootDistanceRatio / MaxShootDistanceRatio);
+        return distance > minDistance;
+    }
+
+    public static bool CanExecuteDribbleTowardGoal(PlayerBlackboard bb)
+    {
+        return CanDribbleTowardGoal(bb) || CanForceDribbleWhileHolding(bb);
     }
 
     public static float ComputeDribbleCostAdjustment(PlayerBlackboard bb)
@@ -460,14 +496,15 @@ public static class MainNpcAttackPlanning
             teamBB,
             GoapFieldNpcPerspective.IsMirrored(bb));
         float laneWidth = teamBB.FieldInfo.FieldLength * 0.08f;
-        bool shotLaneClear = PlayerBlackboardCalculator.IsPassRouteClear(
+        bool shotLaneClear = IsShotLaneClear(
+            bb,
             bb.PhysicalState.Position,
             goalPos,
-            teamBB.BasicInfo.EnemyPositions,
             laneWidth);
 
         return ApplyEnemyFieldShootBias(
             bb,
+            shotLaneClear,
             ComputeShootCostAdjustment(
                 goalDistance,
                 maxDistance,
@@ -475,14 +512,37 @@ public static class MainNpcAttackPlanning
                 shotLaneClear));
     }
 
-    private static float ApplyEnemyFieldShootBias(PlayerBlackboard bb, float shootAdjustment)
+    private static float ApplyEnemyFieldShootBias(
+        PlayerBlackboard bb,
+        bool shotLaneClear,
+        float shootAdjustment)
     {
         if (!GoapFieldNpcPerspective.IsMirrored(bb))
         {
             return shootAdjustment;
         }
 
+        if (!shotLaneClear)
+        {
+            return shootAdjustment;
+        }
+
         return shootAdjustment - EnemyFieldShootDiscount;
+    }
+
+    private static bool IsShotLaneBlocked(PlayerBlackboard bb)
+    {
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null || bb == null)
+        {
+            return false;
+        }
+
+        Vector3 goalPos = GoapFieldNpcPerspective.GetAttackGoalPosition(
+            teamBB,
+            GoapFieldNpcPerspective.IsMirrored(bb));
+        float laneWidth = teamBB.FieldInfo.FieldLength * 0.08f;
+        return !IsShotLaneClear(bb, bb.PhysicalState.Position, goalPos, laneWidth);
     }
 
     /// <summary>EditMode / 診断用: ゴール距離とプレッシャーからシュートコスト補正を見積もる。</summary>
@@ -494,11 +554,14 @@ public static class MainNpcAttackPlanning
     {
         float adjustment = 0f;
         float normalized = 1f - Mathf.Clamp01(goalDistance / Mathf.Max(maxShootDistance, 0.01f));
-        adjustment -= normalized * ShootNearGoalDiscount;
 
         if (!shotLaneClear)
         {
             adjustment += BlockedShotLanePenalty;
+        }
+        else
+        {
+            adjustment -= normalized * ShootNearGoalDiscount;
         }
 
         if (pressureCount >= 2)
@@ -506,20 +569,90 @@ public static class MainNpcAttackPlanning
             adjustment += 0.20f;
         }
 
-        if (IsWithinVeryNearGoalShootZone(goalDistance, maxShootDistance))
+        if (shotLaneClear)
         {
-            adjustment -= VeryNearGoalShootDiscount;
-            if (pressureCount >= 2)
+            if (IsWithinVeryNearGoalShootZone(goalDistance, maxShootDistance))
             {
-                adjustment -= VeryNearGoalShootPressureRelief;
+                adjustment -= VeryNearGoalShootDiscount;
+                if (pressureCount >= 2)
+                {
+                    adjustment -= VeryNearGoalShootPressureRelief;
+                }
             }
-        }
-        else if (goalDistance <= maxShootDistance * InShootingRangeDistanceRatio)
-        {
-            adjustment -= 0.28f;
+            else if (goalDistance <= maxShootDistance * InShootingRangeDistanceRatio)
+            {
+                adjustment -= 0.28f;
+            }
         }
 
         return adjustment;
+    }
+
+    /// <summary>保持者から攻撃ゴールへの射線が開いているか（GK 以外の全フィールドプレイヤーを考慮）。</summary>
+    public static bool IsShotLaneClear(
+        PlayerBlackboard bb,
+        Vector3 shooterPosition,
+        Vector3 goalPosition,
+        float blockingRange)
+    {
+        var blockers = new List<Vector3>();
+        CollectShotLaneBlockerPositions(bb, blockers);
+        return PlayerBlackboardCalculator.IsShotRouteClear(
+            shooterPosition,
+            goalPosition,
+            blockers,
+            blockingRange,
+            ShotLaneEndpointMargin);
+    }
+
+    private static void CollectShotLaneBlockerPositions(PlayerBlackboard bb, List<Vector3> blockers)
+    {
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return;
+        }
+
+        int ownerPlayerId = ResolvePlayerId(bb);
+        AppendShotLaneBlockerPositions(regist.Allys, ownerPlayerId, blockers);
+        AppendShotLaneBlockerPositions(regist.Enemies, ownerPlayerId, blockers);
+    }
+
+    private static void AppendShotLaneBlockerPositions(
+        IEnumerable<AnimalFacade> facades,
+        int ownerPlayerId,
+        List<Vector3> blockers)
+    {
+        if (facades == null)
+        {
+            return;
+        }
+
+        foreach (AnimalFacade facade in facades)
+        {
+            if (facade == null || IsFieldGoalkeeper(facade))
+            {
+                continue;
+            }
+
+            if (ownerPlayerId > 0 && ResolvePlayerId(facade) == ownerPlayerId)
+            {
+                continue;
+            }
+
+            blockers.Add(facade.transform.position);
+        }
+    }
+
+    private static bool IsFieldGoalkeeper(AnimalFacade facade)
+    {
+        if (facade == null)
+        {
+            return true;
+        }
+
+        AnimalInfo info = facade.GetAnimalInfo();
+        return info != null && info.IsGK;
     }
 
     public static bool IsWithinVeryNearGoalShootZone(float goalDistance, float maxShootDistance)
@@ -587,7 +720,7 @@ public static class MainNpcAttackPlanning
                 continue;
             }
 
-            if (action is DribbleTowardGoalActionSO && !CanDribbleTowardGoal(bb))
+            if (action is DribbleTowardGoalActionSO && !CanExecuteDribbleTowardGoal(bb))
             {
                 continue;
             }
@@ -597,6 +730,18 @@ public static class MainNpcAttackPlanning
             {
                 bestCost = cost;
                 bestAction = action;
+            }
+        }
+
+        if (bestAction == null && CanForceDribbleWhileHolding(bb))
+        {
+            foreach (GoapActionSO action in scopedActions)
+            {
+                if (action is DribbleTowardGoalActionSO)
+                {
+                    bestAction = action;
+                    break;
+                }
             }
         }
 
@@ -613,7 +758,10 @@ public static class MainNpcAttackPlanning
     public static bool NeedsForcedAttackPlan(PlayerBlackboard bb)
     {
         return IsBallPossessionAttackContext(bb)
-            && (CanPassToTeammate(bb) || CanShootAtGoal(bb) || CanDribbleTowardGoal(bb));
+            && (IsSelfBallOwner(bb)
+                || CanPassToTeammate(bb)
+                || CanShootAtGoal(bb)
+                || CanDribbleTowardGoal(bb));
     }
 
     public static bool TryGetDistanceToEnemyGoal(

@@ -96,8 +96,55 @@ public class UI_ReadyViewer : MonoBehaviourPunCallbacks
         canvasGroup.alpha = 0f;
         photonView.RPC("SyncAlpha", RpcTarget.Others, 0f);
 
+        if (PhotonNetwork.IsMasterClient)
+        {
+            yield return AssignOpeningKickoffCoroutine();
+        }
+
         // ゲーム状態に変更
         StateManager.Instance.changeState(StateManager.STATE_KIND.GAME);
+    }
+
+    private IEnumerator AssignOpeningKickoffCoroutine()
+    {
+        var teamFacade = TeamFacade.Instance;
+        float timeout = 5f;
+        while (timeout > 0f
+               && (teamFacade == null
+                   || teamFacade.BallManager == null
+                   || teamFacade.BallManager.Ball == null))
+        {
+            timeout -= 0.1f;
+            teamFacade = TeamFacade.Instance;
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        if (teamFacade?.BallManager == null)
+        {
+            yield break;
+        }
+
+        int storedOwnerIndex = ES3.Load<int>(
+            DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER,
+            BallKickoffAssignment.PickRandomOpeningOwnerIndex());
+        if (storedOwnerIndex < 0)
+        {
+            storedOwnerIndex = BallKickoffAssignment.PickRandomOpeningOwnerIndex();
+            ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER, storedOwnerIndex);
+        }
+
+        if (BallKickoffAssignment.TryAssignFromStoredIndex(
+                teamFacade.BallManager,
+                storedOwnerIndex,
+                out string reason))
+        {
+            Debug.Log($"[UI_ReadyViewer] Opening kickoff assigned: {reason}");
+        }
+        else
+        {
+            Debug.LogWarning($"[UI_ReadyViewer] Opening kickoff fallback to center FREE: {reason}");
+            teamFacade.BallManager.ResetBallPositionToCenterFree();
+        }
     }
 
     [PunRPC]

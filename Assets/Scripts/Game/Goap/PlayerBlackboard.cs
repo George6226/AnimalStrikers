@@ -12,7 +12,7 @@ public class PlayerBlackboard : MonoBehaviour
 {
     [SerializeField] private Rigidbody _rigidbody;
     [Header("GOAP Debug")]
-    [SerializeField] private bool _logBallOwnershipDiagnostics = true;
+    [SerializeField] private bool _logBallOwnershipDiagnostics = false;
     [Header("HasBall Hysteresis")]
     [SerializeField] private int _releaseConfirmFrames = 18;
     [Tooltip("TeamBB の ownerId 未確定時、直前まで保持していた本人だけ短時間 hasBall を維持")]
@@ -35,6 +35,8 @@ public class PlayerBlackboard : MonoBehaviour
     private PlayerWorkingMemoryUpdater _workingMemoryUpdater = new PlayerWorkingMemoryUpdater();
     private int _releaseCandidateStreak;
     private int _ownerUnknownHoldGraceCounter;
+    private int _lastOwnershipDiagOwnerId = int.MinValue;
+    private bool _lastOwnershipDiagHasBall;
     
     // === 初期化 ===
     private void Start()
@@ -131,8 +133,12 @@ public class PlayerBlackboard : MonoBehaviour
                     }
                 }
 
-                if (_logBallOwnershipDiagnostics)
+                if (_logBallOwnershipDiagnostics
+                    && GoapRuntimeDiagnostics.VerboseLoggingEnabled
+                    && (ownerId != _lastOwnershipDiagOwnerId || hasBall != _lastOwnershipDiagHasBall))
                 {
+                    _lastOwnershipDiagOwnerId = ownerId;
+                    _lastOwnershipDiagHasBall = hasBall;
                     string diagLine =
                         $"[GOAP_DIAG][BallOwnership] ownerId={ownerId} playerId={playerId} hasBall={hasBall} " +
                         $"idMatch={idMatch} relStreak={_releaseCandidateStreak}/{_releaseConfirmFrames} " +

@@ -13,6 +13,11 @@ public static class GoapPassDiagnostic
 
     public static void Log(AnimalFacade passer, string message)
     {
+        if (!GoapRuntimeDiagnostics.VerboseLoggingEnabled)
+        {
+            return;
+        }
+
         string actor = FormatActor(passer);
         string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{Tag}] [{actor}] {message}";
         Debug.Log(line);

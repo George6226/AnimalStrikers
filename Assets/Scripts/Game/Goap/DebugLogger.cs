@@ -35,7 +35,6 @@ namespace Game.Goap
             // 特定の文字列を含んでいる場合のみログを出力
             if (ShouldLogMessage(message))
             {
-                Debug.Log("出力あり:"+message);
                 _builder.AppendLine(message);
             }
         }
@@ -46,10 +45,10 @@ namespace Game.Goap
             string[] keywords = {
             };
 
-            // キーワードが空の場合は全てのログを出力
+            // キーワード未設定時はログを出さない（Play 中の Console / ファイル負荷を避ける）
             if (keywords.Length == 0)
             {
-                return true;
+                return false;
             }
 
             // いずれかのキーワードが含まれている場合はログを出力

@@ -9,7 +9,11 @@ using UnityEngine;
 public class SquadControlController : MonoBehaviour
 {
     [Header("段階0デバッグ（頭上ラベル一括）")]
-    [SerializeField] private bool _debugOverlayEnabled = true;
+    [SerializeField] private bool _debugOverlayEnabled = false;
+
+    [Header("GOAP 診断ログ（通常 Play では Off）")]
+    [Tooltip("Off=ログなし / Summary=重要イベントのみ GoapSummary_latest.txt / Verbose=Console+全診断ファイル")]
+    [SerializeField] private GoapDiagnosticLevel _goapDiagnosticLevel = GoapDiagnosticLevel.Off;
 
     [Header("人間が操作するフィールドスロット（0〜2。3はGK固定）")]
     [SerializeField] private int _humanFormationSlot = 0;
@@ -99,6 +103,7 @@ public class SquadControlController : MonoBehaviour
 #endif
         SyncMainNpcVerifyEnvironment();
         SyncMainNpcProductionEnvironment();
+        SyncGoapVerboseLogging();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -158,6 +163,7 @@ public class SquadControlController : MonoBehaviour
 #endif
         SyncMainNpcVerifyEnvironment();
         SyncMainNpcProductionEnvironment();
+        SyncGoapVerboseLogging();
         AnimalDebugOverlay.Enabled = _debugOverlayEnabled;
         TeammateNpcGoapRoleDifferentiation.Enabled = _enableStage4RoleDifferentiation;
         TeammateNpcMovementBrain.GlobalAllowGoapIdleFallback = _allowGoapIdleFallback;
@@ -769,6 +775,15 @@ public class SquadControlController : MonoBehaviour
         }
 
         GoapMainNpcProductionEnvironment.Sync(_enableMainNpcGoapInProduction);
+    }
+
+    private void SyncGoapVerboseLogging()
+    {
+        GoapRuntimeDiagnostics.SetLevel(_goapDiagnosticLevel);
+        if (_goapDiagnosticLevel >= GoapDiagnosticLevel.Summary)
+        {
+            GoapAgent.MarkSummaryLogSessionActive();
+        }
     }
 
     private void ResetGoapPilotConfigurations()

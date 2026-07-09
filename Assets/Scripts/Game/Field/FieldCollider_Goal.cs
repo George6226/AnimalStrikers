@@ -52,13 +52,27 @@ public class FieldCollider_Goal : MonoBehaviour
     // 全ての位置をリセット
     private void ResetAllPositions()
     {
-        var teamReg = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        var teamFacade = TeamFacade.Instance;
+        if (teamFacade == null)
+        {
+            return;
+        }
+
+        // Master 側ゴールに入った = 失点側は Master / Sub 側ゴール = 失点側は Sub(NPC)
+        bool concedingTeamIsMaster = isMasterGoal;
+        int kickoffOwnerIndex = BallKickoffAssignment.GetStoredOwnerIndexForTeamLeader(concedingTeamIsMaster);
+        ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER, kickoffOwnerIndex);
+
+        var teamReg = teamFacade.TeamRegist;
         if (teamReg != null)
         {
-            // 全てのアバターを初期位置に戻す
             foreach (var facade in teamReg.AllAnimals)
             {
-                if (facade == null) continue;
+                if (facade == null)
+                {
+                    continue;
+                }
+
                 var avatar = facade.GetAvatar();
                 if (avatar != null)
                 {
@@ -66,7 +80,8 @@ public class FieldCollider_Goal : MonoBehaviour
                 }
             }
         }
-        TeamFacade.Instance.BallManager.ResetBallPosition();
+
+        teamFacade.BallManager.ResetBallPositionForKickoff(kickoffOwnerIndex);
     }
 
     // 処理終了

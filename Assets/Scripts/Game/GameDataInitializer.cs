@@ -36,7 +36,9 @@ public class GameDataInitializer : MonoBehaviour
         }
 
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.VECTOR3_BALL_POSITION, Vector3.zero);
-        ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER, -1);
+        ES3.Save(
+            DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER,
+            BallKickoffAssignment.PickRandomOpeningOwnerIndex());
 
         Debug.Log(
             $"[GameDataInitializer] match session ready formation={string.Join(", ", ES3.Load<List<Param_AnimalInfo.AnimalType>>(playerFormationKey))}");

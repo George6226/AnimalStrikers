@@ -55,9 +55,20 @@ public static class GoapMainNpcProductionEnvironment
             return true;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        // HAS_BALL と TeamBlackboard の同期ズレ中も保持者 GOAP を落とさない（画面上の停止防止）。
+        if (MainNpcAttackPlanning.IsEffectiveBallOwner(bb))
         {
-            return MainNpcAttackPlanning.IsBallPossessionAttackContext(bb);
+            return true;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB != null
+            && IsDeadPossessionContext(teamBB)
+            && !IncomingPassPlanning.IsIncomingPassReceiveContext(bb)
+            && !IncomingPassPlanning.IsAnticipatedBallOwner(bb)
+            && !IncomingPassPlanning.IsReceiveCatchPhase(bb))
+        {
+            return false;
         }
 
         if (MainNpcPostPassPlanning.IsTeamBallSupportContext(bb))
@@ -66,12 +77,14 @@ public static class GoapMainNpcProductionEnvironment
         }
 
         if (IncomingPassPlanning.IsIncomingPassReceiveContext(bb)
-            || IncomingPassPlanning.IsAnticipatedBallOwner(bb))
+            || IncomingPassPlanning.IsAnticipatedBallOwner(bb)
+            || IncomingPassPlanning.IsReceiveCatchPhase(bb))
         {
             return true;
         }
 
-        return MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb);
+        return MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb)
+            && !IsKickoffPickupSuppressed();
     }
 
     /// <summary>本番 Main GOAP 稼働中は手動入力を抑止（GOAP とプレイヤー操作の二重実行防止）。</summary>
@@ -110,5 +123,41 @@ public static class GoapMainNpcProductionEnvironment
         }
 
         return "M2";
+    }
+
+    private static bool IsOpponentSettledPossession(TeamBlackboard teamBB)
+    {
+        if (teamBB == null)
+        {
+            return false;
+        }
+
+        var ball = teamBB.BallInfo;
+        return ball.EnemyHasBall
+            && !ball.TeamHasBall
+            && ball.BallOwnerID > 0;
+    }
+
+    /// <summary>
+    /// Main が達成可能ゴールを持たない局面（敵保持・味方シュート飛行・キックオフ抑制中）。
+    /// NoGoal スパムで画面上は停止しているように見えるため、GOAP を先に落とす。
+    /// </summary>
+    private static bool IsDeadPossessionContext(TeamBlackboard teamBB)
+    {
+        if (IsOpponentSettledPossession(teamBB) || IsKickoffPickupSuppressed())
+        {
+            return true;
+        }
+
+        var ball = teamBB.BallInfo;
+        return ball.BallState == BallManager_State.BALL_STATE.SHOOT
+            && !ball.TeamHasBall
+            && !ball.EnemyHasBall;
+    }
+
+    private static bool IsKickoffPickupSuppressed()
+    {
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        return ballManager != null && ballManager.IsKickoffBallPickupSuppressed;
     }
 }
