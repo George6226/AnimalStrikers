@@ -2,6 +2,7 @@
 using Game.Goap;
 using Game.Goap.Goals;
 using NUnit.Framework;
+using Photon.Pun;
 using UnityEngine;
 
 public sealed class IncomingPassPlanningEditModeTests
