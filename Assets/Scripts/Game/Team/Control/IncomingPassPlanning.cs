@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Goap;
 using UnityEngine;
 
@@ -190,6 +191,12 @@ public static class IncomingPassPlanning
             return true;
         }
 
+        if (IsReceiveCatchPhase(bb))
+        {
+            target = ball.BallPosition;
+            return true;
+        }
+
         return false;
     }
 
@@ -219,5 +226,74 @@ public static class IncomingPassPlanning
     public static bool IsNearIncomingBall(PlayerBlackboard bb)
     {
         return bb != null && bb.BallState.BallDistance <= ReceiveNearBallDistance;
+    }
+
+    /// <summary>IncomingPassReceive ゴールと同じ実行資格。</summary>
+    public static bool IsIncomingPassReceiveEligible(PlayerBlackboard bb)
+    {
+        if (!IsIncomingPassReceiveContext(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (IsReceiveCatchPhase(bb))
+        {
+            return true;
+        }
+
+        return TryGetReceiveMoveTarget(bb, out _);
+    }
+
+    /// <summary>
+    /// NEAR_BALL 充足でプランナーが空プランを返すが、受け切り前は MoveToReceivePass が必要。
+    /// </summary>
+    public static bool NeedsForcedIncomingPassReceivePlan(PlayerBlackboard bb)
+    {
+        return IsIncomingPassReceiveEligible(bb)
+            && bb.GetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true")) == true;
+    }
+
+    public static bool CanExecuteIncomingPassReceive(PlayerBlackboard bb)
+    {
+        if (!IsIncomingPassReceiveEligible(bb))
+        {
+            return false;
+        }
+
+        if (!GoapNpcMotor.TryResolve(bb, out _, out _, out _))
+        {
+            return false;
+        }
+
+        return TryGetReceiveMoveTarget(bb, out _) || IsReceiveCatchPhase(bb);
+    }
+
+    public static bool TryBuildForcedIncomingPassReceivePlan(
+        PlayerBlackboard bb,
+        IEnumerable<GoapActionSO> scopedActions,
+        out Queue<GoapActionSO> plan)
+    {
+        plan = null;
+        if (!IsIncomingPassReceiveEligible(bb) || scopedActions == null)
+        {
+            return false;
+        }
+
+        foreach (GoapActionSO action in scopedActions)
+        {
+            if (action is MoveToReceivePassActionSO)
+            {
+                plan = new Queue<GoapActionSO>();
+                plan.Enqueue(action);
+                return true;
+            }
+        }
+
+        return false;
     }
 }

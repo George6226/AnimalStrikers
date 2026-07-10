@@ -864,7 +864,8 @@ public class GoapAgent : MonoBehaviour
                 && (TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan)
                     || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)
                     || TryConvertEmptyPlanToForcedMainAttack(bestPlan.goal, ref resolvedPlan)
-                    || TryConvertEmptyPlanToForcedFreeBall(bestPlan.goal, ref resolvedPlan)))
+                    || TryConvertEmptyPlanToForcedFreeBall(bestPlan.goal, ref resolvedPlan)
+                    || TryConvertEmptyPlanToForcedIncomingPassReceive(bestPlan.goal, ref resolvedPlan)))
             {
                 bestPlan.plan = resolvedPlan;
             }
@@ -1048,6 +1049,11 @@ public class GoapAgent : MonoBehaviour
             bestPlan = PreferForcedBallPossessionAttackPlan(bestGoal, goalActions, bestPlan);
             bestPlan = SanitizeBallPossessionAttackPlan(bestGoal, goalActions, bestPlan);
             if ((bestPlan == null || bestPlan.Count == 0)
+                && TryBuildForcedIncomingPassReceivePlan(bestGoal, goalActions, out var forcedReceivePlan))
+            {
+                bestPlan = forcedReceivePlan;
+            }
+            else if ((bestPlan == null || bestPlan.Count == 0)
                 && TryBuildForcedTacticalPlanForGoal(_playerBlackboard, goalActions, out var forcedPlan))
             {
                 bestPlan = forcedPlan;
@@ -1068,6 +1074,13 @@ public class GoapAgent : MonoBehaviour
         }
 
         LogPlanCostSummary(bestGoal, goalActions, plans, null);
+
+        if (TryBuildForcedIncomingPassReceivePlan(bestGoal, goalActions, out var forcedReceivePlanWhenNoCandidates)
+            && forcedReceivePlanWhenNoCandidates != null
+            && forcedReceivePlanWhenNoCandidates.Count > 0)
+        {
+            return (forcedReceivePlanWhenNoCandidates, bestGoal);
+        }
 
         if (TryBuildForcedTacticalPlanForGoal(
                 _playerBlackboard, goalActions, out var forcedPlanWhenNoCandidates)
@@ -1143,7 +1156,8 @@ public class GoapAgent : MonoBehaviour
             && !MainNpcPostPassPlanning.NeedsPostPassSupportMovement(_playerBlackboard)
             && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
             && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard)
-            && !MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard))
+            && !MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard)
+            && !IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1277,6 +1291,67 @@ public class GoapAgent : MonoBehaviour
 
         plan = forcedPlan;
         LogSummary("ForcedFreeBallRecoveryPlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlanNearBall)");
+        return true;
+    }
+
+    private bool TryBuildForcedIncomingPassReceivePlan(
+        GoapGoalSO goal,
+        List<GoapActionSO> goalActions,
+        out Queue<GoapActionSO> plan)
+    {
+        plan = null;
+        if (goal is not IncomingPassReceiveGoalSO)
+        {
+            return false;
+        }
+
+        if (!IncomingPassPlanning.TryBuildForcedIncomingPassReceivePlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedIncomingPassReceivePlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=nearBallCatchPhase)");
+        return true;
+    }
+
+    private bool TryConvertEmptyPlanToForcedIncomingPassReceive(GoapGoalSO goal, ref Queue<GoapActionSO> plan)
+    {
+        if (plan == null || plan.Count > 0 || goal == null)
+        {
+            return false;
+        }
+
+        if (goal is not IncomingPassReceiveGoalSO)
+        {
+            return false;
+        }
+
+        if (!IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard))
+        {
+            return false;
+        }
+
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
+        if (!IncomingPassPlanning.TryBuildForcedIncomingPassReceivePlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedIncomingPassReceivePlan(action=" +
             (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlanNearBall)");
         return true;
     }
