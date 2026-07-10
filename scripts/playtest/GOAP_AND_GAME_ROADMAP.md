@@ -19,8 +19,8 @@
 | ID | 課題 | 状態 | ブランチ/PR |
 |----|------|------|-------------|
 | **G0** | 本番 Main の守備デッドゾーン（Lion NoGoalSelected） | **完了 (#43)** | `fix/goap-polish-main-defense` |
-| **G1** | ShootAtGoal ActionRejected ループ | **実装中** | `fix/goap-g1-shoot-rejected` |
-| G2 | FreeBallRecovery PlanFailure（Boar/Gorilla） | 未着手 | |
+| **G1** | ShootAtGoal ActionRejected ループ | **完了 (#44 / Play 合格)** | `fix/goap-g1-shoot-rejected` |
+| G2 | FreeBallRecovery PlanFailure（Boar/Gorilla） | **実装中** | `fix/goap-g2-freeball-planfailure` |
 | G3 | IncomingPassReceive PlanFailure | 未着手 | |
 | G4 | 敵 NPC NoGoalSelected（Crocodile 等） | 未着手 | |
 | G5 | 検証スクリプト上限の更新 | 未着手 | |
@@ -29,6 +29,19 @@
 
 - 本番 Main（操作キャラ）が敵保持時に `DefensivePositioning` 戦術パスを使う
 - `EnemyBallDefense` 完了直後の `NoGoalSelected` が激減
+
+### G1 Play 検証結果（`goap_g1_play_pass_20260710` / main @ 5ab55a4）
+
+| 指標 | 修正前 | 今回 | 判定 |
+|------|--------|------|------|
+| Lion `ActionRejected(ShootAtGoal)` | 57〜96 | **0** | ✅ |
+| 全体 `ActionRejected(ShootAtGoal)` | — | **0** | ✅ |
+| Lion `ActionStart(ShootAtGoal)` | — | 7 | ✅ 実シュート実行 |
+| `missed+nogal` | 0 | **0** | ✅ |
+| `NoGoalIdle(wait>=3s)` | 0 | **0** | ✅ |
+| Phase D コア | PASS 10/10 | **PASS 10/10** | ✅ |
+
+アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g1_play_pass_20260710_20260710_215749.txt`
 
 ### GOAP 仕上げ全体の出口条件（3分 Play）
 
