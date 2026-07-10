@@ -4,8 +4,8 @@ set -euo pipefail
 
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
-GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-162}"
+GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|TeammateNpcDefensePlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-167}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(
@@ -194,6 +194,41 @@ goap_ci_clear_profile_markers() {
       "${log_dir}/goap-main-npc-attack-pending-exit.txt" \
       "${log_dir}/goap-main-npc-attack-started.marker"
   fi
+}
+
+# バッチが完走せず落ちた（Play 未開始・マーカー欠落）場合は再試行対象とする。
+goap_ci_batch_run_incomplete() {
+  local project_root="${1:?}"
+  local token="${2:?}"
+  local log_dir="${project_root}/Logs"
+  local result_file="goap-batch-result.txt"
+
+  if goap_ci_resolve_batch_profile "${token}"; then
+    result_file="${GOAP_PROFILE_RESULT_FILE}"
+  fi
+
+  if [[ -f "${log_dir}/${result_file}" ]]; then
+    return 1
+  fi
+
+  local diag=""
+  while IFS= read -r candidate; do
+    [[ -z "${candidate}" ]] && continue
+    if [[ -f "${candidate}" ]]; then
+      diag="${candidate}"
+      break
+    fi
+  done < <(goap_ci_batch_diag_candidates "${project_root}" "${token}")
+
+  if [[ -z "${diag}" ]]; then
+    return 0
+  fi
+
+  if grep -q 'BATCH_COMPLETE\|BATCH_ABORT' "${diag}"; then
+    return 1
+  fi
+
+  return 0
 }
 
 goap_ci_report_batch_failure() {

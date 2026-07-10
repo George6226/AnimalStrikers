@@ -18,7 +18,7 @@
 
 | ID | 課題 | 状態 | ブランチ/PR |
 |----|------|------|-------------|
-| **G0** | 本番 Main の守備デッドゾーン（Lion NoGoalSelected） | **実装中** | `fix/goap-polish-main-defense` |
+| **G0** | 本番 Main の守備デッドゾーン（Lion NoGoalSelected） | **PR #43 / CI** | `fix/goap-polish-main-defense` |
 | G1 | ShootAtGoal ActionRejected ループ | 未着手 | |
 | G2 | FreeBallRecovery PlanFailure（Boar/Gorilla） | 未着手 | |
 | G3 | IncomingPassReceive PlanFailure | 未着手 | |

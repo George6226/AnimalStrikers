@@ -62,6 +62,7 @@ public static class GoapBatchVerificationEditorRunner
 
     private static void BeginFreshRun()
     {
+        GoapMainNpcProductionEnvironment.Sync(false);
         _profile = GoapBatchVerifyEnvironment.Profile;
         _resultFileName = GoapBatchVerifyEnvironment.GetResultFileName(_profile);
         GoapBatchVerifySceneConfigurator.ApplyProfile(_profile);

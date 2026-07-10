@@ -154,6 +154,13 @@ for token in "\${batch_tokens[@]}"; do
       rm -f "/project/Logs/\${GOAP_PROFILE_RESULT_FILE}" "/project/Logs/\${GOAP_PROFILE_LOG_FILE}"
       continue
     fi
+    if [[ "\${batch_attempt}" -lt 2 && "\${batch_exit}" -eq 1 ]] && goap_ci_batch_run_incomplete /project "\${token}"; then
+      echo "[goap-ci] batch exited before verdict (exit=1); retrying once after marker cleanup (\${GOAP_PROFILE_LABEL})" >&2
+      goap_ci_clear_profile_markers /project/Logs "\${token}"
+      rm -f "/project/Logs/\${GOAP_PROFILE_RESULT_FILE}" "/project/Logs/\${GOAP_PROFILE_LOG_FILE}"
+      rm -f /project/Assets/DebugLog/GoapDiag_latest.txt /project/Assets/DebugLog/GoapSummary_latest.txt
+      continue
+    fi
     final_exit="\${batch_exit}"
     break
   done
