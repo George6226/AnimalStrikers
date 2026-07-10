@@ -39,6 +39,72 @@ public static class MainNpcPostPassPlanning
         return GoapFieldNpcPerspective.IsFreeBallContext(teamBB);
     }
 
+    /// <summary>FreeBallRecovery ゴールと同じ実行資格（拾い切るまで継続が必要な局面）。</summary>
+    public static bool IsFreeBallRecoveryEligible(PlayerBlackboard bb)
+    {
+        if (!IsFreeBallRecoveryContext(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (TeammateNpcGoapRoleDifferentiation.Enabled
+            && !TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc(bb))
+        {
+            return false;
+        }
+
+        if (TeammateNpcGoapRoleDifferentiation.Enabled
+            && !TeammateNpcGoapRoleDifferentiation.ShouldLeadFreeBallChase(bb))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// NEAR_BALL 充足でプランナーが空プランを返すが、FREE ボールの拾い切り前は MoveToFreeBall が必要。
+    /// </summary>
+    public static bool NeedsForcedFreeBallRecoveryPlan(PlayerBlackboard bb)
+    {
+        return IsFreeBallRecoveryEligible(bb)
+            && bb.GetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true")) == true;
+    }
+
+    public static bool TryBuildForcedFreeBallRecoveryPlan(
+        PlayerBlackboard bb,
+        IEnumerable<GoapActionSO> scopedActions,
+        out Queue<GoapActionSO> plan)
+    {
+        plan = null;
+        if (!IsFreeBallRecoveryEligible(bb) || scopedActions == null)
+        {
+            return false;
+        }
+
+        foreach (GoapActionSO action in scopedActions)
+        {
+            if (action is MoveToFreeBallActionSO)
+            {
+                plan = new Queue<GoapActionSO>();
+                plan.Enqueue(action);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>味方ボール保持中にメイン NPC がサポート移動を継続すべきか。</summary>
     public static bool NeedsPostPassSupportMovement(PlayerBlackboard bb)
     {

@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.Reflection;
+using Game.Goap;
 using Game.Goap.Goals;
 using NUnit.Framework;
 using Photon.Pun;
@@ -56,6 +58,79 @@ public sealed class MainNpcPostPassPlanningEditModeTests
             "[GOAP_SUMMARY] [Goap#1|owner=Lion(Clone),playerId=1001] GoalChanged(goal=TeamBallSupport)\n";
 
         Assert.That(MainNpcPostPassPlanning.VerifyMainNpcPostPassSupportStarted(summary), Is.False);
+    }
+
+    [Test]
+    public void NeedsForcedFreeBallRecoveryPlan_TrueWhenNearBallButStillFree()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.FREE);
+
+        var npc = CreateFieldNpc(1003, AnimalControlRole.TeammateNpc);
+        var bb = npc.GetComponentInChildren<PlayerBlackboard>();
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+        bool roleDiffEnabled = TeammateNpcGoapRoleDifferentiation.Enabled;
+        TeammateNpcGoapRoleDifferentiation.Enabled = false;
+
+        try
+        {
+            Assert.That(MainNpcPostPassPlanning.IsFreeBallRecoveryEligible(bb), Is.True);
+            Assert.That(MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(bb), Is.True);
+        }
+        finally
+        {
+            TeammateNpcGoapRoleDifferentiation.Enabled = roleDiffEnabled;
+            Object.DestroyImmediate(npc);
+            Object.DestroyImmediate(root);
+            SetStaticField(typeof(TeamFacade), "_instance", null);
+        }
+    }
+
+    [Test]
+    public void TryBuildForcedFreeBallRecoveryPlan_ReturnsMoveToFreeBallWhenNearBall()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.zero);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.FREE);
+
+        var npc = CreateFieldNpc(1003, AnimalControlRole.TeammateNpc);
+        var bb = npc.GetComponentInChildren<PlayerBlackboard>();
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        bb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+        bool roleDiffEnabled = TeammateNpcGoapRoleDifferentiation.Enabled;
+        TeammateNpcGoapRoleDifferentiation.Enabled = false;
+
+        var actions = new List<GoapActionSO>
+        {
+            ScriptableObject.CreateInstance<MoveToFreeBallActionSO>(),
+        };
+
+        try
+        {
+            Assert.That(
+                MainNpcPostPassPlanning.TryBuildForcedFreeBallRecoveryPlan(bb, actions, out var plan),
+                Is.True);
+            Assert.That(plan, Is.Not.Null);
+            Assert.That(plan!.Peek(), Is.InstanceOf<MoveToFreeBallActionSO>());
+        }
+        finally
+        {
+            TeammateNpcGoapRoleDifferentiation.Enabled = roleDiffEnabled;
+            foreach (var action in actions)
+            {
+                Object.DestroyImmediate(action);
+            }
+
+            Object.DestroyImmediate(npc);
+            Object.DestroyImmediate(root);
+            SetStaticField(typeof(TeamFacade), "_instance", null);
+        }
     }
 
     [Test]

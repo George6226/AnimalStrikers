@@ -863,7 +863,8 @@ public class GoapAgent : MonoBehaviour
             if (resolvedPlan.Count == 0
                 && (TryConvertEmptyPlanToForcedSupport(bestPlan.goal, ref resolvedPlan)
                     || TryConvertEmptyPlanToForcedDefense(bestPlan.goal, ref resolvedPlan)
-                    || TryConvertEmptyPlanToForcedMainAttack(bestPlan.goal, ref resolvedPlan)))
+                    || TryConvertEmptyPlanToForcedMainAttack(bestPlan.goal, ref resolvedPlan)
+                    || TryConvertEmptyPlanToForcedFreeBall(bestPlan.goal, ref resolvedPlan)))
             {
                 bestPlan.plan = resolvedPlan;
             }
@@ -1141,7 +1142,8 @@ public class GoapAgent : MonoBehaviour
             && !TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(_playerBlackboard)
             && !MainNpcPostPassPlanning.NeedsPostPassSupportMovement(_playerBlackboard)
             && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
-            && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard))
+            && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard)
+            && !MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1247,6 +1249,38 @@ public class GoapAgent : MonoBehaviour
         return true;
     }
 
+    private bool TryConvertEmptyPlanToForcedFreeBall(GoapGoalSO goal, ref Queue<GoapActionSO> plan)
+    {
+        if (plan == null || plan.Count > 0 || goal == null)
+        {
+            return false;
+        }
+
+        if (goal is not FreeBallRecoveryGoalSO)
+        {
+            return false;
+        }
+
+        if (!MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard))
+        {
+            return false;
+        }
+
+        var goalActions = FilterActionsForGoal(goal, _availableActions);
+        if (!MainNpcPostPassPlanning.TryBuildForcedFreeBallRecoveryPlan(
+                _playerBlackboard, goalActions, out var forcedPlan)
+            || forcedPlan == null
+            || forcedPlan.Count == 0)
+        {
+            return false;
+        }
+
+        plan = forcedPlan;
+        LogSummary("ForcedFreeBallRecoveryPlan(action=" +
+            (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlanNearBall)");
+        return true;
+    }
+
     /// <summary>
     /// BallPossessionAttack は後方連鎖プランにドリブルが入らないため、Pass/Shoot/Dribble の最低コスト強制プランと比較する。
     /// </summary>
@@ -1320,6 +1354,11 @@ public class GoapAgent : MonoBehaviour
         }
 
         if (TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(bb, goalActions, out plan))
+        {
+            return true;
+        }
+
+        if (MainNpcPostPassPlanning.TryBuildForcedFreeBallRecoveryPlan(bb, goalActions, out plan))
         {
             return true;
         }
