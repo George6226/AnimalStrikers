@@ -81,17 +81,36 @@ public static class TeammateNpcDefensePlanning
     }
 
     /// <summary>
-    /// 味方NPCでは EnemyBallDefense を使わず、守備アクションをコスト比較で選ぶ。
+    /// 味方フィールドプレイヤー（NPC / 本番 Main）では EnemyBallDefense を使わず、
+    /// 守備アクションをコスト比較で選ぶ。
     /// </summary>
     public static bool ShouldUseTacticalDefenseGoal(PlayerBlackboard bb)
     {
-        if (!TeammateNpcGoapRoleDifferentiation.Enabled || !IsTeammateNpc(bb))
+        if (!TeammateNpcGoapRoleDifferentiation.Enabled)
+        {
+            return false;
+        }
+
+        if (!IsTeammateNpc(bb) && !IsProductionMainFieldPlayer(bb))
         {
             return false;
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         return IsEnemyBallDefenseContext(teamBB, bb);
+    }
+
+    /// <summary>Phase A 本番で GOAP を動かす操作キャラ（Human Main）。</summary>
+    public static bool IsProductionMainFieldPlayer(PlayerBlackboard bb)
+    {
+        if (bb?.BasicData?.Self == null || !GoapMainNpcProductionEnvironment.IsActive)
+        {
+            return false;
+        }
+
+        var facade = bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?? bb.BasicData.Self.GetComponent<AnimalFacade>();
+        return facade != null && GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade);
     }
 
     /// <summary>プランナー用の動的コスト（重なり回避＋状況調整を反映）。</summary>
