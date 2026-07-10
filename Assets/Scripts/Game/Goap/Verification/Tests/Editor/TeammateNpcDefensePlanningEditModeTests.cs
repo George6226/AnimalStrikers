@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.Reflection;
 using Game.Goap.Goals;
 using NUnit.Framework;
