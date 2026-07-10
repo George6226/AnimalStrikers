@@ -28,9 +28,7 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
 
     public override bool CanExecute(PlayerBlackboard bb)
     {
-        return IncomingPassPlanning.IsIncomingPassReceiveContext(bb)
-            && IncomingPassPlanning.TryGetReceiveMoveTarget(bb, out _)
-            && GoapNpcMotor.TryResolve(bb, out _, out _, out _);
+        return IncomingPassPlanning.CanExecuteIncomingPassReceive(bb);
     }
 
     public override void Execute(PlayerBlackboard bb)

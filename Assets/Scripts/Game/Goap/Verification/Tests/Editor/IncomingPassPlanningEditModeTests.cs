@@ -328,6 +328,114 @@ public sealed class IncomingPassPlanningEditModeTests
     }
 
     [Test]
+    public void TryGetReceiveMoveTarget_ReturnsBallPositionInCatchPhase()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, new Vector3(0f, 0f, 1f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
+        targetBb.BallState.updateBallInfo(false, 1.0f, new Vector3(0f, 0f, 1f));
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+
+        try
+        {
+            Assert.That(IncomingPassPlanning.IsReceiveCatchPhase(targetBb), Is.True);
+            Assert.That(
+                IncomingPassPlanning.TryGetReceiveMoveTarget(targetBb, out Vector3 targetPos),
+                Is.True);
+            Assert.That(targetPos.z, Is.EqualTo(1f).Within(0.01f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void NeedsForcedIncomingPassReceivePlan_TrueWhenNearBallInCatchPhase()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
+        targetBb.BallState.updateBallInfo(false, 1.0f, Vector3.forward);
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        targetBb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+
+        try
+        {
+            Assert.That(IncomingPassPlanning.IsIncomingPassReceiveEligible(targetBb), Is.True);
+            Assert.That(IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(targetBb), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void TryBuildForcedIncomingPassReceivePlan_ReturnsMoveToReceivePass()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        targetBb.SetFact(new Fact(SymbolTag.Position.NEAR_BALL, "true"), true);
+        targetBb.BallState.updateBallInfo(false, 1.0f, Vector3.forward);
+
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+
+        var actions = new System.Collections.Generic.List<GoapActionSO>
+        {
+            ScriptableObject.CreateInstance<MoveToReceivePassActionSO>(),
+        };
+
+        try
+        {
+            Assert.That(
+                IncomingPassPlanning.TryBuildForcedIncomingPassReceivePlan(
+                    targetBb,
+                    actions,
+                    out var plan),
+                Is.True);
+            Assert.That(plan, Is.Not.Null);
+            Assert.That(plan!.Peek(), Is.InstanceOf<MoveToReceivePassActionSO>());
+        }
+        finally
+        {
+            GoapPassFlightTracker.Clear();
+            foreach (var action in actions)
+            {
+                Object.DestroyImmediate(action);
+            }
+
+            Object.DestroyImmediate(passer);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void MoveToReceivePass_CompletesOnTimeout_WhenTrackerClearedButCatchPhase()
     {
         var root = CreateTeamFacadeRoot();
