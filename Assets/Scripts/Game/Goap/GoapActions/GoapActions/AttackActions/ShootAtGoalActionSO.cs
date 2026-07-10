@@ -41,6 +41,11 @@ public class ShootAtGoalActionSO : GoapActionSO
 
     public override float CalculateDynamicCost(PlayerBlackboard bb)
     {
+        if (!MainNpcAttackPlanning.CanExecuteShootAtGoal(bb))
+        {
+            return 99f;
+        }
+
         return TeammateNpcSupportPlanning.ComputeDynamicCost(
             this,
             bb,
