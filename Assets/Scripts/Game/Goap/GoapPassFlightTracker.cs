@@ -156,7 +156,7 @@ public static class GoapPassFlightTracker
             }
         }
 
-        foreach (var facade in regist.Enemys)
+        foreach (var facade in regist.Enemies)
         {
             if (TryMatchRegisteredPlayer(facade, registeredPlayerId, ballOwnerId))
             {
@@ -198,6 +198,22 @@ public static class GoapPassFlightTracker
         }
 
         foreach (var facade in regist.Allys)
+        {
+            if (facade == null)
+            {
+                continue;
+            }
+
+            var bb = facade.GetComponentInChildren<PlayerBlackboard>(true);
+            if (bb?.BasicData == null || bb.BasicData.PlayerID != targetPlayerId)
+            {
+                continue;
+            }
+
+            return IncomingPassPlanning.IsNearIncomingBall(bb);
+        }
+
+        foreach (var facade in regist.Enemies)
         {
             if (facade == null)
             {

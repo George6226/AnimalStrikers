@@ -179,7 +179,7 @@ public static class IncomingPassPlanning
             return true;
         }
 
-        if (GoapPassFlightTracker.TryGetActivePass(out GoapPassFlightTracker.PassFlight flight)
+        if (GoapPassFlightTracker.TryGetActivePass(out _)
             && GoapPassFlightTracker.IsTargetPlayer(bb))
         {
             AnimalFacade selfFacade = GoapMainNpcAttackBridge.ResolveFacade(bb);
