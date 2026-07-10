@@ -29,6 +29,11 @@ public static class GoapEnemyMainNpcPlanning
             return false;
         }
 
+        if (!GoapMatchPlayGate.IsMatchPlayActive())
+        {
+            return false;
+        }
+
         if (MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
         {
             if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))

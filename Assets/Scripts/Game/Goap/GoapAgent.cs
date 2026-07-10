@@ -72,6 +72,7 @@ public class GoapAgent : MonoBehaviour
     private string _lastReceiveFinishReason = string.Empty;
     private bool _lastReceiveOutcomeReceived;
     private bool _pendingReceivePassTransitionLog;
+    private bool _matchPlayWasActive;
     private string _lastFailureSignature = "-";
     private int _sameFailureStreak;
     private bool _ballContextInitialized;
@@ -181,8 +182,25 @@ public class GoapAgent : MonoBehaviour
     {
         if (!enabled || _playerBlackboard == null) return;
 
+        bool matchPlayActive = GoapMatchPlayGate.IsMatchPlayActive();
+        bool matchPlayJustStarted = matchPlayActive && !_matchPlayWasActive;
+        _matchPlayWasActive = matchPlayActive;
+
+        if (!matchPlayActive)
+        {
+            ClearPlanForPreMatch();
+        }
+
         // P3: 人間操作キャラ・非対象NPCでは GOAP を動かさない（enabled が誤って true でも安全）
         bool goapContextEnabled = IsEnabledForTeammateNpcGoap();
+        if (matchPlayJustStarted && goapContextEnabled)
+        {
+            TriggerImmediateReplan(
+                "MatchPlayStarted",
+                "MatchPlayStarted(state=GAME)",
+                allowDuringDeferredAction: true);
+        }
+
         if (!goapContextEnabled && _currentAction == null)
         {
             return;
@@ -685,7 +703,29 @@ public class GoapAgent : MonoBehaviour
             || _lastReplanReason == "BallOwnerChanged"
             || _lastReplanReason == "PassReceiveEligibilityChanged"
             || _lastReplanReason == "PassReceiveComplete"
-            || _lastReplanReason == "PassIssued";
+            || _lastReplanReason == "PassIssued"
+            || _lastReplanReason == "MatchPlayStarted";
+    }
+
+    /// <summary>キックオフ前など非 GAME 中に残ったプランを破棄する。</summary>
+    private void ClearPlanForPreMatch()
+    {
+        if (_currentAction == null && (_currentPlan == null || _currentPlan.Count == 0) && !_isPlanning)
+        {
+            return;
+        }
+
+        if (_currentAction != null)
+        {
+            _currentAction.Cancel();
+            _currentAction = null;
+        }
+
+        _currentPlan?.Clear();
+        _currentGoal = null;
+        _planFailed = false;
+        _isPlanning = false;
+        _nextAllowedReplanTime = 0f;
     }
 
     /// <summary>味方フィールドNPC向け GOAP のみ Update を許可（操作キャラ・非対象は除外）。</summary>
@@ -707,6 +747,11 @@ public class GoapAgent : MonoBehaviour
         {
             var squadDuringVerify = TeamFacade.Instance != null ? TeamFacade.Instance.SquadControl : null;
             return squadDuringVerify == null || squadDuringVerify.ShouldUseGoapFor(facade);
+        }
+
+        if (!GoapMatchPlayGate.IsMatchPlayActive())
+        {
+            return false;
         }
 
         if (GoapMainNpcProductionEnvironment.IsActive

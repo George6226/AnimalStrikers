@@ -75,6 +75,7 @@ public static class GoapRuntimeDiagnostics
             || message.StartsWith("PassIssued(")
             || message.StartsWith("ReceivePassOutcome(")
             || message.StartsWith("ReceivePassTransition(")
+            || message.StartsWith("MatchPlayStarted(")
             || message.Contains("Forced")
             || message.StartsWith("PlanSuccess(")
             || message.StartsWith("PlanFailure(")
