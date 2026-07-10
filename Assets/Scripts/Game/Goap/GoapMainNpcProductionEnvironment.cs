@@ -68,6 +68,12 @@ public static class GoapMainNpcProductionEnvironment
             && !IncomingPassPlanning.IsAnticipatedBallOwner(bb)
             && !IncomingPassPlanning.IsReceiveCatchPhase(bb))
         {
+            // 敵保持・シュート飛行中でも守備 GOAP は継続（受け失敗後の棒立ち防止）。
+            if (TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -83,8 +89,8 @@ public static class GoapMainNpcProductionEnvironment
             return true;
         }
 
-        return MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb)
-            && !IsKickoffPickupSuppressed();
+        return (MainNpcPostPassPlanning.IsFreeBallRecoveryContext(bb) && !IsKickoffPickupSuppressed())
+            || TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb);
     }
 
     /// <summary>本番 Main GOAP 稼働中は手動入力を抑止（GOAP とプレイヤー操作の二重実行防止）。</summary>
