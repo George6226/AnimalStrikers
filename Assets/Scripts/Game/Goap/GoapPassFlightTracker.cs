@@ -57,6 +57,23 @@ public static class GoapPassFlightTracker
         return _active.HasValue && _active.Value.TargetPlayerId == playerId;
     }
 
+    public static bool IsTargetPlayer(PlayerBlackboard bb)
+    {
+        if (bb?.BasicData == null)
+        {
+            return false;
+        }
+
+        if (IsTargetPlayer(bb.BasicData.PlayerID))
+        {
+            return true;
+        }
+
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+        var avatar = facade != null ? facade.GetAvatar() : null;
+        return avatar != null && IsTargetPlayer(avatar.ViewID);
+    }
+
     public static void SyncStalePassFlight(TeamBallInfo ball)
     {
         if (!_active.HasValue || ball == null)
@@ -79,14 +96,14 @@ public static class GoapPassFlightTracker
 
         if (ball.BallState == BallManager_State.BALL_STATE.HOLD)
         {
-            if (ball.BallOwnerID == flight.TargetPlayerId)
+            if (IsReceiverBallOwner(flight.TargetPlayerId, ball.BallOwnerID))
             {
                 Clear();
                 return;
             }
 
             // パッサー HOLD は wind-up 中。トラッカーを維持して受け手 GOAP を有効にする。
-            if (ball.BallOwnerID == flight.PasserPlayerId)
+            if (IsReceiverBallOwner(flight.PasserPlayerId, ball.BallOwnerID))
             {
                 return;
             }
@@ -113,6 +130,60 @@ public static class GoapPassFlightTracker
         }
     }
 
+    private static bool IsReceiverBallOwner(int registeredPlayerId, int ballOwnerId)
+    {
+        if (ballOwnerId < 0 || registeredPlayerId <= 0)
+        {
+            return false;
+        }
+
+        if (ballOwnerId == registeredPlayerId)
+        {
+            return true;
+        }
+
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return false;
+        }
+
+        foreach (var facade in regist.Allys)
+        {
+            if (TryMatchRegisteredPlayer(facade, registeredPlayerId, ballOwnerId))
+            {
+                return true;
+            }
+        }
+
+        foreach (var facade in regist.Enemies)
+        {
+            if (TryMatchRegisteredPlayer(facade, registeredPlayerId, ballOwnerId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryMatchRegisteredPlayer(AnimalFacade facade, int registeredPlayerId, int ballOwnerId)
+    {
+        if (facade == null)
+        {
+            return false;
+        }
+
+        var bb = facade.GetComponentInChildren<PlayerBlackboard>(true);
+        if (bb?.BasicData == null || bb.BasicData.PlayerID != registeredPlayerId)
+        {
+            return false;
+        }
+
+        var avatar = facade.GetAvatar();
+        return avatar != null && ballOwnerId == avatar.ViewID;
+    }
+
     private static bool TryGetReceiverNearLooseBall(int targetPlayerId, TeamBallInfo ball)
     {
         if (ball == null || targetPlayerId <= 0)
@@ -127,6 +198,22 @@ public static class GoapPassFlightTracker
         }
 
         foreach (var facade in regist.Allys)
+        {
+            if (facade == null)
+            {
+                continue;
+            }
+
+            var bb = facade.GetComponentInChildren<PlayerBlackboard>(true);
+            if (bb?.BasicData == null || bb.BasicData.PlayerID != targetPlayerId)
+            {
+                continue;
+            }
+
+            return IncomingPassPlanning.IsNearIncomingBall(bb);
+        }
+
+        foreach (var facade in regist.Enemies)
         {
             if (facade == null)
             {

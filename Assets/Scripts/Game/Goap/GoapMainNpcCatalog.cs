@@ -4,7 +4,7 @@ using Game.Goap.Goals;
 using UnityEngine;
 
 /// <summary>
-/// メイン NPC 向け GOAP（M1: パス/シュート、M2: パス後サポート・ルーズボール追跡）。
+/// メイン NPC 向け GOAP（M1: パス/シュート、M2: サポート/ルーズボール、M3: 敵保持時守備）。
 /// </summary>
 public static class GoapMainNpcCatalog
 {
@@ -13,7 +13,9 @@ public static class GoapMainNpcCatalog
         return goal is FreeBallRecoveryGoalSO
             || goal is BallPossessionAttackGoalSO
             || goal is IncomingPassReceiveGoalSO
-            || goal is TeamBallSupportGoalSO;
+            || goal is TeamBallSupportGoalSO
+            || goal is DefensivePositioningGoalSO
+            || goal is EnemyBallDefenseGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
@@ -23,7 +25,8 @@ public static class GoapMainNpcCatalog
             || action is PassToTeammateActionSO
             || action is ShootAtGoalActionSO
             || action is DribbleTowardGoalActionSO
-            || IsTeamBallSupportAction(action);
+            || IsTeamBallSupportAction(action)
+            || GoapTeammateNpcCatalog.IsDefenseAction(action);
     }
 
     public static bool IsIncomingPassReceiveAction(GoapActionSO action)
@@ -73,6 +76,11 @@ public static class GoapMainNpcCatalog
             return actions.Where(IsIncomingPassReceiveAction).ToList();
         }
 
+        if (goal is DefensivePositioningGoalSO or EnemyBallDefenseGoalSO)
+        {
+            return actions.Where(GoapTeammateNpcCatalog.IsDefenseAction).ToList();
+        }
+
         return actions;
     }
 
@@ -109,6 +117,8 @@ public static class GoapMainNpcCatalog
         EnsureGoal<TeamBallSupportGoalSO>(goals);
         EnsureGoal<IncomingPassReceiveGoalSO>(goals);
         EnsureGoal<BallPossessionAttackGoalSO>(goals);
+        EnsureGoal<DefensivePositioningGoalSO>(goals);
+        EnsureGoal<EnemyBallDefenseGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
         EnsureAction<MoveToReceivePassActionSO>(actions);
@@ -119,6 +129,7 @@ public static class GoapMainNpcCatalog
         EnsureAction<PassToTeammateActionSO>(actions);
         EnsureAction<ShootAtGoalActionSO>(actions);
         EnsureAction<DribbleTowardGoalActionSO>(actions);
+        EnsureDefenseActions(actions);
 
         foreach (GoapActionSO action in actions)
         {
@@ -144,5 +155,14 @@ public static class GoapMainNpcCatalog
         }
 
         actions.Add(ScriptableObject.CreateInstance<T>());
+    }
+
+    private static void EnsureDefenseActions(List<GoapActionSO> actions)
+    {
+        EnsureAction<MoveToDefensivePositionActionSO>(actions);
+        EnsureAction<MarkOpponentActionSO>(actions);
+        EnsureAction<BlockPassLaneActionSO>(actions);
+        EnsureAction<BlockShotLaneActionSO>(actions);
+        EnsureAction<RetreatToDefensiveLineActionSO>(actions);
     }
 }

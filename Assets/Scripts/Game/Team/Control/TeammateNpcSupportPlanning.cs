@@ -151,15 +151,39 @@ public static class TeammateNpcSupportPlanning
         // 本番 Main（Human）は GetOpen 後に sticky な ISR を抱えたままで TeamBallSupport が無くなるためゲートを無視する。
         if (bb?.BasicData?.Self == null || !GoapMainNpcProductionEnvironment.IsActive)
         {
-            return false;
+            return ShouldIgnorePassReceivePositionGateAfterFailedReceive(bb);
         }
 
         var facade = bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
             ?? bb.BasicData.Self.GetComponent<AnimalFacade>();
-        return GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade)
+        if (GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade)
             && IsTeamBallAttackContext(
                 TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null,
-                bb);
+                bb))
+        {
+            return true;
+        }
+
+        return ShouldIgnorePassReceivePositionGateAfterFailedReceive(bb);
+    }
+
+    /// <summary>
+    /// 受け手指定が外れた後は ISR が true のままで TeamBallSupport が塞がり NoGoal になりやすい。
+    /// </summary>
+    public static bool ShouldIgnorePassReceivePositionGateAfterFailedReceive(PlayerBlackboard bb)
+    {
+        if (bb == null || MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
+        {
+            return false;
+        }
+
+        if (IncomingPassPlanning.IsIncomingPassTarget(bb))
+        {
+            return false;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        return IsTeamBallAttackContext(teamBB, bb);
     }
 
     /// <summary>

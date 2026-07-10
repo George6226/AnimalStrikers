@@ -929,6 +929,15 @@ public class GoapAgent : MonoBehaviour
             }
         }
 
+        if (_lastReplanReason == "PassReceiveComplete" && !_lastReceiveOutcomeReceived)
+        {
+            var postReceivePlan = TrySelectPostReceiveRecoveryPlan();
+            if (postReceivePlan.plan != null)
+            {
+                return postReceivePlan;
+            }
+        }
+
         // DebugLogger.Log($"[{this.name}(GoapAgent)] 可能ゴール数:" + _availableGoals.Count);
         
         // 可能ゴールがない
@@ -1284,6 +1293,79 @@ public class GoapAgent : MonoBehaviour
         }
 
         return (null, supportGoal);
+    }
+
+    /// <summary>受け失敗直後は Support / FreeBall / 守備を優先して選ぶ（nogal 固着防止）。</summary>
+    private (Queue<GoapActionSO> plan, GoapGoalSO goal) TrySelectPostReceiveRecoveryPlan()
+    {
+        var recoveryGoals = new[]
+        {
+            _availableGoals.FirstOrDefault(g => g is TeamBallSupportGoalSO),
+            _availableGoals.FirstOrDefault(g => g is FreeBallRecoveryGoalSO),
+            _availableGoals.FirstOrDefault(g => g is DefensivePositioningGoalSO),
+            _availableGoals.FirstOrDefault(g => g is EnemyBallDefenseGoalSO),
+        };
+
+        foreach (var goal in recoveryGoals)
+        {
+            if (goal == null || !goal.IsAchievable(_playerBlackboard))
+            {
+                continue;
+            }
+
+            _lastSelectedGoalName = goal.GoalName;
+            var goalActions = FilterActionsForGoal(goal, _availableActions);
+            if (goalActions == null || goalActions.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (GoapActionSO action in goalActions)
+            {
+                action?.EnsurePlanningFactsConfigured();
+            }
+
+            var plans = _planner.Plan(
+                goalActions,
+                _playerBlackboard,
+                goal.GetPlanningRequiredFacts(_playerBlackboard));
+            if (plans != null && plans.Count > 0)
+            {
+                var bestPlan = SelectBestPlanFromPlans(plans);
+                if (bestPlan != null && bestPlan.Count > 0)
+                {
+                    LogPlanCostSummary(goal, goalActions, plans, bestPlan);
+                    LogSummary("PostReceiveRecoveryPlan(goal=" + goal.GoalName + ", reason=PassReceiveFailed)");
+                    return (bestPlan, goal);
+                }
+            }
+
+            if (TryBuildForcedTacticalPlanForGoal(_playerBlackboard, goalActions, out Queue<GoapActionSO> forcedPlan)
+                && forcedPlan != null
+                && forcedPlan.Count > 0)
+            {
+                LogSummary("PostReceiveRecoveryPlan(goal=" + goal.GoalName
+                    + ", action=" + forcedPlan.Peek().ActionName
+                    + ", reason=PassReceiveFailedForced)");
+                return (forcedPlan, goal);
+            }
+
+            if (goal is TeamBallSupportGoalSO
+                && MainNpcPostPassPlanning.TryBuildForcedPostPassSupportPlan(
+                    _playerBlackboard,
+                    goalActions,
+                    out Queue<GoapActionSO> forcedSupportPlan)
+                && forcedSupportPlan != null
+                && forcedSupportPlan.Count > 0)
+            {
+                LogSummary("PostReceiveRecoveryPlan(goal=TeamBallSupport, action="
+                    + forcedSupportPlan.Peek().ActionName
+                    + ", reason=PassReceiveFailedSupport)");
+                return (forcedSupportPlan, goal);
+            }
+        }
+
+        return (null, null);
     }
 
     /// <summary>
@@ -1985,6 +2067,8 @@ public class GoapAgent : MonoBehaviour
             "BallPossessionAttack" => "attack",
             "TeamBallSupport" => "support",
             "FreeBallRecovery" => "freeball",
+            "DefensivePositioning" => "defense",
+            "EnemyBallDefense" => "defense",
             "IncomingPassReceive" => "receive_retry",
             _ => "other",
         };

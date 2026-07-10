@@ -2,6 +2,7 @@
 using Game.Goap;
 using Game.Goap.Goals;
 using NUnit.Framework;
+using Photon.Pun;
 using UnityEngine;
 
 public sealed class IncomingPassPlanningEditModeTests
@@ -366,6 +367,96 @@ public sealed class IncomingPassPlanningEditModeTests
     }
 
     [Test]
+    public void ShouldIgnorePassReceivePositionGate_TrueAfterFailedReceiveDuringTeamAttack()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.SetFact(new Fact(SymbolTag.Action.IS_IN_PASS_RECEIVE_POSITION, "true"), true);
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        targetBb.BallState.updateBallInfo(false, 5f, Vector3.zero);
+
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+        GoapPassFlightTracker.Clear();
+
+        try
+        {
+            Assert.That(IncomingPassPlanning.IsIncomingPassTarget(targetBb), Is.False);
+            Assert.That(
+                TeammateNpcSupportPlanning.ShouldIgnorePassReceivePositionGateAfterFailedReceive(targetBb),
+                Is.True);
+            Assert.That(new TeamBallSupportGoalSO().IsAchievable(targetBb), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(passer);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void HasReceivedIncomingPass_MatchesViewIdOwner()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(2002, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var target = CreateFieldNpcWithViewId(1002, 2002, AnimalControlRole.TeammateNpc);
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+
+        try
+        {
+            Assert.That(IncomingPassPlanning.HasReceivedIncomingPass(targetBb), Is.True);
+            Assert.That(GoapPassFlightTracker.IsTargetPlayer(targetBb), Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void ProductionShouldEnableGoap_TrueForDefenseWhenEnemyHasBall()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(2007, BallManager_State.BELONG_TEAM.ENEMY, Vector3.zero);
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var human = CreateFieldNpc(1001, AnimalControlRole.Human);
+        var humanFacade = human.GetComponent<AnimalFacade>();
+        var humanBb = human.GetComponentInChildren<PlayerBlackboard>();
+        humanBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+
+        GoapMainNpcProductionEnvironment.Sync(true);
+        try
+        {
+            Assert.That(
+                GoapMainNpcProductionEnvironment.ShouldEnableGoap(humanBb, humanFacade),
+                Is.True);
+        }
+        finally
+        {
+            GoapMainNpcProductionEnvironment.Sync(false);
+            Object.DestroyImmediate(human);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void ProductionShouldEnableGoap_TrueWhenHasBallBeforeTeamBoardSync()
     {
         var root = CreateTeamFacadeRoot();
@@ -397,8 +488,17 @@ public sealed class IncomingPassPlanningEditModeTests
 
     private static GameObject CreateFieldNpc(int playerId, AnimalControlRole role)
     {
+        return CreateFieldNpcWithViewId(playerId, playerId, role);
+    }
+
+    private static GameObject CreateFieldNpcWithViewId(int playerId, int viewId, AnimalControlRole role)
+    {
         var go = new GameObject($"npc_{playerId}");
-        go.AddComponent<AnimalFacade>();
+        var photonView = go.AddComponent<PhotonView>();
+        photonView.ViewID = viewId;
+        go.AddComponent<PhotonAvatarContainerChild>();
+        var facade = go.AddComponent<AnimalFacade>();
+        SetPrivateField(facade, "_avatar", go.GetComponent<PhotonAvatarContainerChild>());
         go.AddComponent<AnimalControlAssignment>().SetRole(role);
         var bbGo = new GameObject("bb");
         bbGo.transform.SetParent(go.transform, false);

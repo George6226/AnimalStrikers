@@ -19,7 +19,8 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(goals.Exists(g => g is FreeBallRecoveryGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is TeamBallSupportGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is IncomingPassReceiveGoalSO), Is.True);
-        Assert.That(goals.Exists(g => g is DefensivePositioningGoalSO), Is.False);
+        Assert.That(goals.Exists(g => g is DefensivePositioningGoalSO), Is.True);
+        Assert.That(goals.Exists(g => g is EnemyBallDefenseGoalSO), Is.True);
     }
 
     [Test]
@@ -66,6 +67,21 @@ public sealed class GoapMainNpcCatalogEditModeTests
 
         Assert.That(filtered, Has.Count.EqualTo(1));
         Assert.That(filtered[0], Is.InstanceOf<MoveToFreeBallActionSO>());
+    }
+
+    [Test]
+    public void FilterActionsForGoal_DefensivePositioning_UsesDefenseActionsOnly()
+    {
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapMainNpcCatalog.NormalizeLists(goals, actions);
+
+        var goal = goals.Find(g => g is DefensivePositioningGoalSO);
+        var filtered = GoapMainNpcCatalog.FilterActionsForGoal(goal, actions);
+
+        Assert.That(filtered, Has.All.Matches<GoapActionSO>(GoapTeammateNpcCatalog.IsDefenseAction));
+        Assert.That(filtered.Exists(a => a is BlockShotLaneActionSO), Is.True);
+        Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.False);
     }
 
     [Test]

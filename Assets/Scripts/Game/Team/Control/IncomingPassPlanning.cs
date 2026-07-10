@@ -28,7 +28,7 @@ public static class IncomingPassPlanning
         }
 
         GoapPassFlightTracker.SyncStalePassFlight(teamBB.BallInfo);
-        if (!GoapPassFlightTracker.IsTargetPlayer(bb.BasicData.PlayerID))
+        if (!GoapPassFlightTracker.IsTargetPlayer(bb))
         {
             return false;
         }
@@ -103,7 +103,7 @@ public static class IncomingPassPlanning
 
         var ball = teamBB.BallInfo;
         if (ball.BallState == BallManager_State.BALL_STATE.HOLD
-            && ball.BallOwnerID == bb.BasicData.PlayerID)
+            && MatchesBallOwnerId(bb, ball.BallOwnerID))
         {
             return true;
         }
@@ -126,10 +126,27 @@ public static class IncomingPassPlanning
                 return true;
             }
 
-            return GoapPassFlightTracker.IsTargetPlayer(bb.BasicData.PlayerID);
+            return GoapPassFlightTracker.IsTargetPlayer(bb);
         }
 
         return false;
+    }
+
+    private static bool MatchesBallOwnerId(PlayerBlackboard bb, int ballOwnerId)
+    {
+        if (bb?.BasicData == null || ballOwnerId < 0)
+        {
+            return false;
+        }
+
+        if (ballOwnerId == bb.BasicData.PlayerID)
+        {
+            return true;
+        }
+
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+        var avatar = facade != null ? facade.GetAvatar() : null;
+        return avatar != null && ballOwnerId == avatar.ViewID;
     }
 
     public static bool TryGetReceiveMoveTarget(PlayerBlackboard bb, out Vector3 target)
@@ -155,15 +172,15 @@ public static class IncomingPassPlanning
         }
 
         if (ball.BallState == BallManager_State.BALL_STATE.FREE
-            && GoapPassFlightTracker.IsTargetPlayer(bb.BasicData.PlayerID)
+            && GoapPassFlightTracker.IsTargetPlayer(bb)
             && IsNearIncomingBall(bb))
         {
             target = ball.BallPosition;
             return true;
         }
 
-        if (GoapPassFlightTracker.TryGetActivePass(out GoapPassFlightTracker.PassFlight flight)
-            && flight.TargetPlayerId == bb.BasicData.PlayerID)
+        if (GoapPassFlightTracker.TryGetActivePass(out _)
+            && GoapPassFlightTracker.IsTargetPlayer(bb))
         {
             AnimalFacade selfFacade = GoapMainNpcAttackBridge.ResolveFacade(bb);
             GameObject ballKeep = selfFacade != null ? selfFacade.GetBallKeep() : null;
@@ -196,7 +213,7 @@ public static class IncomingPassPlanning
 
         var ball = teamBB.BallInfo;
         return ball.BallState == BallManager_State.BALL_STATE.HOLD
-            && ball.BallOwnerID == bb.BasicData.PlayerID;
+            && MatchesBallOwnerId(bb, ball.BallOwnerID);
     }
 
     public static bool IsNearIncomingBall(PlayerBlackboard bb)
