@@ -26,6 +26,7 @@ public class AnimalControlBrainRouter : MonoBehaviour
     private bool _goapConfigured;
     private bool _productionGoapActive;
     private bool _enemyMainGoapActive;
+    private bool _matchPlayWasActive;
 
     public bool IsProductionMainGoapActive => _productionGoapActive;
 
@@ -95,6 +96,11 @@ public class AnimalControlBrainRouter : MonoBehaviour
             useGoap = false;
         }
 
+        if (useGoap && !GoapMatchPlayGate.IsMatchPlayActive())
+        {
+            useGoap = false;
+        }
+
         if (useGoap)
         {
             TryConfigureGoapPilot();
@@ -105,6 +111,17 @@ public class AnimalControlBrainRouter : MonoBehaviour
 
     private void LateUpdate()
     {
+        bool matchPlayActive = GoapMatchPlayGate.IsMatchPlayActive();
+        if (matchPlayActive != _matchPlayWasActive)
+        {
+            _matchPlayWasActive = matchPlayActive;
+            if (_assignment != null)
+            {
+                // READY→GAME / GAME→RESULT でフィールド NPC の GOAP 有効を切り替える。
+                ApplyRole(_assignment.Role);
+            }
+        }
+
         RefreshProductionMainNpcGoap();
         RefreshEnemyMainNpcGoap();
     }

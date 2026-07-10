@@ -44,6 +44,11 @@ public static class GoapMainNpcProductionEnvironment
             return false;
         }
 
+        if (!GoapMatchPlayGate.IsMatchPlayActive())
+        {
+            return false;
+        }
+
         if (GoapBallActionGuard.IsAnyInProgress(facade))
         {
             return true;

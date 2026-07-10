@@ -24,6 +24,11 @@ public static class GoapEnemySubNpcPlanning
             return false;
         }
 
+        if (!GoapMatchPlayGate.IsMatchPlayActive())
+        {
+            return false;
+        }
+
         if (MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
         {
             return MainNpcAttackPlanning.CanPassToTeammate(bb)

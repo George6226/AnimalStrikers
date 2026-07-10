@@ -26,6 +26,7 @@ public class GoapRuntimeDiagnosticsEditModeTests
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("PassIssued(passer_released_ball)"), Is.True);
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReceivePassOutcome(finishReason=timeout, received=false, hasBallFact=false)"), Is.True);
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReceivePassTransition(received=true, finishReason=received, goal=BallPossessionAttack, transition=attack)"), Is.True);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("MatchPlayStarted(state=GAME)"), Is.True);
     }
 
     [Test]
