@@ -468,6 +468,128 @@ public sealed class MainNpcAttackPlanningEditModeTests
     }
 
     [Test]
+    public void CanExecuteShootAtGoal_FalseWhenShootInProgress()
+    {
+        var root = new GameObject("teamFacade");
+        var teamFacade = root.AddComponent<TeamFacade>();
+        var teamBb = root.AddComponent<TeamBlackboard>();
+        var regist = root.AddComponent<TeamRegistar>();
+        SetPrivateField(teamFacade, "_teamBlackboard", teamBb);
+        SetPrivateField(teamFacade, "_teamRegistar", regist);
+        SetStaticField(typeof(TeamFacade), "_instance", teamFacade);
+        teamBb.FieldInfo.Initialize(40f, 20f);
+        teamBb.BallInfo.Initialize();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, new Vector3(0f, 0f, 6f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var allyGo = new GameObject("ally");
+        allyGo.AddComponent<AnimalFacade>();
+        allyGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.Human);
+        var shoot = allyGo.AddComponent<AnimalAction_Shoot>();
+        var host = allyGo.AddComponent<CoroutineHost>();
+        var bbGo = new GameObject("bb");
+        bbGo.transform.SetParent(allyGo.transform, false);
+        var bb = bbGo.AddComponent<PlayerBlackboard>();
+        bb.BasicData.init(allyGo);
+        typeof(PlayerBasicData).GetProperty("PlayerID")!
+            .SetValue(bb.BasicData, 1001, null);
+        bb.SetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true"), true);
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        bb.PhysicalState.updatePhysicalInfo(new Vector3(0f, 0f, 6f), Vector3.zero);
+
+        var actions = new List<GoapActionSO>
+        {
+            ScriptableObject.CreateInstance<DribbleTowardGoalActionSO>(),
+            ScriptableObject.CreateInstance<PassToTeammateActionSO>(),
+            ScriptableObject.CreateInstance<ShootAtGoalActionSO>(),
+        };
+
+        try
+        {
+            SetPrivateField(shoot, "_shootCoroutine", host.StartCoroutine(CoroutineHost.DummyWait()));
+            Assert.That(MainNpcAttackPlanning.CanShootAtGoal(bb), Is.True);
+            Assert.That(MainNpcAttackPlanning.CanExecuteShootAtGoal(bb), Is.False);
+            Assert.That(
+                MainNpcAttackPlanning.TryBuildForcedAttackPlan(bb, actions, out var plan),
+                Is.True);
+            Assert.That(plan!.Peek(), Is.InstanceOf<DribbleTowardGoalActionSO>());
+        }
+        finally
+        {
+            foreach (var action in actions)
+            {
+                Object.DestroyImmediate(action);
+            }
+
+            SetStaticField(typeof(TeamFacade), "_instance", null);
+            Object.DestroyImmediate(allyGo);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void TryBuildForcedAttackPlan_ExcludeShoot_SkipsShootEvenWhenExecutable()
+    {
+        var root = new GameObject("teamFacade");
+        var teamFacade = root.AddComponent<TeamFacade>();
+        var teamBb = root.AddComponent<TeamBlackboard>();
+        var regist = root.AddComponent<TeamRegistar>();
+        SetPrivateField(teamFacade, "_teamBlackboard", teamBb);
+        SetPrivateField(teamFacade, "_teamRegistar", regist);
+        SetStaticField(typeof(TeamFacade), "_instance", teamFacade);
+        teamBb.FieldInfo.Initialize(40f, 20f);
+        teamBb.BallInfo.Initialize();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, new Vector3(0f, 0f, 6f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var allyGo = new GameObject("ally");
+        allyGo.AddComponent<AnimalFacade>();
+        allyGo.AddComponent<AnimalControlAssignment>().SetRole(AnimalControlRole.Human);
+        var bbGo = new GameObject("bb");
+        bbGo.transform.SetParent(allyGo.transform, false);
+        var bb = bbGo.AddComponent<PlayerBlackboard>();
+        bb.BasicData.init(allyGo);
+        typeof(PlayerBasicData).GetProperty("PlayerID")!
+            .SetValue(bb.BasicData, 1001, null);
+        bb.SetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true"), true);
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        bb.PhysicalState.updatePhysicalInfo(new Vector3(0f, 0f, 6f), Vector3.zero);
+
+        var actions = new List<GoapActionSO>
+        {
+            ScriptableObject.CreateInstance<DribbleTowardGoalActionSO>(),
+            ScriptableObject.CreateInstance<PassToTeammateActionSO>(),
+            ScriptableObject.CreateInstance<ShootAtGoalActionSO>(),
+        };
+
+        try
+        {
+            Assert.That(MainNpcAttackPlanning.CanExecuteShootAtGoal(bb), Is.True);
+            Assert.That(
+                MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                    bb,
+                    actions,
+                    out var plan,
+                    excludeShoot: true),
+                Is.True);
+            Assert.That(plan!.Peek(), Is.Not.InstanceOf<ShootAtGoalActionSO>());
+        }
+        finally
+        {
+            foreach (var action in actions)
+            {
+                Object.DestroyImmediate(action);
+            }
+
+            SetStaticField(typeof(TeamFacade), "_instance", null);
+            Object.DestroyImmediate(allyGo);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void TryBuildForcedAttackPlan_FallsBackToDribbleWhenOnlyForceDribbleAvailable()
     {
         var root = new GameObject("teamFacade");
@@ -552,6 +674,14 @@ public sealed class MainNpcAttackPlanningEditModeTests
             fieldName,
             System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
         field?.SetValue(null, value);
+    }
+
+    private sealed class CoroutineHost : MonoBehaviour
+    {
+        public static System.Collections.IEnumerator DummyWait()
+        {
+            yield return null;
+        }
     }
 }
 #endif

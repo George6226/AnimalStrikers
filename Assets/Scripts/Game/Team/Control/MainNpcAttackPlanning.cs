@@ -195,6 +195,18 @@ public static class MainNpcAttackPlanning
         return distance >= minDistance && distance <= maxDistance;
     }
 
+    /// <summary>プランナー選出とランタイム実行の整合用（シュート進行中は不可）。</summary>
+    public static bool CanExecuteShootAtGoal(PlayerBlackboard bb)
+    {
+        if (!CanShootAtGoal(bb))
+        {
+            return false;
+        }
+
+        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+        return facade != null && !GoapBallActionGuard.IsShootInProgress(facade);
+    }
+
     public static bool CanDribbleTowardGoal(PlayerBlackboard bb)
     {
         if (!IsBallPossessionAttackContext(bb))
@@ -755,7 +767,8 @@ public static class MainNpcAttackPlanning
     public static bool TryBuildForcedAttackPlan(
         PlayerBlackboard bb,
         IEnumerable<GoapActionSO> scopedActions,
-        out Queue<GoapActionSO> plan)
+        out Queue<GoapActionSO> plan,
+        bool excludeShoot = false)
     {
         plan = null;
         if (!IsActivelyHoldingBall(bb) || !IsBallPossessionAttackContext(bb) || scopedActions == null)
@@ -777,7 +790,8 @@ public static class MainNpcAttackPlanning
                 continue;
             }
 
-            if (action is ShootAtGoalActionSO && !CanShootAtGoal(bb))
+            if (action is ShootAtGoalActionSO
+                && (excludeShoot || !CanExecuteShootAtGoal(bb)))
             {
                 continue;
             }

@@ -23,10 +23,7 @@ public class ShootAtGoalActionRuntime : GoapActionRuntime
 
     public override bool CanExecute(PlayerBlackboard bb)
     {
-        AnimalFacade facade = GoapMainNpcAttackBridge.ResolveFacade(bb);
-        return MainNpcAttackPlanning.CanShootAtGoal(bb)
-            && facade != null
-            && !GoapBallActionGuard.IsShootInProgress(facade);
+        return MainNpcAttackPlanning.CanExecuteShootAtGoal(bb);
     }
 
     public override void Execute(PlayerBlackboard bb)

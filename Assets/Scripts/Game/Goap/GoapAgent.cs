@@ -1045,6 +1045,7 @@ public class GoapAgent : MonoBehaviour
             // 複数のプランから一番コストが低いものを選択
             var bestPlan = SelectBestPlanFromPlans(plans);
             bestPlan = PreferForcedBallPossessionAttackPlan(bestGoal, goalActions, bestPlan);
+            bestPlan = SanitizeBallPossessionAttackPlan(bestGoal, goalActions, bestPlan);
             if ((bestPlan == null || bestPlan.Count == 0)
                 && TryBuildForcedTacticalPlanForGoal(_playerBlackboard, goalActions, out var forcedPlan))
             {
@@ -1073,6 +1074,10 @@ public class GoapAgent : MonoBehaviour
             && forcedPlanWhenNoCandidates.Count > 0)
         {
             forcedPlanWhenNoCandidates = PreferForcedBallPossessionAttackPlan(
+                bestGoal,
+                goalActions,
+                forcedPlanWhenNoCandidates);
+            forcedPlanWhenNoCandidates = SanitizeBallPossessionAttackPlan(
                 bestGoal,
                 goalActions,
                 forcedPlanWhenNoCandidates);
@@ -1270,6 +1275,38 @@ public class GoapAgent : MonoBehaviour
         float forcedCost = ComputePlanTotalCost(forcedPlan);
         float plannerCost = ComputePlanTotalCost(plannerPlan);
         return forcedCost < plannerCost ? forcedPlan : plannerPlan;
+    }
+
+    /// <summary>
+    /// プランナーが選んだ ShootAtGoal が実行不可（シュート進行中など）のとき、Pass/Dribble へ差し替える。
+    /// </summary>
+    private Queue<GoapActionSO> SanitizeBallPossessionAttackPlan(
+        GoapGoalSO goal,
+        List<GoapActionSO> goalActions,
+        Queue<GoapActionSO> plan)
+    {
+        if (goal is not BallPossessionAttackGoalSO
+            || plan == null
+            || plan.Count == 0
+            || plan.Peek() is not ShootAtGoalActionSO
+            || MainNpcAttackPlanning.CanExecuteShootAtGoal(_playerBlackboard))
+        {
+            return plan;
+        }
+
+        if (!MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> fallback,
+                excludeShoot: true)
+            || fallback == null
+            || fallback.Count == 0)
+        {
+            return plan;
+        }
+
+        LogSummary("ShootPlanSanitized(substitute=" + fallback.Peek().ActionName + ")");
+        return fallback;
     }
 
     private static bool TryBuildForcedTacticalPlanForGoal(
@@ -1641,6 +1678,23 @@ public class GoapAgent : MonoBehaviour
                 return;
             }
 
+            if (_currentAction is ShootAtGoalActionRuntime
+                && GoapMainNpcAttackBridge.ResolveFacade(_playerBlackboard) is AnimalFacade shootFacade
+                && GoapBallActionGuard.IsShootInProgress(shootFacade))
+            {
+                _nextAllowedReplanTime = Mathf.Max(_nextAllowedReplanTime, Time.time + 0.15f);
+                LogSummary($"ActionDeferred(action=ShootAtGoal, reason=shoot_in_progress)");
+                _currentAction = null;
+                _planFailed = false;
+                return;
+            }
+
+            if (_currentAction is ShootAtGoalActionRuntime
+                && TrySubstituteRejectedShootAtGoal())
+            {
+                return;
+            }
+
             DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション実行不可 -> {_currentAction.DisplayName}");
             if (IsMovementActionStaleReject(_currentAction))
             {
@@ -1662,6 +1716,46 @@ public class GoapAgent : MonoBehaviour
         
         DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション開始 -> {_currentAction.DisplayName}");
         LogSummary($"ActionStart(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName})");
+    }
+
+    private bool TrySubstituteRejectedShootAtGoal()
+    {
+        if (_currentGoal is not BallPossessionAttackGoalSO)
+        {
+            return false;
+        }
+
+        var goalActions = FilterActionsForGoal(_currentGoal, _availableActions);
+        if (!MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                _playerBlackboard,
+                goalActions,
+                out Queue<GoapActionSO> fallback,
+                excludeShoot: true)
+            || fallback == null
+            || fallback.Count == 0)
+        {
+            return false;
+        }
+
+        _currentAction = null;
+        _planFailed = false;
+        foreach (GoapActionSO actionSO in fallback)
+        {
+            GoapActionRuntime runtime = actionSO.CreateRuntime(GetRuntimeDebugName(actionSO));
+            if (runtime != null && runtime.CanExecute(_playerBlackboard))
+            {
+                _currentPlan.Enqueue(runtime);
+            }
+        }
+
+        if (_currentPlan.Count == 0)
+        {
+            return false;
+        }
+
+        LogSummary("ShootRejectedSubstitute(action=" + fallback.Peek().ActionName + ")");
+        ExecuteNextAction();
+        return true;
     }
 
     // 現在のアクションを更新する
