@@ -16,6 +16,14 @@ public static class GoalkeeperPositioning
         public readonly Vector3 TargetPosition;
         public readonly Mode Mode;
         public readonly bool IsUnderThreat;
+
+        public Result(bool isValid, Vector3 targetPosition, Mode mode, bool isUnderThreat)
+        {
+            IsValid = isValid;
+            TargetPosition = targetPosition;
+            Mode = mode;
+            IsUnderThreat = isUnderThreat;
+        }
     }
 
     /// <summary>敵 GK は ENEMY タグでミラー視点。</summary>
@@ -87,13 +95,11 @@ public static class GoalkeeperPositioning
                 homeZ);
         }
 
-        return new Result
-        {
-            IsValid = true,
-            TargetPosition = ClampToField(target, field),
-            Mode = mode,
-            IsUnderThreat = underThreat,
-        };
+        return new Result(
+            true,
+            ClampToField(target, field),
+            mode,
+            underThreat);
     }
 
     public static bool IsInDefensiveZone(Vector3 ballPosition, Vector3 defendGoal, Vector3 fieldCenter)
