@@ -61,8 +61,14 @@ public static class ConstData
     // パス精度ブレ角（Pass=0 のときの最大角度）
     public static float MAX_PASS_SPREAD_ANGLE = 20.0f;
 
-    // 待機時のHP回復量（毎秒）
+    // 待機時のスタミナ回復量（毎秒）
     public static float STAND_HEAL_PER_SECOND = 20.0f;
+
+    /// <summary>通常移動時のスタミナ回復量（毎秒）。</summary>
+    public static float STAMINA_NORMAL_MOVE_HEAL_PER_SECOND = 20.0f;
+
+    /// <summary>ダッシュ移動時のスタミナ消費量（毎秒）。</summary>
+    public static float STAMINA_DASH_DRAIN_PER_SECOND = 20.0f;
 
     /// <summary>スタミナ残量がこの比率以下で移動速度が低下し始める（F1）。</summary>
     public static float STAMINA_LOW_MOVE_RATIO_THRESHOLD = 0.25f;

@@ -78,12 +78,8 @@ public class PhotonHPGauge : MonoBehaviourPunCallbacks, IPunObservable
     // HPを回復する
     public void healHP(float value)
     {
-        if(photonView.IsMine)
-        {
-            _currentHP = Mathf.Min(_currentHP + value, _maxHP);
-            // Debug.Log("PhotonHPGauge:healHP:"+_currentHP+" 最大HP:"+_maxHP +" 回復量:"+value);
-            changeGuage();
-        }
+        _currentHP = Mathf.Min(_currentHP + value, _maxHP);
+        changeGuage();
     }
     // ゲージを変更する
     private void changeGuage()

@@ -76,7 +76,7 @@ public class AnimalHandler : MonoBehaviour
     }
 
     // 移動する
-    public void move(float per, float speedMag)
+    public void move(float per, float speedMag, bool isDashing = false)
     {
         // スペシャル中
         if (AnimalAction_Special.IsSpecialActive){
@@ -91,23 +91,44 @@ public class AnimalHandler : MonoBehaviour
         // 移動アニメーション
         _animeChange.changeAnimation((int)AnimalAnime_State.PLAYER_ANIME_KIND.MOVE);
 
-        if(_hpGauge != null)
-        {
-            var myAvatar = _myFacade != null ? _myFacade.GetAvatar() : null;
-            string myTag = myAvatar != null ? myAvatar.tag : string.Empty;
-            bool hasAttackBuff = TeamFacade.Instance != null
-                && TeamFacade.Instance.TeamState != null
-                && TeamFacade.Instance.TeamState.HasAttackBuffByTag(myTag);
-            if (hasAttackBuff)
-            {
-                return;
-            }
+        ApplyStaminaChangeForMove(per, isDashing);
+    }
 
-            float drainPerSec = (speedMag <= 1.0f) ? 10.0f : 20.0f;
-            // 毎秒の減少量を「値」で計算
-            float useValue = per * Time.deltaTime * drainPerSec;
-            _hpGauge.useHP(useValue);
+    private void ApplyStaminaChangeForMove(float moveIntensity, bool isDashing)
+    {
+        if (_hpGauge == null)
+        {
+            return;
         }
+
+        var myAvatar = _myFacade != null ? _myFacade.GetAvatar() : null;
+        string myTag = myAvatar != null ? myAvatar.tag : string.Empty;
+        bool hasAttackBuff = TeamFacade.Instance != null
+            && TeamFacade.Instance.TeamState != null
+            && TeamFacade.Instance.TeamState.HasAttackBuffByTag(myTag);
+        if (hasAttackBuff)
+        {
+            return;
+        }
+
+        float deltaPerSec = ComputeStaminaChangePerSecond(isDashing);
+        float value = moveIntensity * Time.deltaTime * Mathf.Abs(deltaPerSec);
+        if (deltaPerSec < 0f)
+        {
+            _hpGauge.useHP(value);
+        }
+        else
+        {
+            _hpGauge.healHP(value);
+        }
+    }
+
+    /// <summary>移動種別ごとのスタミナ変化量（+/秒=回復、-/秒=消費）。</summary>
+    public static float ComputeStaminaChangePerSecond(bool isDashing)
+    {
+        return isDashing
+            ? -ConstData.STAMINA_DASH_DRAIN_PER_SECOND
+            : ConstData.STAMINA_NORMAL_MOVE_HEAL_PER_SECOND;
     }
 
     /// <summary>
