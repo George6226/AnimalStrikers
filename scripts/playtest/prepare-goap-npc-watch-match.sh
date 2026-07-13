@@ -184,6 +184,7 @@ echo "    ./scripts/playtest/analyze-phase-c-integration-log.sh Assets/DebugLog/
 echo ""
 echo "  パス受け指標も見る場合:"
 echo "    MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog/GoapSummary_latest.txt"
+echo "    （末尾の GOAP仕上げゲート G0〜G4 で ActionRejected / PlanFailure / 敵 NoGoal 上限を判定）"
 echo ""
 echo "  3 分 CLI 自動実行（Unity バッチ）:"
 echo "    ./scripts/playtest/run-phase-d-3min-playtest.sh"

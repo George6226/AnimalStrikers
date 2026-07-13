@@ -1,6 +1,6 @@
 # AnimalStrikers GOAP & ゲーム機能ロードマップ
 
-最終更新: 2026-07-10
+最終更新: 2026-07-13
 
 ## 完了済み
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 現在: GOAP 仕上げ（G0〜G5）
+## 現在: GOAP 仕上げ（G0〜G6）
 
 | ID | 課題 | 状態 | ブランチ/PR |
 |----|------|------|-------------|
@@ -22,8 +22,9 @@
 | **G1** | ShootAtGoal ActionRejected ループ | **完了 (#44 / Play 合格)** | `fix/goap-g1-shoot-rejected` |
 | **G2** | FreeBallRecovery PlanFailure（Boar/Gorilla） | **完了 (#45 / Play 合格)** | `fix/goap-g2-freeball-planfailure` |
 | **G3** | IncomingPassReceive PlanFailure | **完了 (#46 / Play 合格)** | `fix/goap-g3-incoming-pass-planfailure` |
-| G4 | 敵 NPC NoGoalSelected（Crocodile 等） | 未着手 | |
-| G5 | 検証スクリプト上限の更新 | 未着手 | |
+| **G4** | 敵 NPC NoGoalSelected（Crocodile 等） | **完了 (#47+#48+#49 / Play 合格)** | `fix/goap-g4c-post-shoot-grace` |
+| **G5** | 検証スクリプト上限の更新 | **完了 (#50)** | `chore/goap-g5-play-gate-limits` |
+| G6 | 味方 Main NoGoalSelected（Lion/Gorilla 等） | 未着手（G4 から分離） | |
 
 ### G0 完了条件
 
@@ -70,13 +71,53 @@
 
 アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g3_play_pass_20260713_20260713_113345.txt`
 
+### G4 Play 検証結果（`goap_g4c_play_pass_20260713` / main @ 2961f2b）
+
+| 指標 | G3 修正前 | G4b (#48) | 今回 (#49) | 判定 |
+|------|-----------|-----------|------------|------|
+| Crocodile `NoGoalSelected` | 49 | 52 | **13** | ✅ |
+| Elephant `NoGoalSelected` | 13 | 9 | **2** | ✅ |
+| 敵 NPC 合計 | 62 | 64 | **15** | ✅ |
+| Shoot→NoGoal | 18 | 15 | **0** | ✅ |
+| `ForcedPostShootDefensePlan(postShootGrace)` | — | 0 | **262** | ✅ |
+| 全体 `NoGoalSelected` | 110 | 138 | **59** | △（G6 へ分離） |
+| G1/G2/G3 回帰 | 0 | 0 | **0** | ✅ |
+| Phase D コア | PASS 10/10 | PASS 10/10 | **PASS 10/10** | ✅ |
+
+アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g4c_play_pass_20260713_play_20260713_135442.txt`
+
+**G4 修正の流れ**: #47 守備文脈拡張 → #48 `ForcedPostShootDefensePlan` → #49 `ShootAtGoal` 完了後 0.75s 猶予窓
+
+### G5 完了内容
+
+- `scripts/playtest/goap-play-gate-config.sh` — G0〜G4 Play 上限の単一ソース
+- `analyze-phase-d-pass-receive-log.sh` — G1/G2/G3 回帰（FAIL）+ G4 敵 NPC（FAIL）+ 全体 NoGoal（WARN・G6 まで）
+- `docs/goap-ci.md` — EditMode 期待件数 140 → **178**
+
+G4c アーカイブでのゲート検証:
+
+```bash
+MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
+  Assets/DebugLog/archives/GoapSummary_goap_g4c_play_pass_20260713_play_20260713_135442.txt
+```
+
+### G6 概要（G4 Play で判明・別タスク）
+
+G4 合格後も全体 `NoGoalSelected` が 59 件残る。主因は味方 Main（Lion 17 / Gorilla 16）と味方 Sub（Boar 11）。敵 NPC は G4 で解消済み。
+
+| 指標 | G4c 時点 | G6 目標 |
+|------|----------|---------|
+| Lion `NoGoalSelected` | 17 | 激減 |
+| Gorilla `NoGoalSelected` | 16 | 激減 |
+| 全体 `NoGoalSelected` | 59 | **< 20** |
+
 ### GOAP 仕上げ全体の出口条件（3分 Play）
 
 | 指標 | 目標 |
 |------|------|
 | `missed+nogal` | 0 維持 |
 | `NoGoalIdle(wait>=3s)` | 0 維持 |
-| `NoGoalSelected`（試合中） | < 20 |
+| `NoGoalSelected`（試合中） | < 20（**G6 で対応**） |
 | `ActionRejected(ShootAtGoal)` | < 5 |
 | `PlanFailure(FreeBallRecovery)` | < 10 |
 | Phase D コア | 回帰なし |
@@ -87,6 +128,7 @@
 ./scripts/playtest/prepare-goap-npc-watch-match.sh goap_polish_<日付>
 # Unity 3分 Play
 MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog/GoapSummary_latest.txt
+# G0〜G4 ゲート（ActionRejected / PlanFailure / 敵 NoGoal 等）は同スクリプト末尾で自動判定
 ```
 
 ---
@@ -125,7 +167,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 ```
 [完了] M1/M2/M3 + P1/P2
   ↓
-[今] GOAP仕上げ G0〜G5
+[今] GOAP仕上げ G6（G0〜G5 完了）
   ↓
 [F1] スタミナ枯渇減速
   ↓

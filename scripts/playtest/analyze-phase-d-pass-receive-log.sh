@@ -8,6 +8,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# shellcheck source=goap-play-gate-config.sh
+source "${SCRIPT_DIR}/goap-play-gate-config.sh"
 LOG="${1:-${PROJECT_ROOT}/Assets/DebugLog/GoapSummary_latest.txt}"
 MODE="${MODE:-full}"
 ALLY_OWNER="${ALLY_OWNER:-Lion}"
@@ -68,9 +70,13 @@ check_max() {
   local label="$1"
   local count="$2"
   local max="$3"
+  local severity="${4:-warn}"
   if [[ "${count}" -le "${max}" ]]; then
     echo "  ✅ ${label}: ${count} 件（上限 ${max}）"
     pass_count=$((pass_count + 1))
+  elif [[ "${severity}" == "fail" ]]; then
+    echo "  ❌ ${label}: ${count} 件（上限 ${max}）"
+    fail_count=$((fail_count + 1))
   else
     echo "  ⚠️  ${label}: ${count} 件（目安 <= ${max}）"
     warn_count=$((warn_count + 1))
@@ -211,10 +217,66 @@ grep -E 'ReceivePassOutcome|PassReceiveComplete|ReceivePassTransition|ActionComp
   | tail -24 || echo "(該当なし)"
 echo ""
 
+echo "--- GOAP仕上げゲート (G0〜G4) ---"
+
+shoot_rejected=$(grep -c 'ActionRejected(action=ShootAtGoal' "${LOG}" || true)
+freeball_failure=$(grep -c 'PlanFailure(goal=FreeBallRecovery' "${LOG}" || true)
+incoming_failure=$(grep -c 'PlanFailure(goal=IncomingPassReceive' "${LOG}" || true)
+forced_post_shoot=$(grep -c 'ForcedPostShootDefensePlan' "${LOG}" || true)
+nogoal_total=$(grep -c 'NoGoalSelected' "${LOG}" || true)
+
+check_max "ActionRejected(ShootAtGoal)" "${shoot_rejected}" "${GOAP_GATE_MAX_ACTION_REJECTED_SHOOT}" fail
+check_max "PlanFailure(FreeBallRecovery)" "${freeball_failure}" "${GOAP_GATE_MAX_PLAN_FAILURE_FREEBALL}" fail
+check_max "PlanFailure(IncomingPassReceive)" "${incoming_failure}" "${GOAP_GATE_MAX_PLAN_FAILURE_INCOMING}" fail
+
+eval "$(python3 - "${LOG}" "${GOAP_GATE_SHOOT_NOGOAL_LINES}" <<'PY'
+import sys
+
+log_path, window_lines = sys.argv[1], int(sys.argv[2])
+lines = open(log_path, encoding="utf-8", errors="replace").read().splitlines()
+
+shoot_nogal = 0
+for i, line in enumerate(lines):
+    if "ActionComplete(action=ShootAtGoal" not in line and "ActionStart(action=ShootAtGoal" not in line:
+        continue
+    window = "\n".join(lines[i + 1 : i + 1 + window_lines])
+    if "NoGoalSelected" in window:
+        shoot_nogal += 1
+
+miss_nogal = sum(
+    1
+    for line in lines
+    if "ReceivePassTransition" in line and "transition=nogal" in line and "received=false" in line
+)
+
+print(f"GOAP_MET_SHOOT_NOGOAL={shoot_nogal}")
+print(f"GOAP_MET_MISSED_NOGAL={miss_nogal}")
+PY
+)"
+check_max "Shoot→NoGoal（直後 ${GOAP_GATE_SHOOT_NOGOAL_LINES} 行）" "${GOAP_MET_SHOOT_NOGOAL}" "${GOAP_GATE_MAX_SHOOT_NOGOAL_WINDOW}" fail
+check_max "missed+nogal（受け失敗→NoGoal）" "${GOAP_MET_MISSED_NOGAL}" 0 fail
+
+if [[ "${MODE}" == "full" ]]; then
+  croc_nogal=$(grep -E 'owner=Crocodile' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  elephant_nogal=$(grep -E 'owner=Elephant' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  shark_nogal=$(grep -E 'owner=Shark' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  enemy_nogal=$((croc_nogal + elephant_nogal + shark_nogal))
+
+  check_max "敵 Crocodile NoGoalSelected" "${croc_nogal}" "${GOAP_GATE_MAX_ENEMY_NOGOAL_CROCODILE}" fail
+  check_max "敵 Elephant NoGoalSelected" "${elephant_nogal}" "${GOAP_GATE_MAX_ENEMY_NOGOAL_ELEPHANT}" fail
+  check_max "敵 NPC NoGoalSelected 合計" "${enemy_nogal}" "${GOAP_GATE_MAX_ENEMY_NOGOAL_TOTAL}" fail
+  check_count "ForcedPostShootDefensePlan" "${forced_post_shoot}" "${GOAP_GATE_MIN_FORCED_POST_SHOOT_DEFENSE}" warn
+else
+  echo "  ℹ️  MODE=ally: G4 敵 NPC 指標はスキップ（MODE=full で検証）"
+fi
+
+check_max "全体 NoGoalSelected（G6 まで WARN）" "${nogoal_total}" "${GOAP_GATE_WARN_TOTAL_NOGOAL}" warn
+echo "  ℹ️  上限定義: scripts/playtest/goap-play-gate-config.sh"
+
 echo "--- サマリ ---"
 echo "  PASS: ${pass_count} / WARN: ${warn_count} / FAIL: ${fail_count}"
 if [[ "${fail_count}" -eq 0 ]]; then
-  echo "  判定: コア回帰なし（WARN はプレイ内容・MODE による）"
+  echo "  判定: コア回帰なし（WARN はプレイ内容・MODE・G6 指標による）"
 else
   echo "  判定: 要調査 — ログ全文または Diag を確認"
 fi
