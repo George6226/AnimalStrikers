@@ -24,7 +24,7 @@
 | **G3** | IncomingPassReceive PlanFailure | **完了 (#46 / Play 合格)** | `fix/goap-g3-incoming-pass-planfailure` |
 | **G4** | 敵 NPC NoGoalSelected（Crocodile 等） | **完了 (#47+#48+#49 / Play 合格)** | `fix/goap-g4c-post-shoot-grace` |
 | **G5** | 検証スクリプト上限の更新 | **完了 (#50)** | `chore/goap-g5-play-gate-limits` |
-| **G6** | 味方 Main NoGoalSelected（Lion/Gorilla 等） | **実装 (#51)** | `fix/goap-g6-ally-nogoal-fallback` |
+| **G6** | 味方 Main NoGoalSelected（Lion/Gorilla 等） | **完了 (#51+#52 / Play 合格)** | `fix/goap-g6b-defense-grace-hasball` |
 
 ### G0 完了条件
 
@@ -101,6 +101,25 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
   Assets/DebugLog/archives/GoapSummary_goap_g4c_play_pass_20260713_play_20260713_135442.txt
 ```
 
+### G6 Play 検証結果（`goap_g6_play_pass_20260713` / main @ 71ae3b4 + #52 修正）
+
+| 指標 | G4c (#49) | G6 初回 (#51) | 今回 (#52) | 判定 |
+|------|-----------|---------------|------------|------|
+| Lion `NoGoalSelected` | 17 | 19 | **0** | ✅ |
+| Gorilla `NoGoalSelected` | 16 | 2 | **2** | ✅ |
+| Boar `NoGoalSelected` | 11 | 2 | **2** | ✅ |
+| Crocodile `NoGoalSelected` | 13 | 33 | **0** | ✅ |
+| 全体 `NoGoalSelected` | 59 | 63 | **8** | ✅ (< 20) |
+| Shoot→NoGoal | 0 | 28* | **0** | ✅ |
+| G1/G2/G3 回帰 | 0 | 0 | **0** | ✅ |
+| Phase D コア | PASS | PASS | **PASS 22/22** | ✅ |
+
+\*初回は `HAS_BALL` 判定順のバグ + Shoot 指標が ActionStart も含んでいたため過大計上
+
+**#52 修正**: `NeedsForcedDefensePlanWhenNoGoal` でシュート猶予を `HAS_BALL` チェックより先に評価
+
+アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g6_play_pass_20260713_20260713_145638.txt`
+
 ### G6 実装内容
 
 `SelectBestGoal returned null` 時のフォールバック強化:
@@ -175,7 +194,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 ```
 [完了] M1/M2/M3 + P1/P2
   ↓
-[今] GOAP仕上げ G6 Play 検証（G0〜G6 実装完了）
+[完了] GOAP仕上げ G0〜G6
   ↓
 [F1] スタミナ枯渇減速
   ↓
