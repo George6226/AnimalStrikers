@@ -166,7 +166,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 |----|-----|------|------|-------------|
 | 1 | **F1** | スタミナ枯渇による移動速度低下 | **完了 (#53)** · 目視 OK | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
 | 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | **完了 (#54)** · 目視 OK | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
-| 3 | **F3** | GK 実装（GOAP 外・独立） | **実装中** | `GoalkeeperNpcBrain.cs`, `GoalkeeperPositioning.cs` |
+| 3 | **F3** | GK 実装（GOAP 外・独立） | **完了 (#56)** · 目視待ち | `GoalkeeperNpcBrain.cs`, `GoalkeeperPositioning.cs` |
 | 4 | **F4** | Main NPC スライディング/タックル GOAP | 未着手 | `AnimalAction_Sliding.cs`, GOAP カタログ |
 | 5 | **F5** | 必殺技の NPC/GOAP 接続 | 未着手 | `AnimalAction_Special.cs`, キャラ別 SpecialActions |
 
@@ -189,6 +189,8 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 - `GoalkeeperPositioning`: ゴールライン位置・ボール X 追従・ルーズボール接近
 - `GoalkeeperNpcBrain`: 味方/敵 GK 共通の `FixedUpdate` 移動（GOAP 外）
+
+**目視確認**: `./scripts/playtest/prepare-f3-goalkeeper-visual-check.sh`
 
 **F1 と F3 は並行可能。** F2 は F1 の直後。F4/F5 は GOAP 仕上げ完了後。
 
