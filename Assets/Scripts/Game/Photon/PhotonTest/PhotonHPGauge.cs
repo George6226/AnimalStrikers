@@ -15,6 +15,11 @@ public class PhotonHPGauge : MonoBehaviourPunCallbacks, IPunObservable
     [SerializeField] private AnimalFacade _myFacade;
     private float _maxHP = ConstData.DEFAULT_HP;
     private float _currentHP = ConstData.DEFAULT_HP;
+
+    public float CurrentHP => _currentHP;
+    public float MaxHP => _maxHP;
+    public float StaminaRatio => _maxHP > 0f ? _currentHP / _maxHP : 0f;
+    public bool IsExhausted => _currentHP <= 0f;
     
     // HPバーの表示状態
     private bool _isVisible = true;
