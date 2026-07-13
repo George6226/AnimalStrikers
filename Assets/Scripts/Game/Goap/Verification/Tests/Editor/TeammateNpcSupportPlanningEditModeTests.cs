@@ -1,3 +1,5 @@
+using Game.Goap;
+using Game.Goap.Goals;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -418,6 +420,50 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
                 needsMovement,
                 TeammateNpcSupportPlanning.NeedsTacticalSupportMovement(bb),
                 $"{label} slot{slot} needsMovement");
+        }
+    }
+
+    [Test]
+    public void NeedsForcedSupportPlanWhenNoGoal_TrueDuringPostPassGrace()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+        PlayerBlackboard bb = _fixture.GetBlackboard(1);
+
+        Assert.That(
+            TeammateNpcSupportPlanning.NeedsForcedSupportPlanWhenNoGoal(bb, Time.time + 1f),
+            Is.True);
+    }
+
+    [Test]
+    public void TryBuildForcedSupportPlanWhenNoGoal_ReturnsPlanDuringPostPassGrace()
+    {
+        _fixture.ApplyPattern(GoapSupportLayoutPatternId.CfOwner_Clustered);
+        PlayerBlackboard bb = _fixture.GetBlackboard(1);
+        var goals = new System.Collections.Generic.List<GoapGoalSO>
+        {
+            ScriptableObject.CreateInstance<TeamBallSupportGoalSO>(),
+        };
+        var actions = new System.Collections.Generic.List<GoapActionSO>();
+        GoapTeammateNpcCatalog.NormalizeLists(goals, actions);
+
+        try
+        {
+            Assert.That(
+                TeammateNpcSupportPlanning.TryBuildForcedSupportPlanWhenNoGoal(
+                    bb,
+                    goals,
+                    actions,
+                    out var goal,
+                    out var plan,
+                    Time.time + 1f),
+                Is.True);
+            Assert.That(goal, Is.InstanceOf<TeamBallSupportGoalSO>());
+            Assert.That(plan, Is.Not.Null);
+            Assert.That(plan.Count, Is.EqualTo(1));
+        }
+        finally
+        {
+            Object.DestroyImmediate(goals[0]);
         }
     }
 }

@@ -266,6 +266,13 @@ if [[ "${MODE}" == "full" ]]; then
   check_max "敵 Elephant NoGoalSelected" "${elephant_nogal}" "${GOAP_GATE_MAX_ENEMY_NOGOAL_ELEPHANT}" fail
   check_max "敵 NPC NoGoalSelected 合計" "${enemy_nogal}" "${GOAP_GATE_MAX_ENEMY_NOGOAL_TOTAL}" fail
   check_count "ForcedPostShootDefensePlan" "${forced_post_shoot}" "${GOAP_GATE_MIN_FORCED_POST_SHOOT_DEFENSE}" warn
+
+  lion_nogal=$(grep -E 'owner=Lion' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  gorilla_nogal=$(grep -E 'owner=Gorilla' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  boar_nogal=$(grep -E 'owner=Boar' "${LOG}" | grep -c 'NoGoalSelected' || true)
+  check_max "味方 Lion NoGoalSelected" "${lion_nogal}" "${GOAP_GATE_MAX_ALLY_NOGOAL_LION}" fail
+  check_max "味方 Gorilla NoGoalSelected" "${gorilla_nogal}" "${GOAP_GATE_MAX_ALLY_NOGOAL_GORILLA}" fail
+  check_max "味方 Boar NoGoalSelected" "${boar_nogal}" "${GOAP_GATE_MAX_ALLY_NOGOAL_BOAR}" fail
 else
   echo "  ℹ️  MODE=ally: G4 敵 NPC 指標はスキップ（MODE=full で検証）"
 fi

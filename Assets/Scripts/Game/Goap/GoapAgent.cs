@@ -47,6 +47,10 @@ public class GoapAgent : MonoBehaviour
     [SerializeField] private float _postReceiveTransitionWindowSeconds = 1.25f;
     [Tooltip("ShootAtGoal 完了直後の強制守備プラン猶予（秒）。ボール SHOOT 状態が既に終わっていても NoGoal を防ぐ")]
     [SerializeField] private float _postShootDefenseGraceSeconds = 0.75f;
+    [Tooltip("PassToTeammate 完了直後の TeamBallSupport 猶予（秒）。IsAchievable 同期ズレで NoGoal になるのを防ぐ")]
+    [SerializeField] private float _postPassSupportGraceSeconds = 0.75f;
+    [Tooltip("戦術移動 ActionSkipped 直後の再選出猶予（秒）。ボール遷移中の SelectBestGoal=null を防ぐ")]
+    [SerializeField] private float _tacticalContextGraceSeconds = 0.5f;
     [SerializeField] private bool _debugMode = false;               // デバッグモード
     
     // === 内部状態 ===
@@ -72,6 +76,10 @@ public class GoapAgent : MonoBehaviour
     private float _nextAllowedReplanTime;
     private float _lastReceiveActionCompleteTime = -999f;
     private float _postShootDefenseGraceUntil = float.NegativeInfinity;
+    private float _postPassSupportGraceUntil = float.NegativeInfinity;
+    private float _postDefenseContextGraceUntil = float.NegativeInfinity;
+    private float _postSupportContextGraceUntil = float.NegativeInfinity;
+    private float _postAttackContextGraceUntil = float.NegativeInfinity;
     private string _lastReceiveFinishReason = string.Empty;
     private bool _lastReceiveOutcomeReceived;
     private bool _pendingReceivePassTransitionLog;
@@ -1008,10 +1016,10 @@ public class GoapAgent : MonoBehaviour
         var bestGoal = SelectBestGoal();
         if (bestGoal == null)
         {
-            if (TryBuildForcedPostShootDefensePlanWhenNoGoal(out bestGoal, out Queue<GoapActionSO> postShootPlan))
+            if (TryBuildForcedPlanWhenSelectBestGoalNull(out bestGoal, out Queue<GoapActionSO> forcedPlan))
             {
                 _lastSelectedGoalName = bestGoal.GoalName;
-                return (postShootPlan, bestGoal);
+                return (forcedPlan, bestGoal);
             }
 
             _lastSelectedGoalName = "-";
@@ -1329,30 +1337,136 @@ public class GoapAgent : MonoBehaviour
         return true;
     }
 
-    private bool TryBuildForcedPostShootDefensePlanWhenNoGoal(
+    private bool TryBuildForcedPlanWhenSelectBestGoalNull(
         out GoapGoalSO goal,
         out Queue<GoapActionSO> plan)
     {
         goal = null;
         plan = null;
-        if (!TeammateNpcDefensePlanning.TryBuildForcedPostShootDefensePlan(
+
+        if (TeammateNpcDefensePlanning.TryBuildForcedDefensePlanWhenNoGoal(
                 _playerBlackboard,
                 _availableGoals,
                 _availableActions,
                 out goal,
                 out plan,
-                _postShootDefenseGraceUntil)
-            || goal == null
-            || plan == null
-            || plan.Count == 0)
+                _postShootDefenseGraceUntil,
+                _postDefenseContextGraceUntil)
+            && goal != null
+            && plan != null
+            && plan.Count > 0)
         {
-            return false;
+            string reason = Time.time < _postShootDefenseGraceUntil
+                ? "postShootGrace"
+                : (Time.time < _postDefenseContextGraceUntil ? "defenseContextGrace" : "enemyBallContext");
+            LogSummary("ForcedDefensePlanWhenNoGoal(action=" + plan.Peek().ActionName
+                + ", goal=" + goal.GoalName + ", reason=" + reason + ")");
+            return true;
         }
 
-        LogSummary("ForcedPostShootDefensePlan(action=" +
-            plan.Peek().ActionName + ", goal=" + goal.GoalName + ", reason=" +
-            (Time.time < _postShootDefenseGraceUntil ? "postShootGrace" : "shootTransition") + ")");
-        return true;
+        if (TeammateNpcSupportPlanning.TryBuildForcedSupportPlanWhenNoGoal(
+                _playerBlackboard,
+                _availableGoals,
+                _availableActions,
+                out goal,
+                out plan,
+                _postPassSupportGraceUntil,
+                _postSupportContextGraceUntil)
+            && goal != null
+            && plan != null
+            && plan.Count > 0)
+        {
+            string reason = Time.time < _postPassSupportGraceUntil
+                ? "postPassGrace"
+                : (Time.time < _postSupportContextGraceUntil ? "supportContextGrace" : "teamBallContext");
+            LogSummary("ForcedSupportPlanWhenNoGoal(action=" + plan.Peek().ActionName
+                + ", goal=" + goal.GoalName + ", reason=" + reason + ")");
+            return true;
+        }
+
+        var incomingGoal = _availableGoals.FirstOrDefault(g => g is IncomingPassReceiveGoalSO);
+        if (incomingGoal != null
+            && IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard))
+        {
+            var incomingActions = FilterActionsForGoal(incomingGoal, _availableActions);
+            if (IncomingPassPlanning.TryBuildForcedIncomingPassReceivePlan(
+                    _playerBlackboard,
+                    incomingActions,
+                    out plan)
+                && plan != null
+                && plan.Count > 0)
+            {
+                goal = incomingGoal;
+                LogSummary("ForcedIncomingPassReceivePlan(action=" + plan.Peek().ActionName
+                    + ", reason=selectBestGoalNull)");
+                return true;
+            }
+        }
+
+        var freeBallGoal = _availableGoals.FirstOrDefault(g => g is FreeBallRecoveryGoalSO);
+        if (freeBallGoal != null
+            && MainNpcPostPassPlanning.IsFreeBallRecoveryEligible(_playerBlackboard))
+        {
+            var freeBallActions = FilterActionsForGoal(freeBallGoal, _availableActions);
+            if (MainNpcPostPassPlanning.TryBuildForcedFreeBallRecoveryPlan(
+                    _playerBlackboard,
+                    freeBallActions,
+                    out plan)
+                && plan != null
+                && plan.Count > 0)
+            {
+                goal = freeBallGoal;
+                LogSummary("ForcedFreeBallRecoveryPlan(action=" + plan.Peek().ActionName
+                    + ", reason=selectBestGoalNull)");
+                return true;
+            }
+        }
+
+        var attackGoal = _availableGoals.FirstOrDefault(g => g is BallPossessionAttackGoalSO);
+        if (attackGoal != null
+            && MainNpcAttackPlanning.NeedsForcedAttackPlanWhenNoGoal(
+                _playerBlackboard,
+                _postAttackContextGraceUntil))
+        {
+            var attackActions = FilterActionsForGoal(attackGoal, _availableActions);
+            if (MainNpcAttackPlanning.TryBuildForcedAttackPlan(
+                    _playerBlackboard,
+                    attackActions,
+                    out plan)
+                && plan != null
+                && plan.Count > 0)
+            {
+                goal = attackGoal;
+                LogSummary("ForcedMainAttackPlan(action=" + plan.Peek().ActionName
+                    + ", reason=selectBestGoalNull)");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RecordTacticalContextGrace(string goalName)
+    {
+        if (string.IsNullOrEmpty(goalName))
+        {
+            return;
+        }
+
+        float until = Time.time + _tacticalContextGraceSeconds;
+        switch (goalName)
+        {
+            case "DefensivePositioning":
+            case "EnemyBallDefense":
+                _postDefenseContextGraceUntil = until;
+                break;
+            case "TeamBallSupport":
+                _postSupportContextGraceUntil = until;
+                break;
+            case "BallPossessionAttack":
+                _postAttackContextGraceUntil = until;
+                break;
+        }
     }
 
     private bool TryBuildForcedIncomingPassReceivePlan(
@@ -1506,7 +1620,10 @@ public class GoapAgent : MonoBehaviour
     private (Queue<GoapActionSO> plan, GoapGoalSO goal) TrySelectPostPassSupportPlan()
     {
         var supportGoal = _availableGoals.FirstOrDefault(g => g is TeamBallSupportGoalSO);
-        if (supportGoal == null || !supportGoal.IsAchievable(_playerBlackboard))
+        bool supportContextActive = MainNpcPostPassPlanning.IsTeamBallSupportContext(_playerBlackboard)
+            || Time.time < _postPassSupportGraceUntil;
+        if (supportGoal == null
+            || (!supportGoal.IsAchievable(_playerBlackboard) && !supportContextActive))
         {
             return (null, null);
         }
@@ -1872,6 +1989,7 @@ public class GoapAgent : MonoBehaviour
             DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション実行不可 -> {_currentAction.DisplayName}");
             if (IsMovementActionStaleReject(_currentAction))
             {
+                RecordTacticalContextGrace(DebugCurrentGoalName);
                 LogSummary($"ActionSkipped(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName}, reason=context_changed)");
                 _currentAction = null;
                 _currentPlan.Clear();
@@ -1978,6 +2096,7 @@ public class GoapAgent : MonoBehaviour
             else if (wasPassIssued)
             {
                 _currentGoal = null;
+                _postPassSupportGraceUntil = Time.time + _postPassSupportGraceSeconds;
                 TriggerImmediateReplan(
                     "PassIssued",
                     "PassIssued(passer_released_ball)",

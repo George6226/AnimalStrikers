@@ -214,6 +214,71 @@ public static class TeammateNpcDefensePlanning
         return inGrace || inShootTransition;
     }
 
+    /// <summary>
+    /// SelectBestGoal が null のときの守備強制（シュート猶予・敵ボール文脈・戦術スキップ猶予）。
+    /// </summary>
+    public static bool NeedsForcedDefensePlanWhenNoGoal(
+        PlayerBlackboard bb,
+        float postShootGraceUntil = float.NegativeInfinity,
+        float postDefenseContextGraceUntil = float.NegativeInfinity)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        if (!IsTeammateNpc(bb) && !IsProductionMainFieldPlayer(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            return false;
+        }
+
+        if (NeedsForcedPostShootDefensePlan(bb, postShootGraceUntil))
+        {
+            return true;
+        }
+
+        if (postDefenseContextGraceUntil > Time.time)
+        {
+            return true;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        return IsEnemyBallDefenseContext(teamBB, bb);
+    }
+
+    /// <summary>SelectBestGoal が null のとき、守備ゴール＋戦術守備アクションを強制する。</summary>
+    public static bool TryBuildForcedDefensePlanWhenNoGoal(
+        PlayerBlackboard bb,
+        IEnumerable<GoapGoalSO> availableGoals,
+        List<GoapActionSO> availableActions,
+        out GoapGoalSO goal,
+        out Queue<GoapActionSO> plan,
+        float postShootGraceUntil = float.NegativeInfinity,
+        float postDefenseContextGraceUntil = float.NegativeInfinity)
+    {
+        goal = null;
+        plan = null;
+        if (!NeedsForcedDefensePlanWhenNoGoal(bb, postShootGraceUntil, postDefenseContextGraceUntil)
+            || availableGoals == null
+            || availableActions == null
+            || availableActions.Count == 0)
+        {
+            return false;
+        }
+
+        return TryBuildForcedDefensePlanCore(bb, availableGoals, availableActions, out goal, out plan);
+    }
+
     /// <summary>SelectBestGoal が null のとき、守備ゴール＋戦術守備アクションを強制する。</summary>
     public static bool TryBuildForcedPostShootDefensePlan(
         PlayerBlackboard bb,
@@ -232,6 +297,19 @@ public static class TeammateNpcDefensePlanning
         {
             return false;
         }
+
+        return TryBuildForcedDefensePlanCore(bb, availableGoals, availableActions, out goal, out plan);
+    }
+
+    private static bool TryBuildForcedDefensePlanCore(
+        PlayerBlackboard bb,
+        IEnumerable<GoapGoalSO> availableGoals,
+        List<GoapActionSO> availableActions,
+        out GoapGoalSO goal,
+        out Queue<GoapActionSO> plan)
+    {
+        goal = null;
+        plan = null;
 
         foreach (GoapGoalSO candidate in availableGoals)
         {

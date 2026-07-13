@@ -618,6 +618,118 @@ public static class TeammateNpcSupportPlanning
         return true;
     }
 
+    /// <summary>SelectBestGoal が null のときのサポート強制（パス直後猶予・味方ボール文脈・戦術スキップ猶予）。</summary>
+    public static bool NeedsForcedSupportPlanWhenNoGoal(
+        PlayerBlackboard bb,
+        float postPassSupportGraceUntil = float.NegativeInfinity,
+        float postSupportContextGraceUntil = float.NegativeInfinity)
+    {
+        if (!IsSupportFieldPlayer(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
+        {
+            return false;
+        }
+
+        if (IncomingPassPlanning.IsIncomingPassTarget(bb))
+        {
+            return false;
+        }
+
+        if (postPassSupportGraceUntil > Time.time || postSupportContextGraceUntil > Time.time)
+        {
+            return true;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        return IsTeamBallAttackContext(teamBB, bb)
+            || MainNpcPostPassPlanning.IsTeamBallSupportContext(bb);
+    }
+
+    /// <summary>SelectBestGoal が null のとき、TeamBallSupport ゴール＋サポートアクションを強制する。</summary>
+    public static bool TryBuildForcedSupportPlanWhenNoGoal(
+        PlayerBlackboard bb,
+        IEnumerable<GoapGoalSO> availableGoals,
+        List<GoapActionSO> availableActions,
+        out GoapGoalSO goal,
+        out Queue<GoapActionSO> plan,
+        float postPassSupportGraceUntil = float.NegativeInfinity,
+        float postSupportContextGraceUntil = float.NegativeInfinity)
+    {
+        goal = null;
+        plan = null;
+        if (!NeedsForcedSupportPlanWhenNoGoal(bb, postPassSupportGraceUntil, postSupportContextGraceUntil)
+            || availableGoals == null
+            || availableActions == null
+            || availableActions.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (GoapGoalSO candidate in availableGoals)
+        {
+            if (candidate is not TeamBallSupportGoalSO)
+            {
+                continue;
+            }
+
+            List<GoapActionSO> scopedActions = GoapTeammateNpcCatalog.FilterActionsForGoal(
+                candidate,
+                availableActions);
+            if (scopedActions == null || scopedActions.Count == 0)
+            {
+                continue;
+            }
+
+            if (TryBuildForcedTacticalSupportPlan(bb, scopedActions, out plan)
+                && plan != null
+                && plan.Count > 0)
+            {
+                goal = candidate;
+                return true;
+            }
+
+            GoapActionSO action = VerificationOnlySupportAction != GoapSupportActionUnderTest.None
+                ? scopedActions.FirstOrDefault(a => VerificationOnlySupportAction.MatchesAction(a))
+                : ResolveForcedSupportActionForSlot(bb, scopedActions);
+            if (action == null)
+            {
+                continue;
+            }
+
+            goal = candidate;
+            plan = new Queue<GoapActionSO>();
+            plan.Enqueue(action);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportFieldPlayer(PlayerBlackboard bb)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        if (TeammateNpcDefensePlanning.IsTeammateNpc(bb)
+            || TeammateNpcDefensePlanning.IsProductionMainFieldPlayer(bb))
+        {
+            return true;
+        }
+
+        return IsFieldPlayer(bb);
+    }
+
     public static bool BlocksWhenAlreadyInPassReceivePosition(PlayerBlackboard bb)
     {
         return !ShouldIgnorePassReceivePositionGate(bb);
