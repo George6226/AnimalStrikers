@@ -164,9 +164,9 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 | 順 | ID | 機能 | 状態 | 主なファイル |
 |----|-----|------|------|-------------|
-| 1 | **F1** | スタミナ枯渇による移動速度低下 | **完了 (#53)** | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
-| 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | **完了 (#54)** | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
-| 3 | **F3** | GK 実装（GOAP 外・独立） | 未着手 | `GoalkeeperNpcBrain.cs` |
+| 1 | **F1** | スタミナ枯渇による移動速度低下 | **完了 (#53)** · 目視 OK | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
+| 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | **完了 (#54)** · 目視 OK | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
+| 3 | **F3** | GK 実装（GOAP 外・独立） | **実装中** | `GoalkeeperNpcBrain.cs`, `GoalkeeperPositioning.cs` |
 | 4 | **F4** | Main NPC スライディング/タックル GOAP | 未着手 | `AnimalAction_Sliding.cs`, GOAP カタログ |
 | 5 | **F5** | 必殺技の NPC/GOAP 接続 | 未着手 | `AnimalAction_Special.cs`, キャラ別 SpecialActions |
 
@@ -183,7 +183,12 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 - `AnimalAction_Move` / `AnimalActionSelector`: 速度倍率・入力経路でも同条件を適用
 - `GoapNpcMotor`: `CanUseDash` / `TrySetDash` / `MoveToward(..., useDash)`（戦術統合は 6-D）
 
-**目視確認**: `./scripts/playtest/prepare-f1-f2-stamina-visual-check.sh`
+**目視確認**: `./scripts/playtest/prepare-f1-f2-stamina-visual-check.sh`（2026-07-13 全項目 OK）
+
+### F3 実装内容（MVP）
+
+- `GoalkeeperPositioning`: ゴールライン位置・ボール X 追従・ルーズボール接近
+- `GoalkeeperNpcBrain`: 味方/敵 GK 共通の `FixedUpdate` 移動（GOAP 外）
 
 **F1 と F3 は並行可能。** F2 は F1 の直後。F4/F5 は GOAP 仕上げ完了後。
 
