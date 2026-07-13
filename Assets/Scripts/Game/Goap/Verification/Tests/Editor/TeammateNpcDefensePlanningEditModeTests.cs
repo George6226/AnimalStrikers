@@ -114,6 +114,83 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
         }
     }
 
+    [Test]
+    public void NeedsForcedPostShootDefensePlan_TrueForEnemyNpcDuringOwnShootTransition()
+    {
+        var (teamGo, enemyBb, _, _) = CreateOwnTeamShootReleaseScene(enemyNpc: true);
+        var defensivePositioning = ScriptableObject.CreateInstance<DefensivePositioningGoalSO>();
+
+        try
+        {
+            Assert.That(TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(enemyBb), Is.True);
+            Assert.That(defensivePositioning.IsAchievable(enemyBb), Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(defensivePositioning);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void TryBuildForcedPostShootDefensePlan_ReturnsDefenseWhenSelectBestGoalWouldFail()
+    {
+        var (teamGo, enemyBb, goals, actions) = CreateOwnTeamShootReleaseScene(enemyNpc: true);
+
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.TryBuildForcedPostShootDefensePlan(
+                    enemyBb,
+                    goals,
+                    actions,
+                    out var goal,
+                    out var plan),
+                Is.True);
+            Assert.That(goal, Is.InstanceOf<DefensivePositioningGoalSO>());
+            Assert.That(plan, Is.Not.Null);
+            Assert.That(plan.Count, Is.EqualTo(1));
+            Assert.That(GoapTeammateNpcCatalog.IsDefenseAction(plan.Peek()), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    private static (GameObject teamGo, PlayerBlackboard bb, List<GoapGoalSO> goals, List<GoapActionSO> actions)
+        CreateOwnTeamShootReleaseScene(bool enemyNpc)
+    {
+        var teamGo = new GameObject("teamRoot");
+        var teamFacade = teamGo.AddComponent<TeamFacade>();
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        BindTeamFacadeSingleton(teamFacade, teamBB);
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(1005, BallManager_State.BELONG_TEAM.ENEMY, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.SHOOT);
+
+        var actorGo = new GameObject("actor");
+        actorGo.AddComponent<AnimalFacade>();
+        actorGo.AddComponent<AnimalControlAssignment>().SetRole(
+            enemyNpc ? AnimalControlRole.EnemyFieldNpc : AnimalControlRole.TeammateNpc);
+        var bbGo = new GameObject("PlayerBlackboard");
+        bbGo.transform.SetParent(actorGo.transform, false);
+        var bb = bbGo.AddComponent<PlayerBlackboard>();
+        bb.BasicData.init(bbGo);
+        bb.ActionState.init();
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+        bb.SetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true"), true);
+
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapEnemyNpcCatalog.NormalizeLists(goals, actions, GoapNpcTier.Sub);
+
+        return (teamGo, bb, goals, actions);
+    }
+
     private static (GameObject teamGo, PlayerBlackboard bb) CreateEnemyBallDefenseScene(AnimalControlRole role)
     {
         var teamGo = new GameObject("teamRoot");

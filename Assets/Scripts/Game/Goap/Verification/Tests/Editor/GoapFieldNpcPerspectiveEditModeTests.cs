@@ -268,6 +268,39 @@ public sealed class GoapFieldNpcPerspectiveEditModeTests
     }
 
     [Test]
+    public void IsOwnTeamShootReleaseTransition_TrueForEnemyOwnShoot()
+    {
+        var teamGo = new GameObject("teamBB");
+        var teamBB = teamGo.AddComponent<TeamBlackboard>();
+        teamBB.FieldInfo.Initialize(100f, 60f);
+        teamBB.BallInfo.setExistBall();
+        teamBB.BallInfo.updateBallID(1005, BallManager_State.BELONG_TEAM.ENEMY, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+        teamBB.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.SHOOT);
+
+        var enemyGo = new GameObject("enemy");
+        var enemyAssignment = enemyGo.AddComponent<AnimalControlAssignment>();
+        enemyGo.AddComponent<AnimalFacade>();
+        enemyAssignment.SetRole(AnimalControlRole.EnemyFieldNpc);
+        var enemyBbGo = new GameObject("PlayerBlackboard");
+        enemyBbGo.transform.SetParent(enemyGo.transform, false);
+        var enemyBb = enemyBbGo.AddComponent<PlayerBlackboard>();
+        enemyBb.BasicData.init(enemyBbGo);
+
+        try
+        {
+            Assert.That(GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(teamBB, enemyBb), Is.True);
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, enemyBb), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
     public void IsOpponentBallDefenseContext_TrueDuringEnemyOwnShootTransition()
     {
         var teamGo = new GameObject("teamBB");

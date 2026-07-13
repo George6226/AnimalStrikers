@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Goap;
+using Game.Goap.Goals;
 using System.Linq;
 using UnityEngine;
 
@@ -181,6 +182,84 @@ public static class TeammateNpcDefensePlanning
         plan = new Queue<GoapActionSO>();
         plan.Enqueue(action);
         return true;
+    }
+
+    /// <summary>
+    /// 自軍シュート直後は HAS_BALL の WM ラグで DefensivePositioning が IsAchievable=false になりやすい。
+    /// </summary>
+    public static bool NeedsForcedPostShootDefensePlan(PlayerBlackboard bb)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        if (!IsTeammateNpc(bb) && !IsProductionMainFieldPlayer(bb))
+        {
+            return false;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null
+            || !GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(teamBB, bb))
+        {
+            return false;
+        }
+
+        return bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) == true;
+    }
+
+    /// <summary>SelectBestGoal が null のとき、守備ゴール＋戦術守備アクションを強制する。</summary>
+    public static bool TryBuildForcedPostShootDefensePlan(
+        PlayerBlackboard bb,
+        IEnumerable<GoapGoalSO> availableGoals,
+        List<GoapActionSO> availableActions,
+        out GoapGoalSO goal,
+        out Queue<GoapActionSO> plan)
+    {
+        goal = null;
+        plan = null;
+        if (!NeedsForcedPostShootDefensePlan(bb)
+            || availableGoals == null
+            || availableActions == null
+            || availableActions.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (GoapGoalSO candidate in availableGoals)
+        {
+            if (candidate is not DefensivePositioningGoalSO and not EnemyBallDefenseGoalSO)
+            {
+                continue;
+            }
+
+            List<GoapActionSO> scopedActions = GoapTeammateNpcCatalog.FilterActionsForGoal(
+                candidate,
+                availableActions);
+            if (scopedActions == null || scopedActions.Count == 0)
+            {
+                continue;
+            }
+
+            GoapActionSO action = VerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None
+                ? scopedActions.FirstOrDefault(a => VerificationOnlyDefenseAction.MatchesAction(a))
+                : scopedActions
+                    .OrderBy(a => a.CalculateDynamicCost(bb))
+                    .ThenBy(a => a.CalculateTacticalSelectionCost(bb))
+                    .FirstOrDefault();
+            if (action == null)
+            {
+                continue;
+            }
+
+            goal = candidate;
+            plan = new Queue<GoapActionSO>();
+            plan.Enqueue(action);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>保持者→フリー受け手のパスレーン幾何（BlockPassLane / MTD 委譲判定の共有）。</summary>
