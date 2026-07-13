@@ -106,7 +106,14 @@ public static class GoapFieldNpcPerspective
 
         if (IsPassOrShootTransition(ball))
         {
-            return ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored);
+            if (ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored))
+            {
+                return true;
+            }
+
+            // 自軍シュート直後（ボール未所属）: 攻守切替まで守備へ（敵NPC鏡像で NoGoal 固着を防ぐ）
+            return ball.BallState == BallManager_State.BALL_STATE.SHOOT
+                && ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
         }
 
         return EffectiveEnemyHasBall(teamBB, mirrored) && !EffectiveTeamHasBall(teamBB, mirrored);
