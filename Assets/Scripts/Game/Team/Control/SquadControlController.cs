@@ -896,6 +896,12 @@ public class SquadControlController : MonoBehaviour
 
         assignment.SetRole(role);
 
+        if (role == AnimalControlRole.GoalkeeperNpc
+            && facade.GetComponent<GoalkeeperNpcBrain>() == null)
+        {
+            facade.gameObject.AddComponent<GoalkeeperNpcBrain>();
+        }
+
         var router = facade.GetComponent<AnimalControlBrainRouter>();
         if (router != null)
         {

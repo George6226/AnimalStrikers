@@ -33,18 +33,14 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         {
             _facade = GetComponent<AnimalFacade>();
         }
-    }
 
-    private void OnEnable()
-    {
         if (_assignment != null)
         {
             _assignment.RoleChanged += OnRoleChanged;
-            OnRoleChanged(_assignment.Role);
         }
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         if (_assignment != null)
         {
@@ -54,8 +50,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
     private void OnRoleChanged(AnimalControlRole role)
     {
-        enabled = role == AnimalControlRole.GoalkeeperNpc;
-        if (!enabled)
+        if (role != AnimalControlRole.GoalkeeperNpc)
         {
             _currentMode = GoalkeeperPositioning.Mode.HoldLine;
             StopMoving();
