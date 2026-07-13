@@ -21,7 +21,7 @@
 | **G0** | 本番 Main の守備デッドゾーン（Lion NoGoalSelected） | **完了 (#43)** | `fix/goap-polish-main-defense` |
 | **G1** | ShootAtGoal ActionRejected ループ | **完了 (#44 / Play 合格)** | `fix/goap-g1-shoot-rejected` |
 | **G2** | FreeBallRecovery PlanFailure（Boar/Gorilla） | **完了 (#45 / Play 合格)** | `fix/goap-g2-freeball-planfailure` |
-| **G3** | IncomingPassReceive PlanFailure | **実装中** | `fix/goap-g3-incoming-pass-planfailure` |
+| **G3** | IncomingPassReceive PlanFailure | **完了 (#46 / Play 合格)** | `fix/goap-g3-incoming-pass-planfailure` |
 | G4 | 敵 NPC NoGoalSelected（Crocodile 等） | 未着手 | |
 | G5 | 検証スクリプト上限の更新 | 未着手 | |
 
@@ -55,6 +55,20 @@
 | Phase D コア | PASS 10/10 | **PASS 10/10** | ✅ |
 
 アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g2_play_pass_20260710_20260710_234717.txt`
+
+### G3 Play 検証結果（`goap_g3_play_pass_20260713` / main @ 906388f）
+
+| 指標 | 修正前 | 今回 | 判定 |
+|------|--------|------|------|
+| `PlanFailure(IncomingPassReceive)` | 26（Lion 15 / Boar 11） | **0** | ✅ |
+| `ForcedIncomingPassReceivePlan` | — | **10**（Lion 9 / Gorilla 1） | ✅ 強制経路稼働 |
+| `MoveToReceivePass` 開始/完了 | — | 50 / 49 | ✅ |
+| `missed+nogal` | 0 | **0** | ✅ |
+| `NoGoalIdle(wait>=3s)` | 0 | **0** | ✅ |
+| G1/G2 回帰（ShootRejected / FreeBall PlanFailure） | 0 | **0** | ✅ |
+| Phase D コア | PASS 10/10 | **PASS 10/10** | ✅ |
+
+アーカイブ: `Assets/DebugLog/archives/GoapSummary_goap_g3_play_pass_20260713_20260713_113345.txt`
 
 ### GOAP 仕上げ全体の出口条件（3分 Play）
 
