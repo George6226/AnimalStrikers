@@ -55,7 +55,7 @@ public class AnimalAction_Move : AnimalAction_Base
         float speedMag = (baseSpeed + (increaseSpeed * speedStat / 100.0f)) * dash;
 
         // 移動
-        _animalHandler.move(slideScale, speedMag);
+        _animalHandler.move(slideScale, speedMag, isDashing);
 
         // サブプレイヤーの場合は180度回転
         if (!PhotonNetwork.IsMasterClient)

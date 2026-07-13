@@ -174,6 +174,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 - `PhotonHPGauge`: `StaminaRatio` / `IsExhausted` 公開
 - `AnimalHandler.moveCommon`: 残量 25% 以下で線形減速（枯渇時 ×0.55、サメ泡と合成）
+- スタミナ増減: 通常移動で回復・ダッシュ移動で消費・被弾で減少
 - `ConstData`: 既定閾値・枯渇倍率
 
 ### F2 実装内容
