@@ -162,13 +162,19 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 ## 次: ゲーム機能フェーズ（F1〜F5）
 
-| 順 | ID | 機能 | 主なファイル |
-|----|-----|------|-------------|
-| 1 | **F1** | スタミナ枯渇による移動速度低下 | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
-| 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
-| 3 | **F3** | GK 実装（GOAP 外・独立） | `GoalkeeperNpcBrain.cs` |
-| 4 | **F4** | Main NPC スライディング/タックル GOAP | `AnimalAction_Sliding.cs`, GOAP カタログ |
-| 5 | **F5** | 必殺技の NPC/GOAP 接続 | `AnimalAction_Special.cs`, キャラ別 SpecialActions |
+| 順 | ID | 機能 | 状態 | 主なファイル |
+|----|-----|------|------|-------------|
+| 1 | **F1** | スタミナ枯渇による移動速度低下 | **実装中 (#53)** | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
+| 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | 未着手 | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
+| 3 | **F3** | GK 実装（GOAP 外・独立） | 未着手 | `GoalkeeperNpcBrain.cs` |
+| 4 | **F4** | Main NPC スライディング/タックル GOAP | 未着手 | `AnimalAction_Sliding.cs`, GOAP カタログ |
+| 5 | **F5** | 必殺技の NPC/GOAP 接続 | 未着手 | `AnimalAction_Special.cs`, キャラ別 SpecialActions |
+
+### F1 実装内容
+
+- `PhotonHPGauge`: `StaminaRatio` / `IsExhausted` 公開
+- `AnimalHandler.moveCommon`: 残量 25% 以下で線形減速（枯渇時 ×0.55、サメ泡と合成）
+- `ConstData`: 既定閾値・枯渇倍率
 
 **F1 と F3 は並行可能。** F2 は F1 の直後。F4/F5 は GOAP 仕上げ完了後。
 

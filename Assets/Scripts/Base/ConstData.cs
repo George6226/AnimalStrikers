@@ -64,6 +64,12 @@ public static class ConstData
     // 待機時のHP回復量（毎秒）
     public static float STAND_HEAL_PER_SECOND = 20.0f;
 
+    /// <summary>スタミナ残量がこの比率以下で移動速度が低下し始める（F1）。</summary>
+    public static float STAMINA_LOW_MOVE_RATIO_THRESHOLD = 0.25f;
+
+    /// <summary>スタミナ枯渇時（比率 0）の移動速度倍率（F1）。</summary>
+    public static float STAMINA_EXHAUSTED_MOVE_SPEED_MULTIPLIER = 0.55f;
+
     // HPのデフォルト値
     public static float DEFAULT_HP = 100.0f;
 

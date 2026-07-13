@@ -24,6 +24,10 @@ public class AnimalHandler : MonoBehaviour
     [Header("サメスペシャル泡エリア")]
     [SerializeField, Range(0.05f, 1f)] private float _sharkBubbleMoveSpeedMultiplier = 0.35f;
 
+    [Header("スタミナ枯渇時の移動速度（F1）")]
+    [SerializeField, Range(0.05f, 1f)] private float _exhaustedMoveSpeedMultiplier = 0.55f;
+    [SerializeField, Range(0.05f, 1f)] private float _lowStaminaRatioThreshold = 0.25f;
+
     private int _sharkBubbleSlowdownCount;
 
     /// <summary>サメの泡コライダ内にいる間 true（複数重なりは参照カウント）。</summary>
@@ -129,7 +133,8 @@ public class AnimalHandler : MonoBehaviour
     {
         float speed = 3.0f;
         float bubbleMul = IsSlowedBySharkBubble ? _sharkBubbleMoveSpeedMultiplier : 1f;
-        Vector3 delta = _rb.transform.forward * per * speedMag * Time.deltaTime * speed * bubbleMul;
+        float staminaMul = GetStaminaMoveSpeedMultiplier();
+        Vector3 delta = _rb.transform.forward * per * speedMag * Time.deltaTime * speed * bubbleMul * staminaMul;
 
         if (useWallSweep && delta.sqrMagnitude > 1e-10f && _specialMoveWallSweep != null)
         {
@@ -227,5 +232,40 @@ public class AnimalHandler : MonoBehaviour
     public void RemoveSharkBubbleSlowdownSource()
     {
         _sharkBubbleSlowdownCount = Mathf.Max(0, _sharkBubbleSlowdownCount - 1);
+    }
+
+    private float GetStaminaMoveSpeedMultiplier()
+    {
+        if (_hpGauge == null)
+        {
+            return 1f;
+        }
+
+        return ComputeStaminaMoveSpeedMultiplier(
+            _hpGauge.StaminaRatio,
+            _lowStaminaRatioThreshold,
+            _exhaustedMoveSpeedMultiplier);
+    }
+
+    /// <summary>
+    /// 残量が閾値以下のとき線形で減速（閾値=1.0、0=枯渇倍率）。
+    /// </summary>
+    public static float ComputeStaminaMoveSpeedMultiplier(
+        float staminaRatio,
+        float lowStaminaRatioThreshold,
+        float exhaustedMoveSpeedMultiplier)
+    {
+        float threshold = Mathf.Max(0.001f, lowStaminaRatioThreshold);
+        if (staminaRatio >= threshold)
+        {
+            return 1f;
+        }
+
+        if (staminaRatio <= 0f)
+        {
+            return exhaustedMoveSpeedMultiplier;
+        }
+
+        return Mathf.Lerp(exhaustedMoveSpeedMultiplier, 1f, staminaRatio / threshold);
     }
 }
