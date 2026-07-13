@@ -16,7 +16,6 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _goalMouthHalfWidth = 3.5f;
     [SerializeField] private float _rushLooseBallDistance = 8f;
 
-    private AnimalActionSelector _actionSelector;
     private AnimalHandler _handler;
     private GoalkeeperPositioning.Mode _currentMode = GoalkeeperPositioning.Mode.HoldLine;
 
@@ -38,6 +37,12 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         {
             _assignment.RoleChanged += OnRoleChanged;
         }
+
+        CacheMovementComponents();
+        if (_assignment != null && _assignment.Role == AnimalControlRole.GoalkeeperNpc)
+        {
+            EnsureGoalkeeperBallCollider();
+        }
     }
 
     private void OnDestroy()
@@ -54,7 +59,10 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         {
             _currentMode = GoalkeeperPositioning.Mode.HoldLine;
             StopMoving();
+            return;
         }
+
+        EnsureGoalkeeperBallCollider();
     }
 
     private void FixedUpdate()
@@ -98,25 +106,27 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         }
 
         _currentMode = result.Mode;
-        MoveToward(result.TargetPosition);
+        MoveLaterally(result.TargetPosition);
     }
 
-    private void MoveToward(Vector3 target)
+    /// <summary>ゴールライン上の X 方向のみ移動（Z は位置取りロジックのホームラインを維持）。</summary>
+    private void MoveLaterally(Vector3 target)
     {
         CacheMovementComponents();
+        if (_handler == null)
+        {
+            return;
+        }
 
-        Vector3 pos = transform.position;
-        Vector3 toTarget = target - pos;
-        toTarget.y = 0f;
-
-        if (toTarget.sqrMagnitude <= _stopDistance * _stopDistance)
+        float deltaX = target.x - transform.position.x;
+        if (Mathf.Abs(deltaX) <= _stopDistance)
         {
             StopMoving();
             return;
         }
 
-        float radian = Mathf.Atan2(-toTarget.x, toTarget.z);
-        Move(_moveIntensity, radian);
+        float direction = Mathf.Sign(deltaX) * _moveIntensity;
+        _handler.moveGoalkeeperLateral(direction);
     }
 
     private void CacheMovementComponents()
@@ -126,40 +136,33 @@ public class GoalkeeperNpcBrain : MonoBehaviour
             return;
         }
 
-        if (_actionSelector == null)
-        {
-            _actionSelector = _facade.GetActionSelector();
-        }
-
         if (_handler == null)
         {
             _handler = _facade.GetAnimalHandler();
         }
     }
 
-    private void Move(float slideScale, float radian)
-    {
-        if (_actionSelector != null)
-        {
-            _actionSelector.ExecuteMoveAction(slideScale, radian);
-            return;
-        }
-
-        if (_handler != null)
-        {
-            _handler.move(slideScale, 1f);
-            _handler.rotate(radian);
-        }
-    }
-
     private void StopMoving()
     {
-        if (_actionSelector != null)
-        {
-            _actionSelector.ExecuteMoveAction(0f, 0f);
-            return;
-        }
+        _handler?.keeperStand();
+    }
 
-        _handler?.stand();
+    private void EnsureGoalkeeperBallCollider()
+    {
+        var bodyColliders = GetComponentsInChildren<AnimalCollider_Body>(true);
+        foreach (var body in bodyColliders)
+        {
+            if (body == null)
+            {
+                continue;
+            }
+
+            var col = body.GetComponent<Collider>();
+            if (col != null)
+            {
+                col.isTrigger = true;
+                col.enabled = true;
+            }
+        }
     }
 }

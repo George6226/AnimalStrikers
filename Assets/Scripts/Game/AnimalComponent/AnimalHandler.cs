@@ -177,6 +177,12 @@ public class AnimalHandler : MonoBehaviour
             return;
         }
 
+        if (_myFacade != null && _myFacade.IsGK())
+        {
+            keeperStand();
+            return;
+        }
+
         _animeChange.changeAnimation((int)AnimalAnime_State.PLAYER_ANIME_KIND.STAND);
 
         if(_hpGauge != null)
@@ -185,6 +191,96 @@ public class AnimalHandler : MonoBehaviour
             float healValue = Time.deltaTime * ConstData.STAND_HEAL_PER_SECOND;
             _hpGauge.healHP(healValue);
         }
+    }
+
+    /// <summary>GK 待機（Stand）。</summary>
+    public void keeperStand()
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.STAND);
+        ApplyKeeperIdleStaminaHeal();
+    }
+
+    /// <summary>GK のゴールライン横移動（X 軸のみ）。direction の符号で左右。</summary>
+    public void moveGoalkeeperLateral(float direction, float speedMag = -1f)
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        if (Mathf.Abs(direction) <= 0.001f)
+        {
+            keeperStand();
+            return;
+        }
+
+        if (speedMag < 0f)
+        {
+            speedMag = ResolveFieldMoveSpeedMagnitude();
+        }
+
+        float speed = 3.0f;
+        float bubbleMul = IsSlowedBySharkBubble ? _sharkBubbleMoveSpeedMultiplier : 1f;
+        float staminaMul = GetStaminaMoveSpeedMultiplier();
+        float deltaX = Mathf.Sign(direction) * Mathf.Abs(direction) * speedMag * Time.deltaTime * speed * bubbleMul * staminaMul;
+
+        Vector3 pos = _rb.transform.position;
+        pos.x = Mathf.Clamp(pos.x + deltaX, -11.5f, 11.5f);
+        _rb.transform.position = pos;
+
+        var kind = direction < 0f
+            ? AnimalAnime_State.KEEPER_ANIME_KIND.MOVE_L
+            : AnimalAnime_State.KEEPER_ANIME_KIND.MOVE_R;
+        _animeChange.changeAnimation((int)kind);
+    }
+
+    /// <summary>GK キャッチ（Ball_Catch）。</summary>
+    public void keeperCatch()
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.BALL_CATCH);
+    }
+
+    /// <summary>GK パリィ待機（Parry_Stand）。</summary>
+    public void keeperParryStand()
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.PARRY_STAND);
+    }
+
+    private float ResolveFieldMoveSpeedMagnitude()
+    {
+        AnimalInfo animalInfo = _myFacade != null ? _myFacade.GetAnimalInfo() : null;
+        AnimalSpritInfo animalSpritInfo = _myFacade != null ? _myFacade.GetAnimalSpritInfo() : null;
+        Param_SpritData paramSpritData = animalSpritInfo != null ? animalSpritInfo.ParamSpritData : null;
+        float baseSpeed = paramSpritData != null ? paramSpritData.GetBaseParameterValue(Param_SpritData.ParameterType.Speed) : 0f;
+        float increaseSpeed = paramSpritData != null ? paramSpritData.GetIncreaseParameterValue(Param_SpritData.ParameterType.Speed) : 0f;
+        float speedStat = animalInfo != null ? animalInfo.Speed : 0f;
+        return baseSpeed + (increaseSpeed * speedStat / 100.0f);
+    }
+
+    private void ApplyKeeperIdleStaminaHeal()
+    {
+        if (_hpGauge == null)
+        {
+            return;
+        }
+
+        float healValue = Time.deltaTime * ConstData.STAND_HEAL_PER_SECOND;
+        _hpGauge.healHP(healValue);
     }
 
     // シュート

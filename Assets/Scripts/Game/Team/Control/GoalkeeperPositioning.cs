@@ -84,7 +84,7 @@ public static class GoalkeeperPositioning
             target = new Vector3(
                 Mathf.Clamp(ballPosition.x, defendGoal.x - goalMouthHalfWidth, defendGoal.x + goalMouthHalfWidth),
                 defendGoal.y,
-                Mathf.Clamp(ballPosition.z, Mathf.Min(defendGoal.z, homeZ), Mathf.Max(defendGoal.z, homeZ)));
+                homeZ);
         }
         else if (underThreat)
         {

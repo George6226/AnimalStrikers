@@ -30,6 +30,14 @@ public class AnimalCollider_Body : MonoBehaviour
                 return;
             }
 
+            if (_animalFacade != null && _animalFacade.IsGK())
+            {
+                if (TryHandleGoalkeeperBallContact(hBall))
+                {
+                    return;
+                }
+            }
+
             BallBuffKind currentBuff = hBall.BuffKind;
             Debug.Log("Ball Buff State: " + currentBuff);
             if (_animalFacade != null
@@ -149,6 +157,51 @@ public class AnimalCollider_Body : MonoBehaviour
     public void TryAcquireBall(BallHandler hBall)
     {
         AcquireBallInternal(hBall);
+    }
+
+    private bool TryHandleGoalkeeperBallContact(BallHandler hBall)
+    {
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (ballManager == null || teamBB == null || hBall == null)
+        {
+            return false;
+        }
+
+        if (ballManager.IsKickoffBallPickupSuppressed)
+        {
+            return true;
+        }
+
+        var ballState = teamBB.BallInfo.BallState;
+        var handler = _animalFacade.GetAnimalHandler();
+
+        if (ballState == BallManager_State.BALL_STATE.SHOOT)
+        {
+            hBall.stop();
+            ballManager.changeOwnership(-1, BallManager_State.BALL_STATE.FREE);
+            handler?.keeperParryStand();
+            return true;
+        }
+
+        if (ballState == BallManager_State.BALL_STATE.FREE)
+        {
+            var avatar = _animalFacade.GetAvatar();
+            if (avatar == null)
+            {
+                return true;
+            }
+
+            hBall.stop();
+            if (ballManager.changeOwnership(avatar.ViewID, BallManager_State.BALL_STATE.HOLD))
+            {
+                handler?.keeperCatch();
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
 

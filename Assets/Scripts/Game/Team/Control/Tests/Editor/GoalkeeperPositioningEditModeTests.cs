@@ -78,6 +78,31 @@ public sealed class GoalkeeperPositioningEditModeTests
   }
 
   [Test]
+  public void Compute_LooseBallNearGoal_RushesAlongXOnly()
+  {
+    var teamBB = CreateTeamBlackboard();
+    try
+    {
+      var result = GoalkeeperPositioning.Compute(
+        teamBB,
+        mirrored: false,
+        ballPosition: new Vector3(2f, 0f, -18f),
+        BallManager_State.BALL_STATE.FREE,
+        enemyHasBall: false,
+        teamHasBall: false,
+        rushLooseBallDistance: 8f);
+
+      Assert.That(result.Mode, Is.EqualTo(GoalkeeperPositioning.Mode.RushLooseBall));
+      Assert.That(result.TargetPosition.x, Is.EqualTo(2f).Within(0.01f));
+      Assert.That(result.TargetPosition.z, Is.EqualTo(-16.5f).Within(0.01f));
+    }
+    finally
+    {
+      Object.DestroyImmediate(teamBB.gameObject);
+    }
+  }
+
+  [Test]
   public void IsInDefensiveZone_BallBetweenGoalAndCenter_ReturnsTrue()
   {
     Assert.That(
