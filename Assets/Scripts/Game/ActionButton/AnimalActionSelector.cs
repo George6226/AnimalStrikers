@@ -44,12 +44,8 @@ public class AnimalActionSelector : MonoBehaviour
         // ダッシュ関連の処理
         if (buttonType == AnimalButtonType.DashDown || buttonType == AnimalButtonType.DashUp)
         {
-            var dashAction = FindAction(buttonType) as AnimalAction_Dash;
-            if (dashAction != null)
-            {
-                dashAction.SetDash(buttonType == AnimalButtonType.DashDown);
-                return;
-            }
+            TrySetDash(buttonType == AnimalButtonType.DashDown);
+            return;
         }
 
         // 対応するアクションを取得
@@ -89,6 +85,24 @@ public class AnimalActionSelector : MonoBehaviour
         {
             Debug.LogWarning("[AnimalActionSelector] Moveに対応するアクションが見つかりません。");
         }
+    }
+
+    /// <summary>ダッシュ状態を設定（スタミナ不足時は ON を拒否、F2）。</summary>
+    public bool TrySetDash(bool enabled)
+    {
+        var dashAction = FindAction(AnimalButtonType.DashDown) as AnimalAction_Dash;
+        if (dashAction == null)
+        {
+            return false;
+        }
+
+        if (enabled && !dashAction.CanDashNow())
+        {
+            return false;
+        }
+
+        dashAction.SetDash(enabled);
+        return true;
     }
 
     /// <summary>
