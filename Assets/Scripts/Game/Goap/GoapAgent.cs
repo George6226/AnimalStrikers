@@ -45,6 +45,8 @@ public class GoapAgent : MonoBehaviour
     [SerializeField] private float _postReceiveNoGoalIdleSeconds = 0.12f;
     [Tooltip("パス受け完了後、この秒数は遷移優先で再計画する")]
     [SerializeField] private float _postReceiveTransitionWindowSeconds = 1.25f;
+    [Tooltip("ShootAtGoal 完了直後の強制守備プラン猶予（秒）。ボール SHOOT 状態が既に終わっていても NoGoal を防ぐ")]
+    [SerializeField] private float _postShootDefenseGraceSeconds = 0.75f;
     [SerializeField] private bool _debugMode = false;               // デバッグモード
     
     // === 内部状態 ===
@@ -69,6 +71,7 @@ public class GoapAgent : MonoBehaviour
     private const float NoConfigLogInterval = 1.0f;
     private float _nextAllowedReplanTime;
     private float _lastReceiveActionCompleteTime = -999f;
+    private float _postShootDefenseGraceUntil = float.NegativeInfinity;
     private string _lastReceiveFinishReason = string.Empty;
     private bool _lastReceiveOutcomeReceived;
     private bool _pendingReceivePassTransitionLog;
@@ -1164,7 +1167,9 @@ public class GoapAgent : MonoBehaviour
             && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard)
             && !MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard)
             && !IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard)
-            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard))
+            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(
+                _playerBlackboard,
+                _postShootDefenseGraceUntil))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1219,19 +1224,24 @@ public class GoapAgent : MonoBehaviour
         }
 
         if (!TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
-            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard))
+            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(
+                _playerBlackboard,
+                _postShootDefenseGraceUntil))
         {
             return false;
         }
 
         var goalActions = FilterActionsForGoal(goal, _availableActions);
-        if (TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard)
+        if (TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(
+                _playerBlackboard,
+                _postShootDefenseGraceUntil)
             && TeammateNpcDefensePlanning.TryBuildForcedPostShootDefensePlan(
                 _playerBlackboard,
                 _availableGoals,
                 _availableActions,
                 out _,
-                out Queue<GoapActionSO> postShootPlan)
+                out Queue<GoapActionSO> postShootPlan,
+                _postShootDefenseGraceUntil)
             && postShootPlan != null
             && postShootPlan.Count > 0)
         {
@@ -1330,7 +1340,8 @@ public class GoapAgent : MonoBehaviour
                 _availableGoals,
                 _availableActions,
                 out goal,
-                out plan)
+                out plan,
+                _postShootDefenseGraceUntil)
             || goal == null
             || plan == null
             || plan.Count == 0)
@@ -1339,7 +1350,8 @@ public class GoapAgent : MonoBehaviour
         }
 
         LogSummary("ForcedPostShootDefensePlan(action=" +
-            plan.Peek().ActionName + ", goal=" + goal.GoalName + ")");
+            plan.Peek().ActionName + ", goal=" + goal.GoalName + ", reason=" +
+            (Time.time < _postShootDefenseGraceUntil ? "postShootGrace" : "shootTransition") + ")");
         return true;
     }
 
@@ -1937,6 +1949,7 @@ public class GoapAgent : MonoBehaviour
             string completedGoalName = DebugCurrentGoalName;
             bool wasReceivePass = _currentAction is MoveToReceivePassActionRuntime;
             bool wasPassIssued = _currentAction is PassToTeammateActionRuntime;
+            bool wasShootAtGoal = _currentAction is ShootAtGoalActionRuntime;
 
             if (wasReceivePass)
             {
@@ -1969,6 +1982,10 @@ public class GoapAgent : MonoBehaviour
                     "PassIssued",
                     "PassIssued(passer_released_ball)",
                     allowDuringDeferredAction: true);
+            }
+            else if (wasShootAtGoal)
+            {
+                _postShootDefenseGraceUntil = Time.time + _postShootDefenseGraceSeconds;
             }
 
             DebugLogger.Log($"[{this.name}(GoapAgent)] GoapAgent: アクション完了 -> {completedActionName}");
