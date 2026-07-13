@@ -58,7 +58,15 @@ unity_docker_activate_personal() {
 unity_docker_activate_personal_once() {
   local log_file="${1:-/project/Logs/ci-unity-activate.log}"
   local attempt="${2:-1}"
-  local -a cmd=(unity-editor -batchmode -nographics -quit -logFile "${log_file}")
+  local project_path="${UNITY_CI_PROJECT_PATH:-/project}"
+  local -a cmd=(
+    unity-editor
+    -batchmode
+    -nographics
+    -quit
+    -projectPath "${project_path}"
+    -logFile "${log_file}"
+  )
   local wrote_license="false"
 
   # SERIAL 方式では古い UNITY_LICENSE (.ulf) を書かない（Mac 用 ulf があると再活性化が拒否される）
@@ -83,8 +91,11 @@ unity_docker_activate_personal_once() {
     return 2
   fi
 
-  echo "[goap-ci] activating Unity Personal (timeout 180s, attempt=${attempt})"
+  echo "[goap-ci] activating Unity Personal (timeout 180s, attempt=${attempt}, projectPath=${project_path})"
+  set +e
   timeout 180 "${cmd[@]}"
+  local activate_exit=$?
+  set -e
 
   if grep -q "aborting activation\|License activation has failed\|serial invalid\|No valid Unity Editor license\|Failed to activate entitlement license\|Failed to activate ULF license\|Access token is unavailable" "${log_file}" 2>/dev/null; then
     echo "[goap-ci] license activation failed; see ${log_file}" >&2
@@ -92,9 +103,15 @@ unity_docker_activate_personal_once() {
     return 1
   fi
 
-  if grep -q "license is already valid\|License activated successfully\|Successfully activated the entitlement license" "${log_file}" 2>/dev/null; then
-    echo "[goap-ci] license activation looks OK"
+  if grep -q "license is already valid\|License activated successfully\|Successfully activated the entitlement license\|Successfully activated ULF license" "${log_file}" 2>/dev/null; then
+    echo "[goap-ci] license activation looks OK (unity exit=${activate_exit})"
     return 0
+  fi
+
+  if [[ "${activate_exit}" -ne 0 ]]; then
+    echo "[goap-ci] license activation exited ${activate_exit}; see ${log_file}" >&2
+    tail -30 "${log_file}" >&2 || true
+    return 1
   fi
 
   echo "[goap-ci] activation finished (check ${log_file} if tests fail)"

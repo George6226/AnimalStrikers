@@ -83,6 +83,7 @@ cat <<EOF
    よくある失敗:
    - serial invalid (20110) → UNITY_SERIAL / UNITY_LICENSE の混在（SERIAL 優先時は LICENSE を削除）
    - activation failed → UNITY_EMAIL / UNITY_PASSWORD の誤り、またはパスワードの特殊文字
+   - "License activation has ended" → Unity 6 は活性化に -projectPath が必要（docker-unity-personal.sh 参照）
    - cfDrive フレーク → GoapDiag_cf_drive_latest.txt の SELECTION_/RUNTIME_ を確認
 
 Docker image: ${GOAP_DOCKER_IMAGE}
