@@ -12,10 +12,10 @@ public static class GoalkeeperPositioning
 
     public readonly struct Result
     {
-        public bool IsValid;
-        public Vector3 TargetPosition;
-        public Mode Mode;
-        public bool IsUnderThreat;
+        public readonly bool IsValid;
+        public readonly Vector3 TargetPosition;
+        public readonly Mode Mode;
+        public readonly bool IsUnderThreat;
     }
 
     /// <summary>敵 GK は ENEMY タグでミラー視点。</summary>
