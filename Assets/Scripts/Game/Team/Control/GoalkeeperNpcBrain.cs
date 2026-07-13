@@ -19,6 +19,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _lineDepth = 3.5f;
     [SerializeField] private float _goalMouthHalfWidth = 3.5f;
     [SerializeField] private float _rushLooseBallDistance = 8f;
+    [SerializeField] private float _saveReachDistance = 3.5f;
 
     private AnimalHandler _handler;
     private Collider _ballReceiveCollider;
@@ -28,6 +29,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     private float _lastProximityHandleTime = -999f;
 
     public GoalkeeperPositioning.Mode CurrentMode => _currentMode;
+    public float SaveReachDistance => _saveReachDistance;
 
     private void Awake()
     {
@@ -236,15 +238,21 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         Vector3 closest = _ballReceiveCollider.ClosestPoint(ballPos);
         float dist = Vector3.Distance(closest, ballPos);
         bool near = dist <= ProximityContactDistance;
+        bool withinSaveReach = dist <= _saveReachDistance;
 
         if (GoalkeeperDiagnosticLog.Enabled && (near || ballState == BallManager_State.BALL_STATE.SHOOT))
         {
             GoalkeeperDiagnosticLog.WriteProximityThrottled(
                 $"[GK_PROBE] mode={_currentMode} ballState={ballState} dist={dist:F2} probe_near={near} " +
-                $"ballColEnabled={ballColEnabled} ballPos={ballPos} gkPos={transform.position}");
+                $"saveReach={withinSaveReach} ballColEnabled={ballColEnabled} ballPos={ballPos} gkPos={transform.position}");
         }
 
         if (!near)
+        {
+            return;
+        }
+
+        if (ballState == BallManager_State.BALL_STATE.SHOOT && !withinSaveReach)
         {
             return;
         }

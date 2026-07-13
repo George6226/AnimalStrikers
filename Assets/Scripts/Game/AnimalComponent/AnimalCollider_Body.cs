@@ -39,10 +39,8 @@ public class AnimalCollider_Body : MonoBehaviour
             GoalkeeperDiagnosticLog.Write(
                 $"[GK_TRIGGER] phase={phase} collider={name} ballState={ResolveBallStateLabel()} " +
                 $"ballPos={hBall.transform.position} gkPos={_animalFacade.transform.position}");
-            if (TryGoalkeeperBallContact(hBall, $"trigger_{phase}"))
-            {
-                return;
-            }
+            TryGoalkeeperBallContact(hBall, $"trigger_{phase}");
+            return;
         }
 
         HandleFieldPlayerBallContact(hBall);
@@ -60,6 +58,20 @@ public class AnimalCollider_Body : MonoBehaviour
         if (hBall == null)
         {
             return;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB != null)
+        {
+            var ballState = teamBB.BallInfo.BallState;
+            if (ballState == BallManager_State.BALL_STATE.SHOOT
+                || ballState == BallManager_State.BALL_STATE.PASS)
+            {
+                GoalkeeperDiagnosticLog.SyncFromEnvironmentAndGoap();
+                GoalkeeperDiagnosticLog.Write(
+                    $"[BODY_SKIP] reason=in_flight_state state={ballState} collider={name}");
+                return;
+            }
         }
 
         Debug.Log("Body:OnTriggerEnter:"+hBall.name);
@@ -233,10 +245,19 @@ public class AnimalCollider_Body : MonoBehaviour
 
         if (ballState == BallManager_State.BALL_STATE.SHOOT)
         {
+            float saveDistance = ResolveGoalkeeperSaveDistance();
+            float dist = Vector3.Distance(_animalFacade.transform.position, hBall.transform.position);
+            if (dist > saveDistance)
+            {
+                GoalkeeperDiagnosticLog.Write(
+                    $"[GK_SKIP] source={source} reason=shoot_too_far dist={dist:F2} max={saveDistance:F2}");
+                return false;
+            }
+
             hBall.stop();
             bool changed = ballManager.changeOwnership(-1, BallManager_State.BALL_STATE.FREE);
             handler?.keeperParryStand();
-            GoalkeeperDiagnosticLog.Write($"[GK_SAVE] source={source} ownershipChanged={changed}");
+            GoalkeeperDiagnosticLog.Write($"[GK_SAVE] source={source} ownershipChanged={changed} dist={dist:F2}");
             return true;
         }
 
@@ -262,6 +283,12 @@ public class AnimalCollider_Body : MonoBehaviour
 
         GoalkeeperDiagnosticLog.Write($"[GK_SKIP] source={source} reason=unsupported_state state={ballState}");
         return false;
+    }
+
+    private float ResolveGoalkeeperSaveDistance()
+    {
+        var brain = _animalFacade != null ? _animalFacade.GetComponent<GoalkeeperNpcBrain>() : null;
+        return brain != null ? brain.SaveReachDistance : 3.5f;
     }
 
 
