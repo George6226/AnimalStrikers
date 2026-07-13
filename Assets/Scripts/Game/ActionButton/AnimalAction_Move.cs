@@ -42,7 +42,8 @@ public class AnimalAction_Move : AnimalAction_Base
             return;
         }
 
-        float dash = (_dash != null && _dash.DashNow) ? ConstData.DASH_MULTIPLIER : 1.0f;
+        bool isDashing = _dash != null && _dash.DashNow && _dash.CanDashNow();
+        float dash = isDashing ? ConstData.DASH_MULTIPLIER : 1.0f;
 
         // 速度の計算
         AnimalInfo animalInfo = _myFacade != null ? _myFacade.GetAnimalInfo() : null;

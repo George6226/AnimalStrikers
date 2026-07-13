@@ -42,7 +42,7 @@ public static class GoapNpcMotor
         return selector != null || handler != null;
     }
 
-    public static void MoveToward(PlayerBlackboard bb, Vector3 worldTarget, float moveIntensity = 1f, string debugCategory = "Motor")
+    public static void MoveToward(PlayerBlackboard bb, Vector3 worldTarget, float moveIntensity = 1f, string debugCategory = "Motor", bool useDash = false)
     {
         if (!TryResolve(bb, out _, out var selector, out var handler))
         {
@@ -52,6 +52,11 @@ public static class GoapNpcMotor
                 bb,
                 0.5f);
             return;
+        }
+
+        if (useDash)
+        {
+            TrySetDash(bb, true);
         }
 
         if (!StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME)
@@ -112,6 +117,8 @@ public static class GoapNpcMotor
             return;
         }
 
+        TrySetDash(bb, false);
+
         if (selector != null)
         {
             selector.ExecuteMoveAction(0f, 0f);
@@ -122,5 +129,33 @@ public static class GoapNpcMotor
         }
 
         GoapMovementDiagnostic.LogThrottled(debugCategory, "Stop called (ExecuteMoveAction 0,0 or stand)", bb, 0.35f);
+    }
+
+    /// <summary>スタミナ残量から GOAP/NPC ダッシュ可否を返す（F2）。</summary>
+    public static bool CanUseDash(PlayerBlackboard bb)
+    {
+        if (!TryResolve(bb, out var facade, out _, out _))
+        {
+            return false;
+        }
+
+        PhotonHPGauge gauge = facade.GetHPGauge();
+        return gauge != null && AnimalAction_Dash.CanDashFromStaminaRatio(gauge.StaminaRatio);
+    }
+
+    /// <summary>ダッシュ ON/OFF（不足時は ON を拒否、F2）。</summary>
+    public static bool TrySetDash(PlayerBlackboard bb, bool enabled)
+    {
+        if (!TryResolve(bb, out _, out var selector, out _))
+        {
+            return false;
+        }
+
+        if (selector == null)
+        {
+            return false;
+        }
+
+        return selector.TrySetDash(enabled);
     }
 }
