@@ -112,11 +112,30 @@ public static class GoapFieldNpcPerspective
             }
 
             // 自軍シュート直後（ボール未所属）: 攻守切替まで守備へ（敵NPC鏡像で NoGoal 固着を防ぐ）
-            return ball.BallState == BallManager_State.BALL_STATE.SHOOT
-                && ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
+            return IsOwnTeamShootReleaseTransition(teamBB, bb);
         }
 
         return EffectiveEnemyHasBall(teamBB, mirrored) && !EffectiveTeamHasBall(teamBB, mirrored);
+    }
+
+    /// <summary>自軍がシュートを放ちボールが未所属の SHOOT 遷移中。</summary>
+    public static bool IsOwnTeamShootReleaseTransition(TeamBlackboard teamBB, PlayerBlackboard bb = null)
+    {
+        if (teamBB == null)
+        {
+            return false;
+        }
+
+        var ball = teamBB.BallInfo;
+        if (ball.BallState != BallManager_State.BALL_STATE.SHOOT
+            || ball.TeamHasBall
+            || ball.EnemyHasBall)
+        {
+            return false;
+        }
+
+        bool mirrored = IsMirrored(bb);
+        return ball.LastPossessionBelongTeam == ResolveGlobalOwnTeam(mirrored);
     }
 
     private static bool IsPassOrShootTransition(TeamBallInfo ball)

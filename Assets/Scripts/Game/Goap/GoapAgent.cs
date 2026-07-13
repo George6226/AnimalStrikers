@@ -1005,6 +1005,12 @@ public class GoapAgent : MonoBehaviour
         var bestGoal = SelectBestGoal();
         if (bestGoal == null)
         {
+            if (TryBuildForcedPostShootDefensePlanWhenNoGoal(out bestGoal, out Queue<GoapActionSO> postShootPlan))
+            {
+                _lastSelectedGoalName = bestGoal.GoalName;
+                return (postShootPlan, bestGoal);
+            }
+
             _lastSelectedGoalName = "-";
             SetPlanningFailure("NoGoal", "SelectBestGoal returned null");
             _lastPlanSummary = $"NoGoalSelected(attempt={_planningAttemptCount})";
@@ -1157,7 +1163,8 @@ public class GoapAgent : MonoBehaviour
             && !TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
             && !MainNpcAttackPlanning.NeedsForcedAttackPlan(_playerBlackboard)
             && !MainNpcPostPassPlanning.NeedsForcedFreeBallRecoveryPlan(_playerBlackboard)
-            && !IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard))
+            && !IncomingPassPlanning.NeedsForcedIncomingPassReceivePlan(_playerBlackboard)
+            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard))
         {
             DebugLogger.Log($"[{this.name}(GoapAgent)] 空プラン（ゴール既達成）を選択");
             return emptyPlan;
@@ -1211,12 +1218,29 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
-        if (!TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard))
+        if (!TeammateNpcDefensePlanning.NeedsTacticalDefenseMovement(_playerBlackboard)
+            && !TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard))
         {
             return false;
         }
 
         var goalActions = FilterActionsForGoal(goal, _availableActions);
+        if (TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(_playerBlackboard)
+            && TeammateNpcDefensePlanning.TryBuildForcedPostShootDefensePlan(
+                _playerBlackboard,
+                _availableGoals,
+                _availableActions,
+                out _,
+                out Queue<GoapActionSO> postShootPlan)
+            && postShootPlan != null
+            && postShootPlan.Count > 0)
+        {
+            plan = postShootPlan;
+            LogSummary("ForcedPostShootDefensePlan(action=" +
+                postShootPlan.Peek().ActionName + ", goal=" + goal.GoalName + ", reason=emptyPlan)");
+            return true;
+        }
+
         if (!TeammateNpcDefensePlanning.TryBuildForcedTacticalDefensePlan(
                 _playerBlackboard, goalActions, out var forcedPlan)
             || forcedPlan == null
@@ -1292,6 +1316,30 @@ public class GoapAgent : MonoBehaviour
         plan = forcedPlan;
         LogSummary("ForcedFreeBallRecoveryPlan(action=" +
             (forcedPlan.Count > 0 ? forcedPlan.Peek().ActionName : "-") + ", reason=emptyPlanNearBall)");
+        return true;
+    }
+
+    private bool TryBuildForcedPostShootDefensePlanWhenNoGoal(
+        out GoapGoalSO goal,
+        out Queue<GoapActionSO> plan)
+    {
+        goal = null;
+        plan = null;
+        if (!TeammateNpcDefensePlanning.TryBuildForcedPostShootDefensePlan(
+                _playerBlackboard,
+                _availableGoals,
+                _availableActions,
+                out goal,
+                out plan)
+            || goal == null
+            || plan == null
+            || plan.Count == 0)
+        {
+            return false;
+        }
+
+        LogSummary("ForcedPostShootDefensePlan(action=" +
+            plan.Peek().ActionName + ", goal=" + goal.GoalName + ")");
         return true;
     }
 
