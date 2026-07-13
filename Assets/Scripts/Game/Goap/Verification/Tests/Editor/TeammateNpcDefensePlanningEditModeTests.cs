@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Reflection;
+using Game.Goap;
 using Game.Goap.Goals;
 using NUnit.Framework;
 using UnityEngine;
@@ -183,6 +184,85 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
         }
         finally
         {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void NeedsForcedDefensePlanWhenNoGoal_TrueDuringEnemyBallContext()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        SetDefenseFacts(humanBb);
+
+        try
+        {
+            Assert.That(TeammateNpcDefensePlanning.NeedsForcedDefensePlanWhenNoGoal(humanBb), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void NeedsForcedDefensePlanWhenNoGoal_TrueDuringContextGraceWithoutEnemyBall()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        SetDefenseFacts(humanBb);
+        var teamBB = teamGo.GetComponent<TeamBlackboard>();
+        teamBB.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.NeedsForcedDefensePlanWhenNoGoal(
+                    humanBb,
+                    float.NegativeInfinity,
+                    Time.time + 1f),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void TryBuildForcedDefensePlanWhenNoGoal_ReturnsPlanWhenGoalNotAchievableButGraceActive()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        SetDefenseFacts(humanBb);
+        var teamBB = teamGo.GetComponent<TeamBlackboard>();
+        teamBB.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        var goals = new List<GoapGoalSO> { ScriptableObject.CreateInstance<DefensivePositioningGoalSO>() };
+        var actions = new List<GoapActionSO>();
+        GoapMainNpcCatalog.NormalizeLists(goals, actions);
+
+        try
+        {
+            Assert.That(goals[0].IsAchievable(humanBb), Is.False);
+            Assert.That(
+                TeammateNpcDefensePlanning.TryBuildForcedDefensePlanWhenNoGoal(
+                    humanBb,
+                    goals,
+                    actions,
+                    out var goal,
+                    out var plan,
+                    float.NegativeInfinity,
+                    Time.time + 1f),
+                Is.True);
+            Assert.That(goal, Is.InstanceOf<DefensivePositioningGoalSO>());
+            Assert.That(plan.Count, Is.EqualTo(1));
+        }
+        finally
+        {
+            Object.DestroyImmediate(goals[0]);
             Object.DestroyImmediate(teamGo);
         }
     }

@@ -24,7 +24,7 @@
 | **G3** | IncomingPassReceive PlanFailure | **完了 (#46 / Play 合格)** | `fix/goap-g3-incoming-pass-planfailure` |
 | **G4** | 敵 NPC NoGoalSelected（Crocodile 等） | **完了 (#47+#48+#49 / Play 合格)** | `fix/goap-g4c-post-shoot-grace` |
 | **G5** | 検証スクリプト上限の更新 | **完了 (#50)** | `chore/goap-g5-play-gate-limits` |
-| G6 | 味方 Main NoGoalSelected（Lion/Gorilla 等） | 未着手（G4 から分離） | |
+| **G6** | 味方 Main NoGoalSelected（Lion/Gorilla 等） | **実装 (#51)** | `fix/goap-g6-ally-nogoal-fallback` |
 
 ### G0 完了条件
 
@@ -101,6 +101,14 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
   Assets/DebugLog/archives/GoapSummary_goap_g4c_play_pass_20260713_play_20260713_135442.txt
 ```
 
+### G6 実装内容
+
+`SelectBestGoal returned null` 時のフォールバック強化:
+
+- `TryBuildForcedPlanWhenSelectBestGoalNull` — 守備 / サポート / 受け / フリーボール / 攻撃の順で強制プラン
+- パス直後猶予 `_postPassSupportGraceUntil`、戦術 `ActionSkipped` 直後の文脈猶予
+- `goap-play-gate-config.sh` — 味方 NoGoal 上限（Lion/Gorilla/Boar ≤ 8、全体 ≤ 25 WARN）
+
 ### G6 概要（G4 Play で判明・別タスク）
 
 G4 合格後も全体 `NoGoalSelected` が 59 件残る。主因は味方 Main（Lion 17 / Gorilla 16）と味方 Sub（Boar 11）。敵 NPC は G4 で解消済み。
@@ -167,7 +175,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 ```
 [完了] M1/M2/M3 + P1/P2
   ↓
-[今] GOAP仕上げ G6（G0〜G5 完了）
+[今] GOAP仕上げ G6 Play 検証（G0〜G6 実装完了）
   ↓
 [F1] スタミナ枯渇減速
   ↓

@@ -836,6 +836,19 @@ public static class MainNpcAttackPlanning
         return IsActivelyHoldingBall(bb) && IsBallPossessionAttackContext(bb);
     }
 
+    /// <summary>SelectBestGoal が null のときの攻撃強制（保持中または戦術スキップ猶予）。</summary>
+    public static bool NeedsForcedAttackPlanWhenNoGoal(
+        PlayerBlackboard bb,
+        float postAttackContextGraceUntil = float.NegativeInfinity)
+    {
+        if (NeedsForcedAttackPlan(bb))
+        {
+            return true;
+        }
+
+        return postAttackContextGraceUntil > Time.time && IsBallPossessionAttackContext(bb);
+    }
+
     public static bool TryGetDistanceToEnemyGoal(
         PlayerBlackboard bb,
         out float distance,
