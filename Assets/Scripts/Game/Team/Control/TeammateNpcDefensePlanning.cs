@@ -186,8 +186,11 @@ public static class TeammateNpcDefensePlanning
 
     /// <summary>
     /// 自軍シュート直後は HAS_BALL の WM ラグで DefensivePositioning が IsAchievable=false になりやすい。
+    /// postShootGraceUntil: GoapAgent が ShootAtGoal 完了時に設定する猶予終了時刻。
     /// </summary>
-    public static bool NeedsForcedPostShootDefensePlan(PlayerBlackboard bb)
+    public static bool NeedsForcedPostShootDefensePlan(
+        PlayerBlackboard bb,
+        float postShootGraceUntil = float.NegativeInfinity)
     {
         if (bb == null)
         {
@@ -199,14 +202,16 @@ public static class TeammateNpcDefensePlanning
             return false;
         }
 
-        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (teamBB == null
-            || !GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(teamBB, bb))
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
         {
             return false;
         }
 
-        return bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) == true;
+        bool inGrace = postShootGraceUntil > Time.time;
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        bool inShootTransition = teamBB != null
+            && GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(teamBB, bb);
+        return inGrace || inShootTransition;
     }
 
     /// <summary>SelectBestGoal が null のとき、守備ゴール＋戦術守備アクションを強制する。</summary>
@@ -215,11 +220,12 @@ public static class TeammateNpcDefensePlanning
         IEnumerable<GoapGoalSO> availableGoals,
         List<GoapActionSO> availableActions,
         out GoapGoalSO goal,
-        out Queue<GoapActionSO> plan)
+        out Queue<GoapActionSO> plan,
+        float postShootGraceUntil = float.NegativeInfinity)
     {
         goal = null;
         plan = null;
-        if (!NeedsForcedPostShootDefensePlan(bb)
+        if (!NeedsForcedPostShootDefensePlan(bb, postShootGraceUntil)
             || availableGoals == null
             || availableActions == null
             || availableActions.Count == 0)

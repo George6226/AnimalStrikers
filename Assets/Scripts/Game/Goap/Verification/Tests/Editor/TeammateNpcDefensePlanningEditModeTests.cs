@@ -115,6 +115,35 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
     }
 
     [Test]
+    public void NeedsForcedPostShootDefensePlan_TrueDuringAgentGraceEvenWithoutShootBallState()
+    {
+        var (teamGo, enemyBb, _, _) = CreateOwnTeamShootReleaseScene(enemyNpc: true);
+        teamGo.GetComponent<TeamBlackboard>().BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+        teamGo.GetComponent<TeamBlackboard>().BallInfo.updateBallID(
+            1001,
+            BallManager_State.BELONG_TEAM.PLAYER,
+            Vector3.zero);
+
+        try
+        {
+            Assert.That(
+                GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(
+                    teamGo.GetComponent<TeamBlackboard>(),
+                    enemyBb),
+                Is.False);
+            Assert.That(
+                TeammateNpcDefensePlanning.NeedsForcedPostShootDefensePlan(
+                    enemyBb,
+                    Time.time + 1f),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
     public void NeedsForcedPostShootDefensePlan_TrueForEnemyNpcDuringOwnShootTransition()
     {
         var (teamGo, enemyBb, _, _) = CreateOwnTeamShootReleaseScene(enemyNpc: true);
