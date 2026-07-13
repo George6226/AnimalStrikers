@@ -237,7 +237,7 @@ lines = open(log_path, encoding="utf-8", errors="replace").read().splitlines()
 
 shoot_nogal = 0
 for i, line in enumerate(lines):
-    if "ActionComplete(action=ShootAtGoal" not in line and "ActionStart(action=ShootAtGoal" not in line:
+    if "ActionComplete(action=ShootAtGoal" not in line:
         continue
     window = "\n".join(lines[i + 1 : i + 1 + window_lines])
     if "NoGoalSelected" in window:

@@ -267,6 +267,28 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
         }
     }
 
+    [Test]
+    public void NeedsForcedDefensePlanWhenNoGoal_TrueDuringPostShootGraceEvenWithHasBallFact()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        SetDefenseFacts(humanBb);
+        humanBb.SetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true"), true);
+
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.NeedsForcedDefensePlanWhenNoGoal(
+                    humanBb,
+                    Time.time + 1f),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
     private static (GameObject teamGo, PlayerBlackboard bb, List<GoapGoalSO> goals, List<GoapActionSO> actions)
         CreateOwnTeamShootReleaseScene(bool enemyNpc)
     {

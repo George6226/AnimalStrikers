@@ -237,11 +237,6 @@ public static class TeammateNpcDefensePlanning
             return false;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
-        {
-            return false;
-        }
-
         if (NeedsForcedPostShootDefensePlan(bb, postShootGraceUntil))
         {
             return true;
@@ -250,6 +245,11 @@ public static class TeammateNpcDefensePlanning
         if (postDefenseContextGraceUntil > Time.time)
         {
             return true;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            return false;
         }
 
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
