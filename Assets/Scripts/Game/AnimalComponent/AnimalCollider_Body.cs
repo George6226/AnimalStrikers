@@ -18,25 +18,51 @@ public class AnimalCollider_Body : MonoBehaviour
     // ぶつかった場合
     public void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Body:OnTriggerEnter:"+other.name);
+        HandleBallTrigger(other, "enter");
+    }
 
-        // ボールにぶつかった
-        if (other.gameObject.tag.Equals("Ball"))
+    public void OnTriggerStay(Collider other)
+    {
+        HandleBallTrigger(other, "stay");
+    }
+
+    private void HandleBallTrigger(Collider other, string phase)
+    {
+        if (!TryResolveBallHandler(other, out BallHandler hBall))
         {
-            GameObject ball = other.gameObject;
-            BallHandler hBall = ball.GetComponent<BallHandler>();
-            if (hBall == null)
+            return;
+        }
+
+        GoalkeeperDiagnosticLog.SyncFromEnvironmentAndGoap();
+        if (_animalFacade != null && _animalFacade.IsGK())
+        {
+            GoalkeeperDiagnosticLog.Write(
+                $"[GK_TRIGGER] phase={phase} collider={name} ballState={ResolveBallStateLabel()} " +
+                $"ballPos={hBall.transform.position} gkPos={_animalFacade.transform.position}");
+            if (TryGoalkeeperBallContact(hBall, $"trigger_{phase}"))
             {
                 return;
             }
+        }
 
-            if (_animalFacade != null && _animalFacade.IsGK())
-            {
-                if (TryHandleGoalkeeperBallContact(hBall))
-                {
-                    return;
-                }
-            }
+        HandleFieldPlayerBallContact(hBall);
+    }
+
+    /// <summary>GK ボール接触処理（Trigger / 近接プローブ共通）。</summary>
+    public bool TryGoalkeeperBallContact(BallHandler hBall, string source)
+    {
+        GoalkeeperDiagnosticLog.SyncFromEnvironmentAndGoap();
+        return TryHandleGoalkeeperBallContact(hBall, source);
+    }
+
+    private void HandleFieldPlayerBallContact(BallHandler hBall)
+    {
+        if (hBall == null)
+        {
+            return;
+        }
+
+        Debug.Log("Body:OnTriggerEnter:"+hBall.name);
 
             BallBuffKind currentBuff = hBall.BuffKind;
             Debug.Log("Ball Buff State: " + currentBuff);
@@ -69,7 +95,28 @@ public class AnimalCollider_Body : MonoBehaviour
 
                 AcquireBallInternal(hBall);
             }
+    }
+
+    private static bool TryResolveBallHandler(Collider other, out BallHandler hBall)
+    {
+        hBall = other.GetComponent<BallHandler>();
+        if (hBall == null)
+        {
+            hBall = other.GetComponentInParent<BallHandler>();
         }
+
+        if (hBall == null && other.CompareTag("Ball"))
+        {
+            hBall = other.GetComponent<BallHandler>();
+        }
+
+        return hBall != null;
+    }
+
+    private string ResolveBallStateLabel()
+    {
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        return teamBB != null ? teamBB.BallInfo.BallState.ToString() : "?";
     }
 
     // ボールの所有権変更
@@ -159,28 +206,37 @@ public class AnimalCollider_Body : MonoBehaviour
         AcquireBallInternal(hBall);
     }
 
-    private bool TryHandleGoalkeeperBallContact(BallHandler hBall)
+    private bool TryHandleGoalkeeperBallContact(BallHandler hBall, string source)
     {
         var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (ballManager == null || teamBB == null || hBall == null)
         {
+            GoalkeeperDiagnosticLog.Write($"[GK_SKIP] source={source} reason=missing_refs");
             return false;
         }
 
         if (ballManager.IsKickoffBallPickupSuppressed)
         {
+            GoalkeeperDiagnosticLog.Write($"[GK_SKIP] source={source} reason=kickoff_suppress");
             return true;
         }
 
         var ballState = teamBB.BallInfo.BallState;
         var handler = _animalFacade.GetAnimalHandler();
+        var ballCol = hBall.GetComponent<Collider>();
+        bool ballColEnabled = ballCol != null && ballCol.enabled;
+
+        GoalkeeperDiagnosticLog.Write(
+            $"[GK_HANDLE] source={source} ballState={ballState} ballColEnabled={ballColEnabled} " +
+            $"ballVel={hBall.Rigid.linearVelocity}");
 
         if (ballState == BallManager_State.BALL_STATE.SHOOT)
         {
             hBall.stop();
-            ballManager.changeOwnership(-1, BallManager_State.BALL_STATE.FREE);
+            bool changed = ballManager.changeOwnership(-1, BallManager_State.BALL_STATE.FREE);
             handler?.keeperParryStand();
+            GoalkeeperDiagnosticLog.Write($"[GK_SAVE] source={source} ownershipChanged={changed}");
             return true;
         }
 
@@ -189,18 +245,22 @@ public class AnimalCollider_Body : MonoBehaviour
             var avatar = _animalFacade.GetAvatar();
             if (avatar == null)
             {
+                GoalkeeperDiagnosticLog.Write($"[GK_SKIP] source={source} reason=no_avatar");
                 return true;
             }
 
             hBall.stop();
-            if (ballManager.changeOwnership(avatar.ViewID, BallManager_State.BALL_STATE.HOLD))
+            bool changed = ballManager.changeOwnership(avatar.ViewID, BallManager_State.BALL_STATE.HOLD);
+            if (changed)
             {
                 handler?.keeperCatch();
             }
 
+            GoalkeeperDiagnosticLog.Write($"[GK_CATCH] source={source} ownershipChanged={changed} owner={avatar.ViewID}");
             return true;
         }
 
+        GoalkeeperDiagnosticLog.Write($"[GK_SKIP] source={source} reason=unsupported_state state={ballState}");
         return false;
     }
 

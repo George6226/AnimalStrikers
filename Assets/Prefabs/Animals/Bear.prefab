@@ -513,7 +513,7 @@ GameObject:
   - component: {fileID: 8996993789125503563}
   - component: {fileID: 4556201841224566160}
   - component: {fileID: 8219781860135116732}
-  m_Layer: 7
+  m_Layer: 11
   m_Name: BallReceiveCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -6,6 +6,10 @@ using UnityEngine;
 [RequireComponent(typeof(AnimalControlAssignment))]
 public class GoalkeeperNpcBrain : MonoBehaviour
 {
+    private const string ReceiveLayerName = "Animal_Receive";
+    private const float ProximityContactDistance = 0.45f;
+    private const float ProximityHandleCooldownSeconds = 0.15f;
+
     [SerializeField] private AnimalControlAssignment _assignment;
     [SerializeField] private AnimalFacade _facade;
 
@@ -17,7 +21,11 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _rushLooseBallDistance = 8f;
 
     private AnimalHandler _handler;
+    private Collider _ballReceiveCollider;
+    private AnimalCollider_Body _ballReceiveBody;
     private GoalkeeperPositioning.Mode _currentMode = GoalkeeperPositioning.Mode.HoldLine;
+    private bool _diagSessionStarted;
+    private float _lastProximityHandleTime = -999f;
 
     public GoalkeeperPositioning.Mode CurrentMode => _currentMode;
 
@@ -67,6 +75,8 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
     private void FixedUpdate()
     {
+        MaybeStartDiagnosticSession();
+
         if (_assignment == null || _assignment.Role != AnimalControlRole.GoalkeeperNpc)
         {
             return;
@@ -107,6 +117,19 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
         _currentMode = result.Mode;
         MoveLaterally(result.TargetPosition);
+        TryProximityBallContact();
+    }
+
+    private void MaybeStartDiagnosticSession()
+    {
+        GoalkeeperDiagnosticLog.SyncFromEnvironmentAndGoap();
+        if (_diagSessionStarted || !GoalkeeperDiagnosticLog.Enabled)
+        {
+            return;
+        }
+
+        _diagSessionStarted = true;
+        GoalkeeperDiagnosticLog.ResetSession();
     }
 
     /// <summary>ゴールライン上の X 方向のみ移動（Z は位置取りロジックのホームラインを維持）。</summary>
@@ -149,6 +172,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
     private void EnsureGoalkeeperBallCollider()
     {
+        int receiveLayer = LayerMask.NameToLayer(ReceiveLayerName);
         var bodyColliders = GetComponentsInChildren<AnimalCollider_Body>(true);
         foreach (var body in bodyColliders)
         {
@@ -158,11 +182,89 @@ public class GoalkeeperNpcBrain : MonoBehaviour
             }
 
             var col = body.GetComponent<Collider>();
-            if (col != null)
+            if (col == null)
             {
-                col.isTrigger = true;
-                col.enabled = true;
+                continue;
             }
+
+            if (receiveLayer >= 0)
+            {
+                body.gameObject.layer = receiveLayer;
+            }
+
+            col.isTrigger = true;
+            col.enabled = true;
+
+            if (body.gameObject.name.Contains("BallReceive"))
+            {
+                _ballReceiveCollider = col;
+                _ballReceiveBody = body;
+            }
+
+            GoalkeeperDiagnosticLog.SyncFromEnvironmentAndGoap();
+            GoalkeeperDiagnosticLog.Write(
+                $"[GK_COLLIDER] name={col.name} layer={LayerMask.LayerToName(body.gameObject.layer)} " +
+                $"isTrigger={col.isTrigger} enabled={col.enabled} center={col.bounds.center} size={col.bounds.size}");
+        }
+    }
+
+    private void TryProximityBallContact()
+    {
+        if (_ballReceiveCollider == null || _ballReceiveBody == null)
+        {
+            return;
+        }
+
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        var ball = ballManager != null ? ballManager.Ball : null;
+        if (ball == null || teamBB == null)
+        {
+            return;
+        }
+
+        var ballState = teamBB.BallInfo.BallState;
+        if (ballState != BallManager_State.BALL_STATE.SHOOT
+            && ballState != BallManager_State.BALL_STATE.FREE)
+        {
+            return;
+        }
+
+        var ballCol = ball.GetComponent<Collider>();
+        bool ballColEnabled = ballCol != null && ballCol.enabled;
+        Vector3 ballPos = ball.transform.position;
+        Vector3 closest = _ballReceiveCollider.ClosestPoint(ballPos);
+        float dist = Vector3.Distance(closest, ballPos);
+        bool near = dist <= ProximityContactDistance;
+
+        if (GoalkeeperDiagnosticLog.Enabled && (near || ballState == BallManager_State.BALL_STATE.SHOOT))
+        {
+            GoalkeeperDiagnosticLog.WriteProximityThrottled(
+                $"[GK_PROBE] mode={_currentMode} ballState={ballState} dist={dist:F2} probe_near={near} " +
+                $"ballColEnabled={ballColEnabled} ballPos={ballPos} gkPos={transform.position}");
+        }
+
+        if (!near)
+        {
+            return;
+        }
+
+        if (!ballColEnabled)
+        {
+            GoalkeeperDiagnosticLog.Write(
+                $"[GK_SKIP] source=proximity_probe reason=ball_collider_disabled state={ballState}");
+            return;
+        }
+
+        if (Time.time - _lastProximityHandleTime < ProximityHandleCooldownSeconds)
+        {
+            return;
+        }
+
+        _lastProximityHandleTime = Time.time;
+        if (_ballReceiveBody.TryGoalkeeperBallContact(ball, "proximity_probe"))
+        {
+            GoalkeeperDiagnosticLog.Write($"[GK_PROBE] proximity_contact_handled state={ballState}");
         }
     }
 }
