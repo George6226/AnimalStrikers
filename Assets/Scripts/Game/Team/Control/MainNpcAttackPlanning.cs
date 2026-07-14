@@ -320,7 +320,8 @@ public static class MainNpcAttackPlanning
         return ComputeDribbleCostAdjustment(
             goalDistance,
             maxDistance,
-            teamBB.BallInfo.IsBallOwnerUnderPressure);
+            teamBB.BallInfo.IsBallOwnerUnderPressure)
+            + (CanShootAtGoal(bb) ? 0.4f : 0f);
     }
 
     public static float ComputeDribbleCostAdjustment(
@@ -340,6 +341,12 @@ public static class MainNpcAttackPlanning
         if (pressureCount >= 1)
         {
             adjustment += DribbleUnderPressurePenalty * Mathf.Clamp(pressureCount, 1, 3);
+        }
+
+        // シュート圏外では Pass を選びやすくする（遠距離ドリブルループ抑制）
+        if (goalDistance > maxShootDistance)
+        {
+            adjustment += 0.95f;
         }
 
         return adjustment;

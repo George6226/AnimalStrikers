@@ -113,6 +113,11 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
             adjustment -= 0.7f;
         }
 
+        if (MoveToDefensivePositionActionRuntime.IsHoldingTacticalDefensivePosition(bb))
+        {
+            adjustment += 12f;
+        }
+
         adjustment += TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
 
         return adjustment;

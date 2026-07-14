@@ -62,20 +62,19 @@ public class AnimalAction_Shoot : AnimalAction_Base
         }
         GameObject targetGoal = fieldHandler.GetGoal(tag);
 
-        // 自分の位置とゴールから距離と方向を計算
         Vector3 myPos = _myFacade.transform.position;
-        Vector3 targetPos = targetGoal.transform.position;
-        Vector3 dir = (targetPos - myPos).normalized;
-        float d = Vector3.Distance(myPos, targetPos);
+        Vector3 goalCenter = targetGoal.transform.position;
+        Vector3 aimPoint = ResolveShootAimPoint(myPos, goalCenter, tag);
+        Vector3 dir = (aimPoint - myPos).normalized;
 
         // アニメーションを先に行う
         _animalHandler.shoot();
         _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
 
-        _shootCoroutine = StartCoroutine(executeShoot(dir, d));
+        _shootCoroutine = StartCoroutine(executeShoot(aimPoint, tag));
     }
 
-    private IEnumerator executeShoot(Vector3 dir, float distance)
+    private IEnumerator executeShoot(Vector3 aimPoint, string shooterTag)
     {
         const float windUpSeconds = 0.2f;
         yield return new WaitForSeconds(windUpSeconds);
@@ -94,25 +93,9 @@ public class AnimalAction_Shoot : AnimalAction_Base
             yield break;
         }
 
-        string tag = _myFacade.GetAvatar().gameObject.tag;
-        var fieldHandler = teamFacade.FieldObjectHandler;
-        if (fieldHandler == null)
-        {
-            _shootCoroutine = null;
-            yield break;
-        }
-
-        GameObject targetGoal = fieldHandler.GetGoal(tag);
-        if (targetGoal == null)
-        {
-            _shootCoroutine = null;
-            yield break;
-        }
-
         Vector3 myPos = _myFacade.transform.position;
-        Vector3 targetPos = targetGoal.transform.position;
-        dir = (targetPos - myPos).normalized;
-        distance = Vector3.Distance(myPos, targetPos);
+        Vector3 dir = (aimPoint - myPos).normalized;
+        float distance = Vector3.Distance(myPos, aimPoint);
         _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
 
         BallHandler ball = teamFacade.BallManager.Ball;
@@ -120,7 +103,7 @@ public class AnimalAction_Shoot : AnimalAction_Base
 
         yield return new WaitUntil(() => !ball.SynchronizedNow);
 
-        Vector3 kickDir = BuildShootKickVector(dir, distance);
+        Vector3 kickDir = BuildShootKickVector(myPos, aimPoint);
         ball.kick(kickDir);
 
         var specialGauge = _myFacade.GetSpecialGauge();
@@ -133,25 +116,30 @@ public class AnimalAction_Shoot : AnimalAction_Base
         yield return null;
     }
 
-    private Vector3 BuildShootKickVector(Vector3 dir, float distance)
+    private Vector3 ResolveShootAimPoint(Vector3 shooterPosition, Vector3 goalCenter, string shooterTag)
+    {
+        AnimalFacade defendingGk = ShootAimPolicy.FindDefendingGoalkeeper(_myFacade);
+        Vector3? gkPos = defendingGk != null ? defendingGk.transform.position : null;
+        return ShootAimPolicy.ResolveAimPoint(shooterPosition, goalCenter, gkPos);
+    }
+
+    private Vector3 BuildShootKickVector(Vector3 shooterPosition, Vector3 aimPoint)
     {
         AnimalInfo animalInfo = _myFacade != null ? _myFacade.GetAnimalInfo() : null;
         AnimalSpritInfo animalSpritInfo = _myFacade != null ? _myFacade.GetAnimalSpritInfo() : null;
         Param_SpritData paramSpritData = animalSpritInfo != null ? animalSpritInfo.ParamSpritData : null;
 
-        // シュートの強さ（到達時間）
         float baseShoot = paramSpritData != null ? paramSpritData.GetBaseParameterValue(Param_SpritData.ParameterType.Shoot) : 0.8f;
         float increaseShoot = paramSpritData != null ? paramSpritData.GetIncreaseParameterValue(Param_SpritData.ParameterType.Shoot) : 0f;
         float spritShoot = animalInfo != null ? animalInfo.Shoot : 0f;
-        float shootTime = baseShoot + (increaseShoot * spritShoot / 100.0f);
-        shootTime = Mathf.Max(0.01f, shootTime);
+        bool hasDefendingGk = ShootAimPolicy.FindDefendingGoalkeeper(_myFacade) != null;
 
-        Vector3 adjustedDir = AnimalActionAccuracyPolicy.ApplyHorizontalSpread(
-            dir,
+        return ShootAimPolicy.BuildKickVector(
+            shooterPosition,
+            aimPoint,
             spritShoot,
-            ConstData.MAX_SHOOT_SPREAD_ANGLE);
-
-        float speed = distance / shootTime;
-        return adjustedDir * speed;
+            baseShoot,
+            increaseShoot,
+            hasDefendingGk);
     }
 }

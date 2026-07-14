@@ -9,8 +9,11 @@ public static class GoapPassTargetSelection
     private const float FacingConeDegrees = 30f;
     private const float BlockedRouteScore = -50f;
     private const float ClearRouteBaseScore = 10f;
-    private const float MovingReceiverPenalty = 8f;
+    private const float MovingReceiverPenalty = 12f;
     private const float LateralPassPressurePenalty = 6f;
+    private const float NearReceiverEnemyRadius = 4f;
+    private const float NearReceiverEnemyPenalty = 14f;
+    private const float LongPassPenaltyScale = 30f;
 
     public struct CandidateScoreInput
     {
@@ -231,9 +234,26 @@ public static class GoapPassTargetSelection
         float idealDistance = fieldLength * 0.28f;
         score -= Mathf.Abs(distance - idealDistance) / fieldLength * 2f;
 
+        score -= CountEnemiesNear(input.ReceiverPosition, enemies, NearReceiverEnemyRadius)
+            * NearReceiverEnemyPenalty;
+
+        if (distance > ConstData.MAX_PASS_DISTANCE)
+        {
+            score -= 45f;
+        }
+
+        if (distanceRatio > 0.34f)
+        {
+            score -= (distanceRatio - 0.34f) * LongPassPenaltyScale;
+        }
+
         if (input.ReceiverIsMoving)
         {
             score -= MovingReceiverPenalty;
+            if (distanceRatio > 0.26f)
+            {
+                score -= (distanceRatio - 0.26f) * 22f;
+            }
         }
 
         if (input.OwnerPressureCount >= 1)
@@ -314,7 +334,7 @@ public static class GoapPassTargetSelection
                 EnemyPositions = enemies,
                 FieldLength = fieldLength,
                 OwnerPressureCount = pressure,
-                ReceiverIsMoving = ResolveReceiverIsMoving(candidate),
+                ReceiverIsMoving = IsReceiverMoving(candidate),
             };
 
             float score = ScoreCandidate(input);
@@ -383,6 +403,8 @@ public static class GoapPassTargetSelection
         return ballKeep != null ? ballKeep.transform.position : receiver.transform.position;
     }
 
+    public static bool IsReceiverMoving(AnimalFacade receiver) => ResolveReceiverIsMoving(receiver);
+
     private static bool ResolveReceiverIsMoving(AnimalFacade receiver)
     {
         if (receiver == null)
@@ -392,5 +414,28 @@ public static class GoapPassTargetSelection
 
         PlayerBlackboard bb = receiver.GetComponentInChildren<PlayerBlackboard>();
         return bb != null && bb.PhysicalState.IsMoving;
+    }
+
+    private static int CountEnemiesNear(Vector3 position, List<Vector3> enemyPositions, float radius)
+    {
+        if (enemyPositions == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        foreach (Vector3 enemyPos in enemyPositions)
+        {
+            Vector3 flat = enemyPos;
+            flat.y = 0f;
+            Vector3 flatPos = position;
+            flatPos.y = 0f;
+            if (Vector3.Distance(flat, flatPos) <= radius)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 }

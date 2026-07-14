@@ -7,8 +7,8 @@ using UnityEngine;
 public class GoalkeeperNpcBrain : MonoBehaviour
 {
     private const string ReceiveLayerName = "Animal_Receive";
-    private const float ProximityContactDistance = 0.45f;
-    private const float ProximityHandleCooldownSeconds = 0.15f;
+    private const float ProximityContactDistance = 0.65f;
+    private const float ProximityHandleCooldownSeconds = 0.12f;
 
     [SerializeField] private AnimalControlAssignment _assignment;
     [SerializeField] private AnimalFacade _facade;
@@ -18,11 +18,14 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _moveIntensity = 1f;
     [SerializeField] private float _lineDepth = 3.5f;
     [SerializeField] private float _goalMouthHalfWidth = 3.5f;
-    [SerializeField] private float _rushLooseBallDistance = 8f;
-    [SerializeField] private float _saveReachDistance = 3.5f;
+    [SerializeField] private float _rushLooseBallDistance = 10f;
+    [SerializeField] private float _saveReachDistance = 4.5f;
+    [SerializeField] private float _goalAreaDepth = 6f;
+    [SerializeField] private float _rushForwardDepth = 1.5f;
 
     [Header("配球")]
-    [SerializeField] private float _distributionDelayAfterCatch = 0.55f;
+    [SerializeField] private float _distributionMinDelay = 0.75f;
+    [SerializeField] private float _distributionMaxDelay = 2.0f;
 
     private AnimalHandler _handler;
     private Collider _ballReceiveCollider;
@@ -123,7 +126,9 @@ public class GoalkeeperNpcBrain : MonoBehaviour
             GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored),
             _lineDepth,
             _goalMouthHalfWidth,
-            _rushLooseBallDistance);
+            _rushLooseBallDistance,
+            _goalAreaDepth,
+            _rushForwardDepth);
 
         if (!result.IsValid)
         {
@@ -132,7 +137,14 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         }
 
         _currentMode = result.Mode;
-        MoveLaterally(result.TargetPosition);
+        if (result.Mode == GoalkeeperPositioning.Mode.RushLooseBall)
+        {
+            MoveTowardTarget(result.TargetPosition);
+        }
+        else
+        {
+            MoveLaterally(result.TargetPosition);
+        }
         TryProximityBallContact();
     }
 
@@ -166,6 +178,18 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
         float direction = Mathf.Sign(deltaX) * _moveIntensity;
         _handler.moveGoalkeeperLateral(direction);
+    }
+
+    /// <summary>エリア内ルーズボール向けに XZ で積極的に接近。</summary>
+    private void MoveTowardTarget(Vector3 target)
+    {
+        CacheMovementComponents();
+        if (_handler == null)
+        {
+            return;
+        }
+
+        _handler.moveGoalkeeperToward(target, _stopDistance, _moveIntensity);
     }
 
     private void CacheMovementComponents()
@@ -210,12 +234,29 @@ public class GoalkeeperNpcBrain : MonoBehaviour
             GoalkeeperDiagnosticLog.Write("[GK_DIST] holding_ball wait_for_pass");
         }
 
-        if (Time.time - _holdBallStartTime < _distributionDelayAfterCatch)
+        float elapsed = Time.time - _holdBallStartTime;
+        if (elapsed < _distributionMinDelay)
         {
             return;
         }
 
         bool mirrored = GoalkeeperPositioning.IsMirroredGoalkeeper(_facade);
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (!GoalkeeperDistribution.TrySelectPassTarget(_facade, mirrored, out AnimalFacade passTarget))
+        {
+            if (elapsed < _distributionMaxDelay)
+            {
+                return;
+            }
+        }
+        else if (!GoalkeeperDistribution.IsPassTargetReady(_facade, passTarget, mirrored, teamBB)
+            && elapsed < _distributionMaxDelay)
+        {
+            GoalkeeperDiagnosticLog.Write(
+                $"[GK_DIST] wait_for_target_ready target={passTarget.name} elapsed={elapsed:F2}");
+            return;
+        }
+
         if (GoalkeeperDistributionBridge.TryExecutePass(_facade, mirrored, out _))
         {
             _distributionPassRequested = true;
@@ -294,7 +335,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         Vector3 closest = _ballReceiveCollider.ClosestPoint(ballPos);
         float dist = Vector3.Distance(closest, ballPos);
         bool near = dist <= ProximityContactDistance;
-        bool withinSaveReach = dist <= _saveReachDistance;
+        bool withinSaveReach = Vector3.Distance(transform.position, ballPos) <= _saveReachDistance;
 
         if (GoalkeeperDiagnosticLog.Enabled && (near || ballState == BallManager_State.BALL_STATE.SHOOT))
         {

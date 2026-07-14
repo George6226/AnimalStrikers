@@ -13,7 +13,11 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
     private float _burstDuration;
     private float _moveIntensity;
     private const float MinBurstBeforeShootReadySeconds = 0.25f;
+    private const float StuckProgressWindowSeconds = 0.85f;
+    private const float StuckProgressMinDelta = 0.35f;
     private PlayerBlackboard _bb;
+    private Vector3 _progressSamplePosition;
+    private float _nextProgressSampleTime;
 
     public DribbleTowardGoalActionRuntime(GoapActionSO origin, string debugName) : base(origin, debugName)
     {
@@ -36,6 +40,8 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
         _motorResolved = GoapNpcMotor.TryResolve(bb, out _, out _, out _);
         _isExecuting = true;
         _startTime = Time.time;
+        _progressSamplePosition = GoapNpcMotor.GetSelfWorldPosition(bb);
+        _nextProgressSampleTime = Time.time + StuckProgressWindowSeconds;
         GoapMovementDiagnostic.Log(DiagCategory, "Execute burst start", bb);
     }
 
@@ -60,6 +66,22 @@ public class DribbleTowardGoalActionRuntime : GoapActionRuntime
         bool mirrored = GoapFieldNpcPerspective.IsMirrored(_bb);
         Vector3 attackGoal = GoapFieldNpcPerspective.GetAttackGoalPosition(teamBB, mirrored);
         GoapNpcMotor.MoveToward(_bb, attackGoal, _moveIntensity, DiagCategory);
+
+        if (Time.time >= _nextProgressSampleTime)
+        {
+            Vector3 now = GoapNpcMotor.GetSelfWorldPosition(_bb);
+            float moved = Vector3.Distance(
+                new Vector3(now.x, 0f, now.z),
+                new Vector3(_progressSamplePosition.x, 0f, _progressSamplePosition.z));
+            if (moved < StuckProgressMinDelta)
+            {
+                FinishDribble("stuck_no_progress");
+                return;
+            }
+
+            _progressSamplePosition = now;
+            _nextProgressSampleTime = Time.time + StuckProgressWindowSeconds;
+        }
     }
 
     public override bool IsComplete()

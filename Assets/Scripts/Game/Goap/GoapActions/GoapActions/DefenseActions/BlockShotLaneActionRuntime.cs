@@ -4,6 +4,7 @@ using Game.Goap;
 public class BlockShotLaneActionRuntime : GoapActionRuntime
 {
     private const string DiagCategory = "BlockShotLane";
+    private const string ActionName = "BlockShotLane";
 
     private bool _isExecuting;
     private float _startTime;
@@ -36,6 +37,12 @@ public class BlockShotLaneActionRuntime : GoapActionRuntime
         {
             return false;
         }
+
+        if (TeammateNpcDefensePlanning.IsTacticalDefenseActionCoolingDown(bb, ActionName))
+        {
+            return false;
+        }
+
         return GoapTacticalMoveHelper.TryResolveMotor(bb);
     }
 
@@ -61,8 +68,10 @@ public class BlockShotLaneActionRuntime : GoapActionRuntime
 
         bool arrived = _motorResolved
             && GoapTacticalMoveHelper.MoveToward(_bb, _target, _moveIntensity, DiagCategory);
-        bool timedOut = Time.time - _startTime >= _executionTime;
-        if (!arrived && !timedOut) return false;
+        if (!GoapTacticalMoveHelper.ShouldCompleteTacticalMove(_startTime, _executionTime, arrived))
+        {
+            return false;
+        }
 
         Finish();
         return true;
@@ -76,6 +85,7 @@ public class BlockShotLaneActionRuntime : GoapActionRuntime
         {
             GoapTacticalMoveHelper.Stop(_bb, DiagCategory);
             GoapTacticalMoveHelper.ApplyDefensivePositionFact(_bb);
+            TeammateNpcDefensePlanning.MarkTacticalDefenseActionCompleted(_bb, ActionName);
         }
 
         _isExecuting = false;

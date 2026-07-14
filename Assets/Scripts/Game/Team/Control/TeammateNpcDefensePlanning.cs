@@ -10,6 +10,8 @@ using UnityEngine;
 public static class TeammateNpcDefensePlanning
 {
     private const float TemporarilyDisabledActionCostPenalty = 50f;
+    private const float TacticalDefenseReTriggerSeconds = 0.55f;
+    private static readonly Dictionary<string, float> TacticalDefenseCooldownUntilByKey = new();
 
     /// <summary>EnemyBallDefense より DefensivePositioning を優先する味方NPC向け。</summary>
     public const float DefensivePositioningEnemyBallPriority = 88f;
@@ -47,6 +49,42 @@ public static class TeammateNpcDefensePlanning
     public static bool BlocksWhenAlreadyInDefensivePosition(PlayerBlackboard bb)
     {
         return !ShouldIgnoreDefensivePositionGate(bb);
+    }
+
+    public static void MarkTacticalDefenseActionCompleted(PlayerBlackboard bb, string actionName)
+    {
+        if (bb == null || string.IsNullOrEmpty(actionName))
+        {
+            return;
+        }
+
+        TacticalDefenseCooldownUntilByKey[BuildTacticalDefenseCooldownKey(bb, actionName)] =
+            Time.time + TacticalDefenseReTriggerSeconds;
+    }
+
+    public static bool IsTacticalDefenseActionCoolingDown(PlayerBlackboard bb, string actionName)
+    {
+        if (bb == null || string.IsNullOrEmpty(actionName))
+        {
+            return false;
+        }
+
+        if (!TacticalDefenseCooldownUntilByKey.TryGetValue(
+                BuildTacticalDefenseCooldownKey(bb, actionName),
+                out float cooldownUntil))
+        {
+            return false;
+        }
+
+        return Time.time < cooldownUntil;
+    }
+
+    private static string BuildTacticalDefenseCooldownKey(PlayerBlackboard bb, string actionName)
+    {
+        int playerId = bb.BasicData != null && bb.BasicData.PlayerID > 0
+            ? bb.BasicData.PlayerID
+            : bb.GetInstanceID();
+        return playerId + ":" + actionName;
     }
 
     public static bool IsTeammateNpc(PlayerBlackboard bb)
@@ -239,6 +277,11 @@ public static class TeammateNpcDefensePlanning
         }
 
         float cost = baseCost + situationalAdjustment;
+        if (action != null && IsTacticalDefenseActionCoolingDown(bb, action.ActionName))
+        {
+            cost += TemporarilyDisabledActionCostPenalty;
+        }
+
         if (!ShouldUseTacticalDefenseGoal(bb))
         {
             return applyFloor ? Mathf.Max(0.1f, cost) : cost;
@@ -279,6 +322,7 @@ public static class TeammateNpcDefensePlanning
         else
         {
             action = scopedActions
+                .Where(a => a != null && !IsTacticalDefenseActionCoolingDown(bb, a.ActionName))
                 .OrderBy(a => a.CalculateDynamicCost(bb))
                 .ThenBy(a => a.CalculateTacticalSelectionCost(bb))
                 .FirstOrDefault();

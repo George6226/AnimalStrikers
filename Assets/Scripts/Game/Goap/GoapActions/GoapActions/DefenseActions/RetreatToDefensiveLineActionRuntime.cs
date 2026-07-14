@@ -4,6 +4,7 @@ using Game.Goap;
 public class RetreatToDefensiveLineActionRuntime : GoapActionRuntime
 {
     private const string DiagCategory = "RetreatLine";
+    private const string ActionName = "RetreatToDefensiveLine";
 
     private bool _isExecuting;
     private float _startTime;
@@ -32,6 +33,11 @@ public class RetreatToDefensiveLineActionRuntime : GoapActionRuntime
     {
         if (bb.GetFact(new Fact(SymbolTag.Tactical.TEAM_HAS_BALL, "true")) == true) return false;
         if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true) return false;
+        if (TeammateNpcDefensePlanning.IsTacticalDefenseActionCoolingDown(bb, ActionName))
+        {
+            return false;
+        }
+
         return GoapTacticalMoveHelper.TryResolveMotor(bb);
     }
 
@@ -57,8 +63,10 @@ public class RetreatToDefensiveLineActionRuntime : GoapActionRuntime
 
         bool arrived = _motorResolved
             && GoapTacticalMoveHelper.MoveToward(_bb, _target, _moveIntensity, DiagCategory, 0.75f);
-        bool timedOut = Time.time - _startTime >= _executionTime;
-        if (!arrived && !timedOut) return false;
+        if (!GoapTacticalMoveHelper.ShouldCompleteTacticalMove(_startTime, _executionTime, arrived))
+        {
+            return false;
+        }
 
         Finish();
         return true;
@@ -72,6 +80,7 @@ public class RetreatToDefensiveLineActionRuntime : GoapActionRuntime
         {
             GoapTacticalMoveHelper.Stop(_bb, DiagCategory);
             GoapTacticalMoveHelper.ApplyDefensivePositionFact(_bb);
+            TeammateNpcDefensePlanning.MarkTacticalDefenseActionCompleted(_bb, ActionName);
         }
 
         _isExecuting = false;

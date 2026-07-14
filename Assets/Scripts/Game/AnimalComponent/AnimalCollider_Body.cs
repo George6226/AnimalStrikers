@@ -256,7 +256,7 @@ public class AnimalCollider_Body : MonoBehaviour
 
             hBall.stop();
             bool changed = ballManager.changeOwnership(-1, BallManager_State.BALL_STATE.FREE);
-            handler?.keeperParryStand();
+            PlayGoalkeeperSaveAnimation(handler, hBall);
             GoalkeeperDiagnosticLog.Write($"[GK_SAVE] source={source} ownershipChanged={changed} dist={dist:F2}");
             return true;
         }
@@ -288,7 +288,36 @@ public class AnimalCollider_Body : MonoBehaviour
     private float ResolveGoalkeeperSaveDistance()
     {
         var brain = _animalFacade != null ? _animalFacade.GetComponent<GoalkeeperNpcBrain>() : null;
-        return brain != null ? brain.SaveReachDistance : 3.5f;
+        return brain != null ? brain.SaveReachDistance : 4.5f;
+    }
+
+    private void PlayGoalkeeperSaveAnimation(AnimalHandler handler, BallHandler hBall)
+    {
+        if (handler == null || hBall == null)
+        {
+            return;
+        }
+
+        Vector3 ballPos = hBall.transform.position;
+        Vector3 gkPos = _animalFacade.transform.position;
+        float height = ballPos.y - gkPos.y;
+        float lateral = ballPos.x - gkPos.x;
+
+        if (height >= ConstData.GK_SAVE_HIGH_BALL_HEIGHT || Mathf.Abs(lateral) >= 0.85f)
+        {
+            if (lateral >= 0f)
+            {
+                handler.keeperParryJumpRight();
+            }
+            else
+            {
+                handler.keeperParryJumpLeft();
+            }
+
+            return;
+        }
+
+        handler.keeperParryStand();
     }
 
 
