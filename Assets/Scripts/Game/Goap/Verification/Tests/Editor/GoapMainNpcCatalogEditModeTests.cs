@@ -81,6 +81,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
 
         Assert.That(filtered, Has.All.Matches<GoapActionSO>(GoapTeammateNpcCatalog.IsDefenseAction));
         Assert.That(filtered.Exists(a => a is BlockShotLaneActionSO), Is.True);
+        Assert.That(filtered.Exists(a => a is SlideTackleActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.False);
     }
 

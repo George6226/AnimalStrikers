@@ -114,6 +114,116 @@ public static class TeammateNpcDefensePlanning
         return facade != null && GoapMainNpcProductionEnvironment.IsProductionMainPlayer(facade);
     }
 
+    /// <summary>相手保持かつ近接時にスライディング奪取を試みられるか（F4: Main 相当のみ）。</summary>
+    public static bool CanSlideTackle(PlayerBlackboard bb, float detectionRange = 3f)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        if (!IsSlideTackleEligibleAgent(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        {
+            return false;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (!IsEnemyBallDefenseContext(teamBB, bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Position.NEAR_ENEMY_HAS_BALL, "true")) == true)
+        {
+            return true;
+        }
+
+        if (teamBB == null || bb.PhysicalState == null)
+        {
+            return false;
+        }
+
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        bool enemyHasBall = GoapFieldNpcPerspective.EffectiveEnemyHasBall(teamBB, mirrored);
+        return PlayerBlackboardCalculator.IsNearEnemyHasBall(
+            bb.PhysicalState.Position,
+            enemyHasBall,
+            teamBB.BallInfo.BallOwnerPosition,
+            detectionRange);
+    }
+
+    /// <summary>F4 対象: 本番味方 Main / 敵 Main / Main NPC Verify。</summary>
+    public static bool IsSlideTackleEligibleAgent(PlayerBlackboard bb)
+    {
+        if (bb?.BasicData?.Self == null)
+        {
+            return false;
+        }
+
+        var facade = bb.BasicData.Self.GetComponentInParent<AnimalFacade>()
+            ?? bb.BasicData.Self.GetComponent<AnimalFacade>();
+        if (facade == null)
+        {
+            return false;
+        }
+
+        if (IsProductionMainFieldPlayer(bb))
+        {
+            return true;
+        }
+
+        if (GoapEnemyMainNpcPlanning.IsEnemyMainPlayer(facade))
+        {
+            return true;
+        }
+
+        if (GoapMainNpcVerifyEnvironment.IsActive
+            && GoapMainNpcVerifyEnvironment.ResolveTier(facade) == GoapNpcTier.Main)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>遠距離では +50、近接時は距離に応じて割引。</summary>
+    public static float ComputeSlideTackleCostAdjustment(PlayerBlackboard bb)
+    {
+        if (!CanSlideTackle(bb))
+        {
+            return TemporarilyDisabledActionCostPenalty;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB == null || bb?.PhysicalState == null)
+        {
+            return -1.2f;
+        }
+
+        float dist = Vector3.Distance(bb.PhysicalState.Position, teamBB.BallInfo.BallOwnerPosition);
+        if (dist <= 1.5f)
+        {
+            return -2.0f;
+        }
+
+        if (dist <= 2.5f)
+        {
+            return -1.55f;
+        }
+
+        return -1.1f;
+    }
+
     /// <summary>プランナー用の動的コスト（重なり回避＋状況調整を反映）。</summary>
     public static float ComputeDynamicCost(
         GoapActionSO action,
