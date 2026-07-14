@@ -90,7 +90,8 @@ public static class GoapTeammateNpcCatalog
             or BlockPassLaneActionSO
             or BlockShotLaneActionSO
             or RetreatToDefensiveLineActionSO
-            or SlideTackleActionSO;
+            or SlideTackleActionSO
+            or UseSpecialActionSO;
     }
 
     public static bool IsTacticalMoveRuntime(GoapActionRuntime runtime)
@@ -138,6 +139,7 @@ public static class GoapTeammateNpcCatalog
         EnsureAction<BlockShotLaneActionSO>(actions);
         EnsureAction<RetreatToDefensiveLineActionSO>(actions);
         EnsureAction<SlideTackleActionSO>(actions);
+        EnsureAction<UseSpecialActionSO>(actions);
         EnsureAction<GetOpenActionSO>(actions);
         EnsureAction<CreateSupportAngleActionSO>(actions);
         EnsureAction<MakeRunBehindActionSO>(actions);

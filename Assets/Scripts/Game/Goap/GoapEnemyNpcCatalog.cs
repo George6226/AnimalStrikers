@@ -80,6 +80,7 @@ public static class GoapEnemyNpcCatalog
         EnsureAction<BlockShotLaneActionSO>(actions);
         EnsureAction<RetreatToDefensiveLineActionSO>(actions);
         EnsureAction<SlideTackleActionSO>(actions);
+        EnsureAction<UseSpecialActionSO>(actions);
     }
 
     private static void EnsureGoal<T>(List<GoapGoalSO> goals) where T : GoapGoalSO
