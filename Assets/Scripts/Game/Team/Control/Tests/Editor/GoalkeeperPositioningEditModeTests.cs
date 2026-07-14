@@ -78,7 +78,7 @@ public sealed class GoalkeeperPositioningEditModeTests
   }
 
   [Test]
-  public void Compute_LooseBallNearGoal_RushesAlongXOnly()
+  public void Compute_LooseBallInGoalArea_RushesTowardBallOnZ()
   {
     var teamBB = CreateTeamBlackboard();
     try
@@ -90,16 +90,85 @@ public sealed class GoalkeeperPositioningEditModeTests
         BallManager_State.BALL_STATE.FREE,
         enemyHasBall: false,
         teamHasBall: false,
-        rushLooseBallDistance: 8f);
+        rushLooseBallDistance: 10f,
+        goalAreaDepth: 6f,
+        rushForwardDepth: 2.5f);
 
       Assert.That(result.Mode, Is.EqualTo(GoalkeeperPositioning.Mode.RushLooseBall));
       Assert.That(result.TargetPosition.x, Is.EqualTo(2f).Within(0.01f));
+      Assert.That(result.TargetPosition.z, Is.EqualTo(-18f).Within(0.01f));
+    }
+    finally
+    {
+      Object.DestroyImmediate(teamBB.gameObject);
+    }
+  }
+
+  [Test]
+  public void Compute_ShootFarFromGoal_TracksLaterallyOnly()
+  {
+    var teamBB = CreateTeamBlackboard();
+    try
+    {
+      var result = GoalkeeperPositioning.Compute(
+        teamBB,
+        mirrored: false,
+        ballPosition: new Vector3(4f, 0.25f, -8f),
+        BallManager_State.BALL_STATE.SHOOT,
+        enemyHasBall: false,
+        teamHasBall: false);
+
+      Assert.That(result.Mode, Is.EqualTo(GoalkeeperPositioning.Mode.TrackBall));
       Assert.That(result.TargetPosition.z, Is.EqualTo(-16.5f).Within(0.01f));
     }
     finally
     {
       Object.DestroyImmediate(teamBB.gameObject);
     }
+  }
+
+  [Test]
+  public void Compute_ShootNearGoalLine_RushesWithinDepth()
+  {
+    var teamBB = CreateTeamBlackboard();
+    try
+    {
+      var result = GoalkeeperPositioning.Compute(
+        teamBB,
+        mirrored: false,
+        ballPosition: new Vector3(2f, 0.4f, -17f),
+        BallManager_State.BALL_STATE.SHOOT,
+        enemyHasBall: false,
+        teamHasBall: false);
+
+      Assert.That(result.Mode, Is.EqualTo(GoalkeeperPositioning.Mode.RushLooseBall));
+      Assert.That(result.TargetPosition.z, Is.GreaterThan(-17.5f));
+    }
+    finally
+    {
+      Object.DestroyImmediate(teamBB.gameObject);
+    }
+  }
+
+  [Test]
+  public void IsBallInGoalArea_BallInsidePenaltyBox_ReturnsTrue()
+  {
+    Assert.That(
+      GoalkeeperPositioning.IsBallInGoalArea(
+        new Vector3(2f, 0f, -17f),
+        new Vector3(0f, 0f, -20f),
+        Vector3.zero,
+        3.5f,
+        6f),
+      Is.True);
+    Assert.That(
+      GoalkeeperPositioning.IsBallInGoalArea(
+        new Vector3(0f, 0f, -10f),
+        new Vector3(0f, 0f, -20f),
+        Vector3.zero,
+        3.5f,
+        6f),
+      Is.False);
   }
 
   [Test]

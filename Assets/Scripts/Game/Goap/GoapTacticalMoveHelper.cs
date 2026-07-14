@@ -6,6 +6,7 @@ using Game.Goap;
 /// </summary>
 public static class GoapTacticalMoveHelper
 {
+    public const float TacticalDefenseMinHoldSeconds = 0.9f;
     public static bool TryResolveMotor(PlayerBlackboard bb)
     {
         return GoapNpcMotor.TryResolve(bb, out _, out _, out _);
@@ -63,5 +64,21 @@ public static class GoapTacticalMoveHelper
         bb.SetFact(new Fact(SymbolTag.Action.IS_IN_DEFENSIVE_POSITION, "false"), false);
         bb.SetFact(new Fact(SymbolTag.Basic.IS_MOVING, "true"), true);
         bb.SetFact(new Fact(SymbolTag.Basic.IS_MOVING, "false"), false);
+    }
+
+    /// <summary>到着直後の即完了ループを防ぐ。maxDuration 経過、または到着後 minHold 経過で true。</summary>
+    public static bool ShouldCompleteTacticalMove(
+        float startTime,
+        float maxDurationSeconds,
+        bool atTarget,
+        float minHoldWhenArrivedSeconds = TacticalDefenseMinHoldSeconds)
+    {
+        float elapsed = Time.time - startTime;
+        if (elapsed >= maxDurationSeconds)
+        {
+            return true;
+        }
+
+        return atTarget && elapsed >= minHoldWhenArrivedSeconds;
     }
 }

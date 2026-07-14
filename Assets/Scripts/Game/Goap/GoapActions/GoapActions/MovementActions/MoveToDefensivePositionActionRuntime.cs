@@ -52,14 +52,17 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
             return false;
         }
 
+        if (IsHoldingTacticalDefensivePosition(bb))
+        {
+            GoapMovementDiagnostic.Log(DiagCategory, "CanExecute=false reason=already_in_defensive_position", bb);
+            return false;
+        }
+
         int playerId = ResolvePlayerId(bb);
         if (CooldownUntilByPlayerId.TryGetValue(playerId, out float cooldownUntil) && Time.time < cooldownUntil)
         {
-            GoapMovementDiagnostic.Log(
-                DiagCategory,
-                $"CanExecute=false reason=defense_cooldown remain={(cooldownUntil - Time.time):F2}s",
-                bb);
-            return false;
+            // 守備位置から外れた場合はクールダウンを無視して再移動する
+            CooldownUntilByPlayerId.Remove(playerId);
         }
 
         if (!IsEnemyBallSituation(bb, out string teamReason))
@@ -202,6 +205,12 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
         {
             GoapNpcMotor.Stop(_bb, DiagCategory);
         }
+    }
+
+    public static bool IsHoldingTacticalDefensivePosition(PlayerBlackboard bb)
+    {
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        return teamBB != null && bb != null && IsTacticalDefensivePosition(bb, teamBB);
     }
 
     private static bool IsTacticalDefensivePosition(PlayerBlackboard bb, TeamBlackboard teamBB)

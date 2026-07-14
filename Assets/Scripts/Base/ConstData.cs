@@ -60,7 +60,52 @@ public static class ConstData
     public static float DASH_MULTIPLIER = 1.5f;
 
     // シュート精度ブレ角（Shoot=0 のときの最大角度）
-    public static float MAX_SHOOT_SPREAD_ANGLE = 25.0f;
+    public static float MAX_SHOOT_SPREAD_ANGLE = 32.0f;
+
+    /// <summary>ゴール口半幅（GK 位置取り・シュート狙いと共通）。</summary>
+    public const float GOAL_MOUTH_HALF_WIDTH = 3.5f;
+
+    /// <summary>自ゴール前の GK 積極拾いエリア深さ（ゴールラインからフィールド方向）。</summary>
+    public const float GK_GOAL_AREA_DEPTH = 6f;
+
+    /// <summary>GK がホームラインから前に出られる最大距離。</summary>
+    public const float GK_RUSH_FORWARD_DEPTH = 2.5f;
+
+    /// <summary>シュートをロフト（上方向）にする確率（製品プレイ時）。</summary>
+    public const float SHOOT_LOFT_CHANCE = 0.45f;
+
+    /// <summary>シュート狙いをゴール口端（GK がいない側のポスト）寄りにする比率。</summary>
+    public const float SHOOT_OPEN_POST_RATIO = 0.92f;
+
+    /// <summary>ロフトシュートの最大到達高度。</summary>
+    public const float SHOOT_LOFT_MAX_HEIGHT = 4.0f;
+
+    /// <summary>GK がジャンプパリーアニメを選ぶボール高さ（GK 基準）。</summary>
+    public const float GK_SAVE_HIGH_BALL_HEIGHT = 1.15f;
+
+    /// <summary>GK 配球の最短待機（秒）。</summary>
+    public const float GK_DISTRIBUTION_MIN_DELAY = 0.75f;
+
+    /// <summary>GK 配球の最長待機（秒）。超えたら条件未達でもパス。</summary>
+    public const float GK_DISTRIBUTION_MAX_DELAY = 2.0f;
+
+    /// <summary>守備 GK として扱う、攻撃ゴールからの最大距離。</summary>
+    public const float GK_DEFEND_GOAL_MAX_DISTANCE = 12f;
+
+    /// <summary>パスの最大距離（それ以上は選定・キック双方で抑制）。</summary>
+    public const float MAX_PASS_DISTANCE = 14f;
+
+    /// <summary>移動中受け手にはこの距離以下なら地上パスを優先。</summary>
+    public const float PASS_GROUND_PREFER_MAX_DISTANCE = 11f;
+
+    /// <summary>GK シュート時の前出しはゴール前この深度まで（FREE より浅い）。</summary>
+    public const float GK_SHOOT_RUSH_MAX_DEPTH = 3.5f;
+
+    /// <summary>味方 GK スポーン位置（自ゴールライン Z=-20 からフィールド側へ）。</summary>
+    public const float GK_SPAWN_DEPTH_ALLY = 3.5f;
+
+    /// <summary>敵 GK スポーン位置（敵ゴールライン Z=+20 からフィールド側へ。小さいほどゴール寄り）。</summary>
+    public const float GK_SPAWN_DEPTH_ENEMY = 2.0f;
 
     // パス精度ブレ角（Pass=0 のときの最大角度）
     public static float MAX_PASS_SPREAD_ANGLE = 20.0f;

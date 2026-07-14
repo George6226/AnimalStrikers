@@ -69,6 +69,51 @@ public static class GoalkeeperDistribution
         return GoapPassTargetSelection.TrySelectBestAlly(goalkeeper, out target);
     }
 
+    /// <summary>受け手が前線に出てパスレーンが通るまで配球を待つ。</summary>
+    public static bool IsPassTargetReady(
+        AnimalFacade goalkeeper,
+        AnimalFacade target,
+        bool mirrored,
+        TeamBlackboard teamBB,
+        float minForwardRatio = 0.10f)
+    {
+        if (goalkeeper == null || target == null || teamBB == null)
+        {
+            return false;
+        }
+
+        var field = teamBB.FieldInfo;
+        Vector3 gkPos = goalkeeper.transform.position;
+        Vector3 targetPos = target.transform.position;
+        Vector3 defendGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
+        Vector3 toField = field.FieldCenter - defendGoal;
+        toField.y = 0f;
+        if (toField.sqrMagnitude < 0.001f)
+        {
+            toField = Vector3.forward;
+        }
+        else
+        {
+            toField.Normalize();
+        }
+
+        float forwardDist = Vector3.Dot(targetPos - gkPos, toField);
+        if (forwardDist < field.FieldLength * minForwardRatio)
+        {
+            return false;
+        }
+
+        var blockers = mirrored
+            ? teamBB.BasicInfo.TeammatePositions
+            : teamBB.BasicInfo.EnemyPositions;
+        float passBlockRange = field.FieldLength * 0.06f;
+        return PlayerBlackboardCalculator.IsPassRouteClear(
+            targetPos,
+            gkPos,
+            blockers,
+            passBlockRange);
+    }
+
     public static TeammateRole ResolveTeammateRole(
         AnimalFacade teammate,
         AnimalFacade goalkeeper,

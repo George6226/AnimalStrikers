@@ -131,11 +131,18 @@ public class AnimalAction_Pass : AnimalAction_Base
         GameObject myBallKeep = _myFacade.GetBallKeep();
         GameObject allyBallKeep = target.GetBallKeep();
         Vector3 myPos = myBallKeep != null ? myBallKeep.transform.position : _myFacade.transform.position;
+        bool receiverMoving = GoapPassTargetSelection.IsReceiverMoving(target);
         Vector3 allyPos = allyBallKeep != null ? allyBallKeep.transform.position : target.transform.position;
-        Vector3 dir = (allyPos - myPos).normalized;
         float distance = Vector3.Distance(myPos, allyPos);
+        float flightSeconds = PassLeadPolicy.EstimateGroundPassFlightSeconds(distance);
+        allyPos = PassLeadPolicy.ResolveKickTargetPosition(target, myPos, flightSeconds, receiverMoving);
+        Vector3 dir = (allyPos - myPos).normalized;
+        distance = Vector3.Distance(myPos, allyPos);
+        distance = PassLeadPolicy.ClampPassDistance(distance);
         bool needsLobKick = _animalPassSearch != null
             && _animalPassSearch.IsCharacterInPassLine(_myFacade.gameObject, target.gameObject);
+        needsLobKick = !PassLeadPolicy.ShouldPreferGroundPass(distance, receiverMoving, needsLobKick)
+            && needsLobKick;
         _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
 
         GoapPassDiagnostic.LogPhase(

@@ -330,7 +330,10 @@ public class PhotonAvatarCreator : MonoBehaviourPunCallbacks
                 x = -4.0f;
                 break;
             case 3:
-                z = -16.5f;
+                // 敵 GK は味方よりゴール側（浅い深度）に配置する
+                z = isMaster
+                    ? -(20f - ConstData.GK_SPAWN_DEPTH_ALLY)
+                    : -(20f - ConstData.GK_SPAWN_DEPTH_ENEMY);
                 break;
         }
 

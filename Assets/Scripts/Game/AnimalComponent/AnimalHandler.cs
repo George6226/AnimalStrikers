@@ -232,6 +232,7 @@ public class AnimalHandler : MonoBehaviour
         Vector3 pos = _rb.transform.position;
         pos.x = Mathf.Clamp(pos.x + deltaX, -11.5f, 11.5f);
         _rb.transform.position = pos;
+        FaceKeeperMovement(new Vector3(deltaX, 0f, 0f));
 
         var kind = direction < 0f
             ? AnimalAnime_State.KEEPER_ANIME_KIND.MOVE_L
@@ -259,6 +260,86 @@ public class AnimalHandler : MonoBehaviour
         }
 
         _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.PARRY_STAND);
+    }
+
+    /// <summary>GK 左ジャンプパリー（Parry_Jump_L）。</summary>
+    public void keeperParryJumpLeft()
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.PARRY_JUMP_L);
+    }
+
+    /// <summary>GK 右ジャンプパリー（Parry_Jump_R）。</summary>
+    public void keeperParryJumpRight()
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        _animeChange.changeAnimation((int)AnimalAnime_State.KEEPER_ANIME_KIND.PARRY_JUMP_R);
+    }
+
+    /// <summary>GK がターゲットへ XZ 移動（ルーズボール積極拾い用）。</summary>
+    public void moveGoalkeeperToward(Vector3 targetWorld, float stopDistance = 0.6f, float intensity = 1f)
+    {
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return;
+        }
+
+        Vector3 pos = _rb.transform.position;
+        Vector3 delta = targetWorld - pos;
+        delta.y = 0f;
+        if (delta.magnitude <= stopDistance)
+        {
+            keeperStand();
+            return;
+        }
+
+        float speedMag = ResolveFieldMoveSpeedMagnitude();
+        float speed = 3.2f;
+        float bubbleMul = IsSlowedBySharkBubble ? _sharkBubbleMoveSpeedMultiplier : 1f;
+        float staminaMul = GetStaminaMoveSpeedMultiplier();
+        Vector3 move = Vector3.ClampMagnitude(delta, speedMag * Time.deltaTime * speed * bubbleMul * staminaMul * intensity);
+        Vector3 newPos = pos + move;
+        newPos.x = Mathf.Clamp(newPos.x, -11.5f, 11.5f);
+        _rb.transform.position = newPos;
+        FaceKeeperMovement(move);
+
+        float animSign = Mathf.Abs(delta.x) > 0.05f
+            ? delta.x
+            : targetWorld.x - pos.x;
+        if (Mathf.Abs(animSign) <= 0.01f && Mathf.Abs(delta.z) > 0.05f)
+        {
+            animSign = delta.z;
+        }
+
+        if (Mathf.Abs(animSign) <= 0.01f)
+        {
+            keeperStand();
+            return;
+        }
+
+        var kind = animSign < 0f
+            ? AnimalAnime_State.KEEPER_ANIME_KIND.MOVE_L
+            : AnimalAnime_State.KEEPER_ANIME_KIND.MOVE_R;
+        _animeChange.changeAnimation((int)kind);
+    }
+
+    private void FaceKeeperMovement(Vector3 moveDelta)
+    {
+        moveDelta.y = 0f;
+        if (moveDelta.sqrMagnitude < 0.0001f)
+        {
+            return;
+        }
+
+        _rb.transform.forward = moveDelta.normalized;
     }
 
     private float ResolveFieldMoveSpeedMagnitude()

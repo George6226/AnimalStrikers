@@ -48,7 +48,9 @@ public static class GoalkeeperPositioning
         bool teamHasBall,
         float lineDepth = 3.5f,
         float goalMouthHalfWidth = 3.5f,
-        float rushLooseBallDistance = 8f)
+        float rushLooseBallDistance = 10f,
+        float goalAreaDepth = 6f,
+        float rushForwardDepth = 2.5f)
     {
         if (teamBB == null)
         {
@@ -64,27 +66,44 @@ public static class GoalkeeperPositioning
             towardCenter = Vector3.forward;
         }
 
-        float homeZ = defendGoal.z + Mathf.Sign(towardCenter.z) * lineDepth;
+        float towardCenterSign = Mathf.Sign(towardCenter.z);
+        float homeZ = defendGoal.z + towardCenterSign * lineDepth;
         Vector3 homeLine = new Vector3(defendGoal.x, defendGoal.y, homeZ);
+        float maxForwardZ = defendGoal.z + towardCenterSign * (lineDepth + rushForwardDepth);
 
         bool shootThreat = ballState == BallManager_State.BALL_STATE.SHOOT;
+        bool ballInGoalArea = IsBallInGoalArea(
+            ballPosition,
+            defendGoal,
+            field.FieldCenter,
+            goalMouthHalfWidth,
+            goalAreaDepth);
+        bool shootInGoalArea = shootThreat
+            && IsBallInGoalArea(
+                ballPosition,
+                defendGoal,
+                field.FieldCenter,
+                goalMouthHalfWidth,
+                ConstData.GK_SHOOT_RUSH_MAX_DEPTH);
         bool looseBallNearGoal = ballState == BallManager_State.BALL_STATE.FREE
             && HorizontalDistance(ballPosition, defendGoal) <= rushLooseBallDistance;
         bool enemyThreat = enemyHasBall
             && !teamHasBall
             && IsInDefensiveZone(ballPosition, defendGoal, field.FieldCenter);
 
-        bool underThreat = shootThreat || looseBallNearGoal || enemyThreat;
+        bool underThreat = shootThreat || ballInGoalArea || looseBallNearGoal || enemyThreat;
         Mode mode = Mode.HoldLine;
         Vector3 target = homeLine;
 
-        if (looseBallNearGoal)
+        if ((ballState == BallManager_State.BALL_STATE.FREE && (ballInGoalArea || looseBallNearGoal))
+            || shootInGoalArea)
         {
             mode = Mode.RushLooseBall;
-            target = new Vector3(
-                Mathf.Clamp(ballPosition.x, defendGoal.x - goalMouthHalfWidth, defendGoal.x + goalMouthHalfWidth),
-                defendGoal.y,
-                homeZ);
+            target = BuildRushTarget(
+                ballPosition,
+                defendGoal,
+                goalMouthHalfWidth,
+                maxForwardZ);
         }
         else if (underThreat)
         {
@@ -100,6 +119,31 @@ public static class GoalkeeperPositioning
             ClampToField(target, field),
             mode,
             underThreat);
+    }
+
+    /// <summary>自ゴール前ペナルティエリア相当（FREE ボール積極拾い判定）。</summary>
+    public static bool IsBallInGoalArea(
+        Vector3 ballPosition,
+        Vector3 defendGoal,
+        Vector3 fieldCenter,
+        float goalMouthHalfWidth,
+        float goalAreaDepth)
+    {
+        Vector3 toBall = ballPosition - defendGoal;
+        Vector3 toCenter = fieldCenter - defendGoal;
+        toBall.y = 0f;
+        toCenter.y = 0f;
+        if (toCenter.sqrMagnitude < 0.001f)
+        {
+            return false;
+        }
+
+        toCenter.Normalize();
+        float depth = Vector3.Dot(toBall, toCenter);
+        float lateral = Mathf.Abs(ballPosition.x - defendGoal.x);
+        return depth >= 0f
+            && depth <= goalAreaDepth
+            && lateral <= goalMouthHalfWidth * 1.15f;
     }
 
     public static bool IsInDefensiveZone(Vector3 ballPosition, Vector3 defendGoal, Vector3 fieldCenter)
@@ -126,6 +170,22 @@ public static class GoalkeeperPositioning
             Mathf.Clamp(pos.x, c.x - halfW, c.x + halfW),
             pos.y,
             Mathf.Clamp(pos.z, c.z - halfL, c.z + halfL));
+    }
+
+    private static Vector3 BuildRushTarget(
+        Vector3 ballPosition,
+        Vector3 defendGoal,
+        float goalMouthHalfWidth,
+        float maxForwardZ)
+    {
+        float minZ = Mathf.Min(defendGoal.z, maxForwardZ);
+        float maxZ = Mathf.Max(defendGoal.z, maxForwardZ);
+        float targetZ = Mathf.Clamp(ballPosition.z, minZ, maxZ);
+
+        return new Vector3(
+            Mathf.Clamp(ballPosition.x, defendGoal.x - goalMouthHalfWidth, defendGoal.x + goalMouthHalfWidth),
+            defendGoal.y,
+            targetZ);
     }
 
     private static float HorizontalDistance(Vector3 a, Vector3 b)
