@@ -62,7 +62,7 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
             return false;
         }
 
-        if (!IsEnemyBallSituation(out string teamReason))
+        if (!IsEnemyBallSituation(bb, out string teamReason))
         {
             GoapMovementDiagnostic.Log(DiagCategory, $"CanExecute=false reason=enemy_ball ({teamReason})", bb);
             return false;
@@ -106,7 +106,7 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
     public override void Update(float deltaTime)
     {
         if (!_isExecuting || _bb == null || !_motorResolved) return;
-        if (!IsEnemyBallSituation(out _)) return;
+        if (!IsEnemyBallSituation(_bb, out _)) return;
 
         if (Time.time >= _nextRetargetTime)
         {
@@ -133,7 +133,7 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
             return true;
         }
 
-        if (!IsEnemyBallSituation(out string teamReason))
+        if (!IsEnemyBallSituation(_bb, out string teamReason))
         {
             GoapMovementDiagnostic.Log(DiagCategory, $"Complete reason=enemy_ball_lost ({teamReason})", _bb);
             GoapNpcMotor.Stop(_bb, DiagCategory);
@@ -206,15 +206,22 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
 
     private static bool IsTacticalDefensivePosition(PlayerBlackboard bb, TeamBlackboard teamBB)
     {
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out _,
+            out List<Vector3> opponentPositions);
+
         return PlayerBlackboardCalculator.CalculateIsInDefensivePosition(
-            teamBB.BallInfo.TeamHasBall,
+            GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored),
             bb.BallState.HasBall,
             bb.ActionState.IsStunned,
             teamBB.FieldInfo.FieldLength,
             GoapNpcMotor.GetSelfWorldPosition(bb),
             teamBB.BallInfo.BallOwnerPosition,
-            teamBB.BasicInfo.EnemyPositions,
-            teamBB.FieldInfo.EnemyGoalPosition);
+            opponentPositions,
+            GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored));
     }
 
     private static void ApplyDefensiveFact(PlayerBlackboard bb)
@@ -223,7 +230,7 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
         bb.SetFact(new Fact(SymbolTag.Action.IS_IN_DEFENSIVE_POSITION, "false"), false);
     }
 
-    private bool IsEnemyBallSituation(out string reason)
+    private bool IsEnemyBallSituation(PlayerBlackboard bb, out string reason)
     {
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null)
@@ -232,15 +239,10 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
             return false;
         }
 
-        if (!teamBB.BallInfo.EnemyHasBall)
+        if (!TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
         {
-            reason = $"enemyHasBall=false ballState={teamBB.BallInfo.BallState}";
-            return false;
-        }
-
-        if (teamBB.BallInfo.TeamHasBall)
-        {
-            reason = $"teamHasBall=true ballState={teamBB.BallInfo.BallState}";
+            reason = $"defenseContext=false teamHasBall={teamBB.BallInfo.TeamHasBall} " +
+                $"enemyHasBall={teamBB.BallInfo.EnemyHasBall} ballState={teamBB.BallInfo.BallState}";
             return false;
         }
 
@@ -275,15 +277,18 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
 
         Vector3 selfPos = GoapNpcMotor.GetSelfWorldPosition(bb);
         int slotIndex = ResolveFormationSlotIndex(bb);
-        var tactical = TeammateNpcTacticalPositionCalculator.Calculate(
-            selfPos,
-            slotIndex,
-            teamBB,
-            CollectOtherTeammatePositions(selfPos));
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        TeammateNpcTacticalPositionCalculator.Result tactical = mirrored
+            ? default
+            : TeammateNpcTacticalPositionCalculator.Calculate(
+                selfPos,
+                slotIndex,
+                teamBB,
+                CollectOtherTeammatePositions(selfPos));
 
-        Vector3 target = tactical.IsValid && tactical.Mode == TeammateNpcTacticalMode.Defend
+        Vector3 target = !mirrored && tactical.IsValid && tactical.Mode == TeammateNpcTacticalMode.Defend
             ? tactical.TargetPosition
-            : FallbackDefensivePosition(selfPos, teamBB);
+            : FallbackDefensivePosition(selfPos, teamBB, bb);
 
         float distFromSelf = Vector3.Distance(selfPos, target);
         GoapMovementDiagnostic.Log(
@@ -295,7 +300,7 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
         return target;
     }
 
-    private static Vector3 FallbackDefensivePosition(Vector3 selfPos, TeamBlackboard teamBB)
+    private static Vector3 FallbackDefensivePosition(Vector3 selfPos, TeamBlackboard teamBB, PlayerBlackboard bb)
     {
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
         if (ownerPos.sqrMagnitude < 0.01f)
@@ -303,10 +308,12 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
             ownerPos = teamBB.BallInfo.BallPosition;
         }
 
-        Vector3 toOwnGoal = (teamBB.FieldInfo.OwnGoalPosition - ownerPos).normalized;
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        Vector3 defendGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
+        Vector3 toOwnGoal = (defendGoal - ownerPos).normalized;
         if (toOwnGoal.sqrMagnitude < 0.0001f)
         {
-            toOwnGoal = (teamBB.FieldInfo.OwnGoalPosition - selfPos).normalized;
+            toOwnGoal = (defendGoal - selfPos).normalized;
         }
 
         return ownerPos + toOwnGoal * (teamBB.FieldInfo.FieldLength * 0.12f);

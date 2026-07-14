@@ -85,10 +85,17 @@ public class BlockPassLaneActionRuntime : GoapActionRuntime
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return bb.PhysicalState.Position;
 
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out _,
+            out List<Vector3> opponentPositions);
+
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         List<Vector3> enemiesWithoutBall = new List<Vector3>();
-        foreach (var enemyPos in teamBB.BasicInfo.EnemyPositions)
+        foreach (var enemyPos in opponentPositions)
         {
             if (Vector3.Distance(enemyPos, ownerPos) > 0.1f)
             {

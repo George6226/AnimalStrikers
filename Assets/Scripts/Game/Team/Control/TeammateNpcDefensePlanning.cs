@@ -311,7 +311,16 @@ public static class TeammateNpcDefensePlanning
         goal = null;
         plan = null;
 
-        foreach (GoapGoalSO candidate in availableGoals)
+        // 自軍シュート直後（ボール未所属）は敵保持前提の EnemyBallDefense ではなく
+        // 守備陣形へ戻る DefensivePositioning を優先する。
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        bool preferDefensivePositioning =
+            GoapFieldNpcPerspective.IsOwnTeamShootReleaseTransition(teamBB, bb);
+        IEnumerable<GoapGoalSO> orderedGoals = preferDefensivePositioning
+            ? availableGoals.OrderBy(g => g is DefensivePositioningGoalSO ? 0 : 1)
+            : availableGoals;
+
+        foreach (GoapGoalSO candidate in orderedGoals)
         {
             if (candidate is not DefensivePositioningGoalSO and not EnemyBallDefenseGoalSO)
             {

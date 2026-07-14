@@ -21,12 +21,17 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _rushLooseBallDistance = 8f;
     [SerializeField] private float _saveReachDistance = 3.5f;
 
+    [Header("配球")]
+    [SerializeField] private float _distributionDelayAfterCatch = 0.55f;
+
     private AnimalHandler _handler;
     private Collider _ballReceiveCollider;
     private AnimalCollider_Body _ballReceiveBody;
     private GoalkeeperPositioning.Mode _currentMode = GoalkeeperPositioning.Mode.HoldLine;
     private bool _diagSessionStarted;
     private float _lastProximityHandleTime = -999f;
+    private float _holdBallStartTime = -1f;
+    private bool _distributionPassRequested;
 
     public GoalkeeperPositioning.Mode CurrentMode => _currentMode;
     public float SaveReachDistance => _saveReachDistance;
@@ -94,9 +99,18 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         var teamBB = teamFacade != null ? teamFacade.TeamBlackboard : null;
         if (teamBB == null || !teamBB.BallInfo.IsExistBall)
         {
+            ResetDistributionState();
             StopMoving();
             return;
         }
+
+        if (IsHoldingBall())
+        {
+            HandleBallDistribution();
+            return;
+        }
+
+        ResetDistributionState();
 
         bool mirrored = GoalkeeperPositioning.IsMirroredGoalkeeper(_facade);
         var ball = teamBB.BallInfo;
@@ -170,6 +184,48 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     private void StopMoving()
     {
         _handler?.keeperStand();
+    }
+
+    private bool IsHoldingBall()
+    {
+        var avatar = _facade != null ? _facade.GetAvatar() : null;
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        return avatar != null
+            && ballManager != null
+            && ballManager.isHoldBall(avatar.ViewID);
+    }
+
+    private void HandleBallDistribution()
+    {
+        StopMoving();
+
+        if (_distributionPassRequested || GoapBallActionGuard.IsPassInProgress(_facade))
+        {
+            return;
+        }
+
+        if (_holdBallStartTime < 0f)
+        {
+            _holdBallStartTime = Time.time;
+            GoalkeeperDiagnosticLog.Write("[GK_DIST] holding_ball wait_for_pass");
+        }
+
+        if (Time.time - _holdBallStartTime < _distributionDelayAfterCatch)
+        {
+            return;
+        }
+
+        bool mirrored = GoalkeeperPositioning.IsMirroredGoalkeeper(_facade);
+        if (GoalkeeperDistributionBridge.TryExecutePass(_facade, mirrored, out _))
+        {
+            _distributionPassRequested = true;
+        }
+    }
+
+    private void ResetDistributionState()
+    {
+        _holdBallStartTime = -1f;
+        _distributionPassRequested = false;
     }
 
     private void EnsureGoalkeeperBallCollider()

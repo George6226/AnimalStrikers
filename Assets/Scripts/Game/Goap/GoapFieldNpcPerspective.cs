@@ -106,13 +106,16 @@ public static class GoapFieldNpcPerspective
 
         if (IsPassOrShootTransition(ball))
         {
-            if (ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored))
+            // 自軍シュート直後（ボール未所属）: 攻守切替まで守備へ（敵NPC鏡像で NoGoal 固着を防ぐ）
+            if (IsOwnTeamShootReleaseTransition(teamBB, bb))
             {
                 return true;
             }
 
-            // 自軍シュート直後（ボール未所属）: 攻守切替まで守備へ（敵NPC鏡像で NoGoal 固着を防ぐ）
-            return IsOwnTeamShootReleaseTransition(teamBB, bb);
+            // パス遷移中のみ相手最終保持側を守備扱いにする。
+            // シュート遷移は上のシュート側判定のみで扱い、受け手側は守備文脈にしない。
+            return ball.BallState == BallManager_State.BALL_STATE.PASS
+                && ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored);
         }
 
         return EffectiveEnemyHasBall(teamBB, mirrored) && !EffectiveTeamHasBall(teamBB, mirrored);

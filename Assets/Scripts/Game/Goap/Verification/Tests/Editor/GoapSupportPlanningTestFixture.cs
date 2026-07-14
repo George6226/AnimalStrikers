@@ -145,6 +145,7 @@ public sealed class GoapSupportPlanningTestFixture : IDisposable
         bb.PhysicalState.init(Vector3.zero);
         bb.BallState.init();
         bb.ActionState.init();
+        bb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
 
         AddAllyToRegistar(facade);
 

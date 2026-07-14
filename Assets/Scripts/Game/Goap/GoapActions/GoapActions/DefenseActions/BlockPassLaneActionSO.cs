@@ -58,8 +58,15 @@ public class BlockPassLaneActionSO : GoapActionSO
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return 0f;
 
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out List<Vector3> allyPositions,
+            out List<Vector3> opponentPositions);
+
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
 
@@ -80,7 +87,7 @@ public class BlockPassLaneActionSO : GoapActionSO
 
         float pressureThreshold = fieldLen * 0.15f;
         int pressureCount = 0;
-        foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+        foreach (Vector3 allyPos in allyPositions)
         {
             if (Vector3.Distance(allyPos, playerPos) < 0.1f)
             {
@@ -101,7 +108,7 @@ public class BlockPassLaneActionSO : GoapActionSO
         float markThreshold = fieldLen * 0.15f;
         Vector3 passTarget = default;
         float passTargetDist = float.MaxValue;
-        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
+        foreach (Vector3 enemyPos in opponentPositions)
         {
             if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
             {
@@ -109,7 +116,7 @@ public class BlockPassLaneActionSO : GoapActionSO
             }
 
             bool isMarked = false;
-            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            foreach (Vector3 allyPos in allyPositions)
             {
                 if (Vector3.Distance(allyPos, playerPos) < 0.1f)
                 {

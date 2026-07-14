@@ -113,7 +113,8 @@ public static class GoalkeeperPositioning
             return false;
         }
 
-        return Vector3.Dot(toBall, toCenter) > 0f;
+        float projection = Vector3.Dot(toBall, toCenter);
+        return projection > 0f && projection <= toCenter.sqrMagnitude;
     }
 
     public static Vector3 ClampToField(Vector3 pos, TeamFieldInfo field)

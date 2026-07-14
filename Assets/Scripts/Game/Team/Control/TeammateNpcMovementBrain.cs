@@ -92,29 +92,6 @@ public class TeammateNpcMovementBrain : MonoBehaviour
             return;
         }
 
-        var goap = GetGoapAgent();
-        bool goapEnabled = goap != null && goap.enabled;
-
-        if (goapEnabled && IsGoapControlling())
-        {
-            return;
-        }
-
-        if (goapEnabled && !AllowsGoapIdleFallback())
-        {
-            _currentMode = TeammateNpcTacticalMode.Hold;
-            StopMoving();
-            return;
-        }
-
-        if (goapEnabled)
-        {
-            // GOAPが有効でも実行中アクションがない間は段階1移動でフォールバック。
-            _isFallbackDriving = true;
-        }
-
-        CacheMovementComponents();
-
         var teamFacade = TeamFacade.Instance;
         var teamBB = teamFacade != null ? teamFacade.TeamBlackboard : null;
         if (teamBB == null || !teamBB.BallInfo.IsExistBall)
@@ -123,6 +100,30 @@ public class TeammateNpcMovementBrain : MonoBehaviour
             StopMoving();
             return;
         }
+
+        var goap = GetGoapAgent();
+        bool goapEnabled = goap != null && goap.enabled;
+        bool goalkeeperDistributionActive = IsGoalkeeperDistributionActive(teamBB);
+
+        if (goapEnabled && IsGoapControlling() && !goalkeeperDistributionActive)
+        {
+            return;
+        }
+
+        if (goapEnabled && !AllowsGoapIdleFallback() && !goalkeeperDistributionActive)
+        {
+            _currentMode = TeammateNpcTacticalMode.Hold;
+            StopMoving();
+            return;
+        }
+
+        if (goapEnabled || goalkeeperDistributionActive)
+        {
+            // GOAPが有効でも実行中アクションがない間は段階1移動でフォールバック。
+            _isFallbackDriving = true;
+        }
+
+        CacheMovementComponents();
 
         int slotIndex = _formationSlot != null && _formationSlot.IsAssigned
             ? _formationSlot.Index
@@ -149,6 +150,13 @@ public class TeammateNpcMovementBrain : MonoBehaviour
     public void SetAllowGoapIdleFallback(bool allow)
     {
         _allowGoapIdleFallback = allow;
+    }
+
+    private bool IsGoalkeeperDistributionActive(TeamBlackboard teamBB)
+    {
+        return teamBB != null
+            && teamBB.BallInfo.IsExistBall
+            && GoalkeeperDistribution.IsGoalkeeperHoldingBall(teamBB);
     }
 
     private bool AllowsGoapIdleFallback()

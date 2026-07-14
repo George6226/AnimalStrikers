@@ -57,8 +57,15 @@ public class BlockShotLaneActionSO : GoapActionSO
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return 0f;
 
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out System.Collections.Generic.List<Vector3> allyPositions,
+            out _);
+
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
 
@@ -83,7 +90,7 @@ public class BlockShotLaneActionSO : GoapActionSO
         // 2. 敵のボール保持者にプレッシャーがかかっていなければコスト減
         float pressureThreshold = fieldLen * 0.15f; // フィールド長の15%以内
         int pressureCount = 0;
-        foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+        foreach (var allyPos in allyPositions)
         {
             // 自分自身は除外
             if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;

@@ -99,7 +99,7 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
             return 2.0f;
         }
 
-        if (HasUnmarkedFreeEnemy(teamBB, bb.PhysicalState.Position))
+        if (HasUnmarkedFreeEnemy(teamBB, bb, bb.PhysicalState.Position))
         {
             return 2.5f;
         }
@@ -108,13 +108,19 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
         return -Mathf.Clamp(d / Mathf.Max(fieldLen * 0.5f, 0.01f), 0f, 1f) * 2.0f;
     }
 
-    private static bool HasUnmarkedFreeEnemy(TeamBlackboard teamBB, Vector3 playerPos)
+    private static bool HasUnmarkedFreeEnemy(TeamBlackboard teamBB, PlayerBlackboard bb, Vector3 playerPos)
     {
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
         float fieldLen = teamBB.FieldInfo.FieldLength;
         float markThreshold = fieldLen * 0.15f;
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out System.Collections.Generic.List<Vector3> allyPositions,
+            out System.Collections.Generic.List<Vector3> opponentPositions);
 
-        foreach (Vector3 enemyPos in teamBB.BasicInfo.EnemyPositions)
+        foreach (Vector3 enemyPos in opponentPositions)
         {
             if (Vector3.Distance(enemyPos, ownerPos) <= 0.1f)
             {
@@ -122,7 +128,7 @@ public class RetreatToDefensiveLineActionSO : GoapActionSO
             }
 
             bool isMarked = false;
-            foreach (Vector3 allyPos in teamBB.BasicInfo.TeammatePositions)
+            foreach (Vector3 allyPos in allyPositions)
             {
                 if (Vector3.Distance(allyPos, playerPos) < 0.1f)
                 {

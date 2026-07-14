@@ -83,7 +83,8 @@ public class RetreatToDefensiveLineActionRuntime : GoapActionRuntime
         if (teamBB == null) return bb.PhysicalState.Position;
 
         var field = teamBB.FieldInfo;
-        Vector3 ownGoal = field.OwnGoalPosition;
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         Vector3 center = field.FieldCenter;
         float L = field.FieldLength;
         float depth = L * _retreatDepthRatio;

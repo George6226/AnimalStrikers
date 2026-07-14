@@ -75,7 +75,7 @@ public class AnimalFacade : MonoBehaviour
 
     public bool IsGK()
     {
-        return _animalInfo.IsGK;
+        return _animalInfo != null && _animalInfo.IsGK;
     }
 
     /// <summary>

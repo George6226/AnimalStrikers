@@ -86,8 +86,9 @@ public class BlockShotLaneActionRuntime : GoapActionRuntime
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return bb.PhysicalState.Position;
 
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         Vector3 ao = ownGoal - ownerPos;
         Vector3 p = bb.PhysicalState.Position;
         float aoLenSq = Mathf.Max(0.001f, Vector3.Dot(ao, ao));
