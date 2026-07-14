@@ -100,6 +100,7 @@ public class GoapAgent : MonoBehaviour
     private bool _ballOwnerLayoutInitialized;
     private Vector3 _lastTrackedBallOwnerPosition;
     private int _lastTrackedBallOwnerId;
+    private float _nextBallOwnerMovementReplanTime;
     private GoapNpcTier _npcTier = GoapNpcTier.Sub;
     [Header("Failure Cooldown")]
     [SerializeField] private float _baseFailureCooldown = 0.2f;
@@ -120,6 +121,8 @@ public class GoapAgent : MonoBehaviour
     [SerializeField] private bool _replanOnBallOwnerMovement = true;
     [Tooltip("保持者の移動がこの距離(フィールド長比)を超えたら再計画")]
     [SerializeField] private float _ballOwnerMovementThresholdRatio = 0.03f;
+    [Tooltip("BallOwnerMoved 再計画後、この秒数は同トリガーを無視（BallOwnerChanged は除外）")]
+    [SerializeField] private float _ballOwnerMovementReplanCooldown = 0.55f;
     
     // === 初期化 ===
     private void Awake()
@@ -168,6 +171,7 @@ public class GoapAgent : MonoBehaviour
         _ballOwnerLayoutInitialized = false;
         _lastTrackedBallOwnerPosition = Vector3.zero;
         _lastTrackedBallOwnerId = -1;
+        _nextBallOwnerMovementReplanTime = 0f;
         
         // A*プランナーの初期化（エージェント名を渡す）
         _planner = new AStarPlanner($"{this.name}(GoapAgent)");
@@ -516,8 +520,31 @@ public class GoapAgent : MonoBehaviour
             return false;
         }
 
+        // BallOwnerMoved のみクールダウン。スナップショットは維持し、解除後に蓄積 delta で発火する。
+        if (TeammateNpcSupportPlanning.IsBallOwnerMovedReplanOnCooldown(
+                ownerChanged,
+                Time.time,
+                _nextBallOwnerMovementReplanTime))
+        {
+            return false;
+        }
+
         CaptureBallOwnerLayoutSnapshot(ownerPos, ownerId);
         string reason = ownerChanged ? "BallOwnerChanged" : "BallOwnerMoved";
+        float cooldown = Mathf.Max(0.1f, _ballOwnerMovementReplanCooldown);
+
+        // GetOpen 等のサポート移動中は Cancel せず snapshot だけ更新（短周期 Abort ループ抑制）。
+        // AbortCurrentPlan / BallOwnerChanged は従来どおり即再計画。
+        if (TeammateNpcSupportPlanning.ShouldDeferBallOwnerMovedWhileSupportMoving(
+                ownerChanged,
+                TeammateNpcSupportPlanning.IsSupportMovementRuntime(_currentAction)))
+        {
+            _nextBallOwnerMovementReplanTime = Time.time + cooldown;
+            LogSummary($"ReplanDeferred(reason={reason}, action={_currentAction.DisplayName})");
+            return false;
+        }
+
+        _nextBallOwnerMovementReplanTime = Time.time + cooldown;
         TriggerImmediateReplan(
             reason,
             $"{reason}(ownerId={ownerId}, delta={delta:F2}, threshold={threshold:F2})");
@@ -529,6 +556,7 @@ public class GoapAgent : MonoBehaviour
         _ballOwnerLayoutInitialized = false;
         _lastTrackedBallOwnerPosition = Vector3.zero;
         _lastTrackedBallOwnerId = -1;
+        _nextBallOwnerMovementReplanTime = 0f;
     }
 
     private void CaptureBallOwnerLayoutSnapshot(Vector3 ownerPos, int ownerId)
