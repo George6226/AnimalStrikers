@@ -66,6 +66,45 @@ public static class TeammateNpcSupportPlanning
         return GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, bb);
     }
 
+    /// <summary>
+    /// GetOpen / CSA / MTS / MakeRunBehind 実行中か。
+    /// BallOwnerMoved の即 Abort を避け、CI 向けのグローバル Abort 遅延対象には含めない。
+    /// </summary>
+    public static bool IsSupportMovementRuntime(GoapActionRuntime runtime)
+    {
+        return runtime is GetOpenActionRuntime
+            or CreateSupportAngleActionRuntime
+            or MoveToSupportPositionActionRuntime
+            or MakeRunBehindActionRuntime;
+    }
+
+    /// <summary>
+    /// BallOwnerMoved の再計画クールダウン中か。BallOwnerChanged（保持者交代）は常に bypass。
+    /// </summary>
+    public static bool IsBallOwnerMovedReplanOnCooldown(
+        bool ownerChanged,
+        float now,
+        float nextAllowedReplanTime)
+    {
+        if (ownerChanged)
+        {
+            return false;
+        }
+
+        return now < nextAllowedReplanTime;
+    }
+
+    /// <summary>
+    /// サポート移動中の BallOwnerMoved は Cancel せず defer する（GetOpen 短周期 Abort ループ抑制）。
+    /// BallOwnerChanged は即再計画を維持する。
+    /// </summary>
+    public static bool ShouldDeferBallOwnerMovedWhileSupportMoving(
+        bool ownerChanged,
+        bool supportMovementInProgress)
+    {
+        return !ownerChanged && supportMovementInProgress;
+    }
+
     public static bool ShouldUseTacticalSupportGoal(PlayerBlackboard bb)
     {
         if (!TeammateNpcGoapRoleDifferentiation.Enabled || !IsAllyFieldSupportActor(bb))

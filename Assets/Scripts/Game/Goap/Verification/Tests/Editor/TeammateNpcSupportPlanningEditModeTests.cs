@@ -466,4 +466,66 @@ public sealed class TeammateNpcSupportPlanningEditModeTests
             Object.DestroyImmediate(goals[0]);
         }
     }
+
+    [Test]
+    public void BallOwnerMoved_ReplanCooldown_SuppressesWhileActive_ButOwnerChangedBypasses()
+    {
+        const float nextAllowed = 10f;
+
+        Assert.That(
+            TeammateNpcSupportPlanning.IsBallOwnerMovedReplanOnCooldown(
+                ownerChanged: false,
+                now: 9.5f,
+                nextAllowedReplanTime: nextAllowed),
+            Is.True,
+            "BallOwnerMoved should suppress during cooldown");
+
+        Assert.That(
+            TeammateNpcSupportPlanning.IsBallOwnerMovedReplanOnCooldown(
+                ownerChanged: false,
+                now: 10.5f,
+                nextAllowedReplanTime: nextAllowed),
+            Is.False,
+            "BallOwnerMoved should fire after cooldown");
+
+        Assert.That(
+            TeammateNpcSupportPlanning.IsBallOwnerMovedReplanOnCooldown(
+                ownerChanged: true,
+                now: 9.5f,
+                nextAllowedReplanTime: nextAllowed),
+            Is.False,
+            "BallOwnerChanged must bypass cooldown");
+    }
+
+    [Test]
+    public void BallOwnerMoved_DefersOnlyWhileSupportMoving_OwnerChangedNeverDefers()
+    {
+        Assert.That(
+            TeammateNpcSupportPlanning.ShouldDeferBallOwnerMovedWhileSupportMoving(
+                ownerChanged: false,
+                supportMovementInProgress: true),
+            Is.True);
+
+        Assert.That(
+            TeammateNpcSupportPlanning.ShouldDeferBallOwnerMovedWhileSupportMoving(
+                ownerChanged: false,
+                supportMovementInProgress: false),
+            Is.False);
+
+        Assert.That(
+            TeammateNpcSupportPlanning.ShouldDeferBallOwnerMovedWhileSupportMoving(
+                ownerChanged: true,
+                supportMovementInProgress: true),
+            Is.False,
+            "BallOwnerChanged must not defer even during support movement");
+    }
+
+    [Test]
+    public void IsSupportMovementRuntime_RecognizesGetOpenAndRejectsNull()
+    {
+        Assert.That(TeammateNpcSupportPlanning.IsSupportMovementRuntime(null), Is.False);
+
+        var getOpen = new GetOpenActionRuntime(null, "test-get-open");
+        Assert.That(TeammateNpcSupportPlanning.IsSupportMovementRuntime(getOpen), Is.True);
+    }
 }
