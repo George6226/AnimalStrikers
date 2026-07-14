@@ -164,5 +164,6 @@ public static class GoapMainNpcCatalog
         EnsureAction<BlockPassLaneActionSO>(actions);
         EnsureAction<BlockShotLaneActionSO>(actions);
         EnsureAction<RetreatToDefensiveLineActionSO>(actions);
+        EnsureAction<SlideTackleActionSO>(actions);
     }
 }

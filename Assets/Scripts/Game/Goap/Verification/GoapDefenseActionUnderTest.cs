@@ -8,6 +8,7 @@ public enum GoapDefenseActionUnderTest
     BlockShotLane = 4,
     RetreatToDefensiveLine = 5,
     EnemyOwnerDriveFollow = 6,
+    SlideTackle = 7,
 }
 
 public static class GoapDefenseActionUnderTestExtensions
@@ -21,6 +22,7 @@ public static class GoapDefenseActionUnderTestExtensions
             GoapDefenseActionUnderTest.BlockPassLane => "BlockPassLane",
             GoapDefenseActionUnderTest.BlockShotLane => "BlockShotLane",
             GoapDefenseActionUnderTest.RetreatToDefensiveLine => "RetreatToDefensiveLine",
+            GoapDefenseActionUnderTest.SlideTackle => "SlideTackle",
             _ => null,
         };
     }
