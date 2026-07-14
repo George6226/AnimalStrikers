@@ -25,15 +25,8 @@ public class AnimalAction_Special : AnimalAction_Base
     {
         // ゲーム中以外か?
         if (!StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME)) return;
-        
-        // ゲージが足りない
-        // if(_specialGauge != null && _specialGauge.GaugeValue < 1.0f)
-        // {
-        //     return;
-        // }
 
-        // スペシャルアクションの発動条件を満たしているかチェック
-        if(CanExecuteSpecial())
+        if (CanExecuteSpecial())
         {
             ActivateSpecial();
         }
@@ -41,6 +34,16 @@ public class AnimalAction_Special : AnimalAction_Base
 
     public bool CanExecuteSpecial()
     {
+        if (_isSpecialActive)
+        {
+            return false;
+        }
+
+        if (_specialGauge != null && _specialGauge.GaugeValue < 1.0f)
+        {
+            return false;
+        }
+
         return _specialAction != null && _specialAction.CanExecuteSpecial();
     }
 

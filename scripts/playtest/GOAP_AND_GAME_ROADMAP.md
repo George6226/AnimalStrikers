@@ -167,8 +167,8 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 1 | **F1** | スタミナ枯渇による移動速度低下 | **完了 (#53)** · 目視 OK | `AnimalHandler.cs`, `PhotonHPGauge.cs` |
 | 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | **完了 (#54)** · 目視 OK | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
 | 3 | **F3** | GK 実装（GOAP 外・独立） | **完了 (#56+#57)** · 目視 OK | `GoalkeeperNpcBrain.cs`, `GoalkeeperPositioning.cs`, `GoalkeeperDistribution.cs` |
-| 4 | **F4** | Main NPC スライディング/タックル GOAP | **EditMode OK** · 目視待ち | `SlideTackleActionSO.cs`, `AnimalAction_Sliding.cs` |
-| 5 | **F5** | 必殺技の NPC/GOAP 接続 | 未着手 | `AnimalAction_Special.cs`, キャラ別 SpecialActions |
+| 4 | **F4** | Main NPC スライディング/タックル GOAP | **完了 (#58)** · 目視ログ OK | `SlideTackleActionSO.cs`, `AnimalAction_Sliding.cs` |
+| 5 | **F5** | 必殺技の NPC/GOAP 接続 | **EditMode OK** · 目視ログ OK | `UseSpecialActionSO.cs`, `AnimalAction_Special.cs` |
 
 ### F1 実装内容
 
@@ -203,7 +203,17 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 **目視確認**: `./scripts/playtest/prepare-f4-slide-tackle-visual-check.sh`
 
-**F1 と F3 は並行可能。** F2 は F1 の直後。F5 は F4 の後。
+### F5 実装内容（MVP）
+
+- `UseSpecialActionSO` / `Runtime` / `GoapSpecialBridge`: ゲージ満タン時に `AnimalAction_Special` を実行
+- 攻撃（BallPossessionAttack）と守備（DefensivePositioning）双方の候補（キャラ別 CanExecuteSpecial に委任）
+- 対象: 本番味方 Main / 敵 Main、ゲージ未達はコスト 99
+- `AnimalAction_Special.CanExecuteSpecial` にゲージ満タン条件を復帰
+- ゲージ加速: `SPECIAL_GAUGE_VALUE` 0.1→0.25（シュート/被ダメ）、パス成功時 `SPECIAL_GAUGE_VALUE_ON_PASS` 0.12
+
+**目視確認**: `./scripts/playtest/prepare-f5-use-special-visual-check.sh`
+
+**F1 と F3 は並行可能。** F2 は F1 の直後。
 
 ---
 

@@ -207,6 +207,50 @@ public static class MainNpcAttackPlanning
         return facade != null && !GoapBallActionGuard.IsShootInProgress(facade);
     }
 
+    /// <summary>F5: Main 相当かつゲージ満タン・キャラ条件を満たすとき必殺技可能。</summary>
+    public static bool CanUseSpecial(PlayerBlackboard bb)
+    {
+        if (bb == null)
+        {
+            return false;
+        }
+
+        if (!TeammateNpcDefensePlanning.IsSlideTackleEligibleAgent(bb))
+        {
+            return false;
+        }
+
+        if (bb.GetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true")) != true)
+        {
+            return false;
+        }
+
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            return false;
+        }
+
+        return GoapSpecialBridge.IsGaugeReady(bb);
+    }
+
+    /// <summary>必殺技準備完了なら強めに優先、不可時は呼び出し側で 99 にする。</summary>
+    public static float ComputeSpecialCostAdjustment(PlayerBlackboard bb)
+    {
+        if (!CanUseSpecial(bb))
+        {
+            return 50f;
+        }
+
+        // 保持中（ライオン型）はシュートよりやや優先しやすい割引。
+        if (IsActivelyHoldingBall(bb))
+        {
+            return -0.55f;
+        }
+
+        // 相手保持（猪・ワニ型）の近接必殺は Slide と同程度の優先度。
+        return -0.35f;
+    }
+
     public static bool CanDribbleTowardGoal(PlayerBlackboard bb)
     {
         if (!IsBallPossessionAttackContext(bb))
@@ -792,6 +836,11 @@ public static class MainNpcAttackPlanning
 
             if (action is ShootAtGoalActionSO
                 && (excludeShoot || !CanExecuteShootAtGoal(bb)))
+            {
+                continue;
+            }
+
+            if (action is UseSpecialActionSO && !CanUseSpecial(bb))
             {
                 continue;
             }

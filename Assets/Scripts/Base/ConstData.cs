@@ -49,8 +49,12 @@ public static class ConstData
     // 試合時間(180秒)
     public static int TIME_GAME = 180;
 
-    // スペシャルゲージの増える量(0.0f ~ 1.0f)
-    public static float SPECIAL_GAUGE_VALUE = 0.1f;
+    // スペシャルゲージの増える量(0.0f ~ 1.0f)。シュート成功・被ダメ時。
+    // 0.25 → おおよそ 4 回で満タン（試合終了前に F5 目視しやすい）。
+    public static float SPECIAL_GAUGE_VALUE = 0.25f;
+
+    /// <summary>パス成功時のスペシャルゲージ増分（シュートより控えめ）。</summary>
+    public static float SPECIAL_GAUGE_VALUE_ON_PASS = 0.12f;
 
     // ダッシュの倍率
     public static float DASH_MULTIPLIER = 1.5f;

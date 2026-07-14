@@ -175,6 +175,12 @@ public class AnimalAction_Pass : AnimalAction_Base
         ball.kick(kickDir);
         GoapPassDiagnostic.Log(_myFacade, $"Kicked lob={needsLobKick} dist={distance:F2}");
 
+        var specialGauge = _myFacade.GetSpecialGauge();
+        if (specialGauge != null)
+        {
+            specialGauge.AddGaugeValue(ConstData.SPECIAL_GAUGE_VALUE_ON_PASS);
+        }
+
         _passCoroutine = null;
         yield return null;
     }

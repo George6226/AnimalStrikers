@@ -38,7 +38,8 @@ public static class GoapMainNpcCatalog
     {
         return action is PassToTeammateActionSO
             or ShootAtGoalActionSO
-            or DribbleTowardGoalActionSO;
+            or DribbleTowardGoalActionSO
+            or UseSpecialActionSO;
     }
 
     public static bool IsTeamBallSupportAction(GoapActionSO action)
@@ -129,6 +130,7 @@ public static class GoapMainNpcCatalog
         EnsureAction<PassToTeammateActionSO>(actions);
         EnsureAction<ShootAtGoalActionSO>(actions);
         EnsureAction<DribbleTowardGoalActionSO>(actions);
+        EnsureAction<UseSpecialActionSO>(actions);
         EnsureDefenseActions(actions);
 
         foreach (GoapActionSO action in actions)
@@ -165,5 +167,6 @@ public static class GoapMainNpcCatalog
         EnsureAction<BlockShotLaneActionSO>(actions);
         EnsureAction<RetreatToDefensiveLineActionSO>(actions);
         EnsureAction<SlideTackleActionSO>(actions);
+        EnsureAction<UseSpecialActionSO>(actions);
     }
 }

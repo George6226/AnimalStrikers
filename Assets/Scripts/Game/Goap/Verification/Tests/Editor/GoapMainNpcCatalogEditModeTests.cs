@@ -37,6 +37,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is ShootAtGoalActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is DribbleTowardGoalActionSO), Is.True);
+        Assert.That(filtered.Exists(a => a is UseSpecialActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is GetOpenActionSO), Is.False);
     }
 
@@ -82,6 +83,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(filtered, Has.All.Matches<GoapActionSO>(GoapTeammateNpcCatalog.IsDefenseAction));
         Assert.That(filtered.Exists(a => a is BlockShotLaneActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is SlideTackleActionSO), Is.True);
+        Assert.That(filtered.Exists(a => a is UseSpecialActionSO), Is.True);
         Assert.That(filtered.Exists(a => a is PassToTeammateActionSO), Is.False);
     }
 
