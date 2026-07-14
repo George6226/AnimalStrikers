@@ -60,6 +60,13 @@ public class MarkOpponentActionSO : GoapActionSO
         if (teamBB == null) return 0f;
 
         float overextensionPenalty = TeammateNpcDefensePlanning.ComputeOverextendedDefensePenalty(bb);
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out List<Vector3> allyPositions,
+            out List<Vector3> opponentPositions);
+
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
@@ -67,13 +74,13 @@ public class MarkOpponentActionSO : GoapActionSO
         // ボールを持っていない & 味方がマークしていない敵（フリー状態）をフィルタリング
         List<Vector3> freeEnemies = new List<Vector3>();
         float markThreshold = fieldLen * 0.15f; // マーク判定の閾値
-        foreach (var e in teamBB.BasicInfo.EnemyPositions)
+        foreach (var e in opponentPositions)
         {
             // ボール保持者の位置と異なる敵（ボールを持っていない敵）
             if (Vector3.Distance(e, ownerPos) > 0.1f)
             {
                 bool isMarked = false;
-                foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+                foreach (var allyPos in allyPositions)
                 {
                     // 自分自身は除外
                     if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
@@ -112,7 +119,7 @@ public class MarkOpponentActionSO : GoapActionSO
         
         float distToOwner = Vector3.Distance(playerPos, ownerPos);
         float idealDistance = fieldLen * _markDistanceRatio;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         float ownerDistToGoal = Vector3.Distance(ownerPos, ownGoal);
         float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
         if (shotDangerScore >= 0.45f && minDistance > idealDistance * 0.85f)

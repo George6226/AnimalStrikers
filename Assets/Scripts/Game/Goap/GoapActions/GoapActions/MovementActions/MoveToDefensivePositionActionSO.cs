@@ -58,10 +58,17 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
     protected override float CalculateSituationalAdjustment(PlayerBlackboard bb)
     {
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
-        if (teamBB == null || !teamBB.BallInfo.EnemyHasBall)
+        if (teamBB == null || !TeammateNpcDefensePlanning.IsEnemyBallDefenseContext(teamBB, bb))
         {
             return 0f;
         }
+
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out System.Collections.Generic.List<Vector3> allyPositions,
+            out _);
 
         float fieldLen = teamBB.FieldInfo.FieldLength;
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
@@ -72,7 +79,7 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
         int nearbyPressurers = 0;
         float pressureThreshold = fieldLen * 0.15f;
         Vector3 selfPos = bb.PhysicalState.Position;
-        foreach (var ally in teamBB.BasicInfo.TeammatePositions)
+        foreach (var ally in allyPositions)
         {
             if (Vector3.Distance(ally, selfPos) < 0.1f)
             {
@@ -85,7 +92,8 @@ public class MoveToDefensivePositionActionSO : GoapActionSO
             }
         }
 
-        float ownerDistToGoal = Vector3.Distance(ownerPos, teamBB.FieldInfo.OwnGoalPosition);
+        Vector3 defendGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
+        float ownerDistToGoal = Vector3.Distance(ownerPos, defendGoal);
         float shotDangerScore = 1f - Mathf.Clamp01(ownerDistToGoal / fieldLen);
 
         float adjustment = -pressureScore * 1.45f;

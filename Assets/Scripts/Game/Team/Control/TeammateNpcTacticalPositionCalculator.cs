@@ -44,6 +44,18 @@ public static class TeammateNpcTacticalPositionCalculator
 
         if (ball.TeamHasBall)
         {
+            if (GoalkeeperDistribution.TryResolveHoldingGoalkeeper(teamBB, out AnimalFacade goalkeeper)
+                && (selfFacade == null || !selfFacade.IsGK()))
+            {
+                return GoalkeeperDistribution.ComputeTeammateResult(
+                    selfPosition,
+                    formationSlotIndex,
+                    teamBB,
+                    goalkeeper,
+                    otherTeammatePositions,
+                    selfFacade);
+            }
+
             return new Result
             {
                 TargetPosition = CalculateAttackSupportPosition(

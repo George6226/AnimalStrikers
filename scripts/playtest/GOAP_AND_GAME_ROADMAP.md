@@ -190,7 +190,10 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 - `GoalkeeperPositioning`: ゴールライン位置・ボール X 追従・ルーズボール接近
 - `GoalkeeperNpcBrain`: 味方/敵 GK 共通の `FixedUpdate` 移動（GOAP 外）
 
-**目視確認**: `./scripts/playtest/prepare-f3-goalkeeper-visual-check.sh`
+**目視確認（位置取り）**: `./scripts/playtest/prepare-f3-goalkeeper-visual-check.sh`
+
+**目視確認（配球 + 敵守備ミラー）**: `./scripts/playtest/prepare-f3-gk-distribution-visual-check.sh`  
+（GK キャッチ後パス、味方受け位置、味方 GK 保持時の敵 Retreat / DefensivePosition）
 
 **F1 と F3 は並行可能。** F2 は F1 の直後。F4/F5 は GOAP 仕上げ完了後。
 

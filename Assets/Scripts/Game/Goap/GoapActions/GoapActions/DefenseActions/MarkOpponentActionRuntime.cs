@@ -94,12 +94,13 @@ public class MarkOpponentActionRuntime : GoapActionRuntime
             return bb.PhysicalState.Position;
         }
 
+        bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
         Vector3 ownerPos = teamBB.BallInfo.BallOwnerPosition;
-        Vector3 ownGoal = teamBB.FieldInfo.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
         Vector3 playerPos = bb.PhysicalState.Position;
         float fieldLen = teamBB.FieldInfo.FieldLength;
 
-        Vector3 bestEnemy = SelectTargetEnemy(ownerPos, playerPos, fieldLen);
+        Vector3 bestEnemy = SelectTargetEnemy(ownerPos, playerPos, fieldLen, mirrored);
 
         float ideal = fieldLen * _markDistanceRatio;
         Vector3 dir = (ownGoal - bestEnemy).normalized;
@@ -108,14 +109,20 @@ public class MarkOpponentActionRuntime : GoapActionRuntime
         return target;
     }
 
-    private Vector3 SelectTargetEnemy(Vector3 ownerPos, Vector3 playerPos, float fieldLen)
+    private Vector3 SelectTargetEnemy(Vector3 ownerPos, Vector3 playerPos, float fieldLen, bool mirrored)
     {
         var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
         if (teamBB == null) return playerPos;
 
         float pressureThreshold = fieldLen * 0.15f;
         int pressureCount = 0;
-        foreach (var allyPos in teamBB.BasicInfo.TeammatePositions)
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out List<Vector3> allyPositions,
+            out List<Vector3> opponentPositions);
+
+        foreach (var allyPos in allyPositions)
         {
             if (Vector3.Distance(allyPos, playerPos) < 0.1f) continue;
 
@@ -131,7 +138,7 @@ public class MarkOpponentActionRuntime : GoapActionRuntime
         }
 
         List<Vector3> enemiesWithoutBall = new List<Vector3>();
-        foreach (var e in teamBB.BasicInfo.EnemyPositions)
+        foreach (var e in opponentPositions)
         {
             if (Vector3.Distance(e, ownerPos) > 0.1f)
             {
