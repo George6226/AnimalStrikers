@@ -31,6 +31,11 @@ public static class GoapEnemySubNpcPlanning
 
         if (MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
         {
+            if (!EnemyAiBalance.AllowEnemySubBallPossessionAttack)
+            {
+                return false;
+            }
+
             return MainNpcAttackPlanning.CanPassToTeammate(bb)
                 || MainNpcAttackPlanning.CanShootAtGoal(bb)
                 || MainNpcAttackPlanning.CanDribbleTowardGoal(bb);
