@@ -67,13 +67,12 @@ public static class TeammateNpcTacticalPositionCalculator
 
         if (ball.EnemyHasBall)
         {
-            return new Result
-            {
-                TargetPosition = CalculateDefensePosition(
-                    selfPosition, formationSlotIndex, teamBB, otherTeammatePositions),
-                Mode = TeammateNpcTacticalMode.Defend,
-                IsValid = true,
-            };
+            return CalculateDefend(
+                selfPosition,
+                formationSlotIndex,
+                teamBB,
+                otherTeammatePositions,
+                mirrored: false);
         }
 
         bool chaseFreeBall = TeammateNpcGoapRoleDifferentiation.ShouldDelegateFreeBallChaseToNpc()
@@ -218,11 +217,40 @@ public static class TeammateNpcTacticalPositionCalculator
         return score;
     }
 
+    /// <summary>
+    /// 守備位置のみ算出。敵フィールド NPC は <paramref name="mirrored"/> で自ゴールを反転する（6-A P1）。
+    /// </summary>
+    public static Result CalculateDefend(
+        Vector3 selfPosition,
+        int formationSlotIndex,
+        TeamBlackboard teamBB,
+        IEnumerable<Vector3> otherTeammatePositions,
+        bool mirrored = false)
+    {
+        if (teamBB == null)
+        {
+            return Invalid();
+        }
+
+        return new Result
+        {
+            TargetPosition = CalculateDefensePosition(
+                selfPosition,
+                formationSlotIndex,
+                teamBB,
+                otherTeammatePositions,
+                mirrored),
+            Mode = TeammateNpcTacticalMode.Defend,
+            IsValid = true,
+        };
+    }
+
     private static Vector3 CalculateDefensePosition(
         Vector3 selfPos,
         int slotIndex,
         TeamBlackboard teamBB,
-        IEnumerable<Vector3> otherTeammates)
+        IEnumerable<Vector3> otherTeammates,
+        bool mirrored = false)
     {
         var field = teamBB.FieldInfo;
         var ball = teamBB.BallInfo;
@@ -232,14 +260,20 @@ public static class TeammateNpcTacticalPositionCalculator
             ownerPos = ball.BallPosition;
         }
 
-        Vector3 ownGoal = field.OwnGoalPosition;
+        Vector3 ownGoal = GoapFieldNpcPerspective.GetDefendGoalPosition(teamBB, mirrored);
+        Vector3 attackGoal = GoapFieldNpcPerspective.GetAttackGoalPosition(teamBB, mirrored);
         Vector3 toOwnGoal = (ownGoal - ownerPos).normalized;
         if (toOwnGoal.sqrMagnitude < 0.0001f)
         {
             toOwnGoal = (ownGoal - field.FieldCenter).normalized;
         }
 
-        Vector3 toGoalAttack = (field.EnemyGoalPosition - ownerPos).normalized;
+        Vector3 toGoalAttack = (attackGoal - ownerPos).normalized;
+        if (toGoalAttack.sqrMagnitude < 0.0001f)
+        {
+            toGoalAttack = (attackGoal - field.FieldCenter).normalized;
+        }
+
         Vector3 right = Vector3.Cross(Vector3.up, toGoalAttack).normalized;
 
         float markDepth = field.FieldLength * 0.12f;

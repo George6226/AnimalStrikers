@@ -1,6 +1,6 @@
 # AnimalStrikers GOAP & ゲーム機能ロードマップ
 
-最終更新: 2026-07-13
+最終更新: 2026-07-15
 
 ## 完了済み
 
@@ -11,10 +11,32 @@
 - Phase B 敵 Main GOAP
 - **P1** 受け失敗後 NoGoal 固着対策（#41）
 - **P2** キックオフ前 GOAP 停止 + GAME 開始 replan（#42）
+- **GOAP 仕上げ G0〜G6**（下記アーカイブ）
+- **F1〜F5**（スタミナ / ダッシュ / GK / SlideTackle / UseSpecial）
+- GK follow-up: #60（狙い・守備即完了）、#61（replan churn）、#62（敵 GK ホーム深さ復帰）
 
 ---
 
-## 現在: GOAP 仕上げ（G0〜G6）
+## 現在: フェーズ6（6-A 〜 6-H）
+
+**進行順**: 6-A → 6-B → … → 6-H（並列は明示時のみ）  
+**詳細表**: 下方「F5 完了後（フェーズ6）」を正とする。  
+**エージェント方針**: `.cursor/rules/phase6.mdc`
+
+### 6-A 進捗
+
+| スライス | 状態 | 内容 |
+|----------|------|------|
+| **P0** 難易度ノブ | **実装済** · Normal CLI OK | `EnemyAiDifficulty` / `EnemyAiBalance` — Easy/Normal/Hard |
+| **P1** 守備戦術ミラー | **実装中** | `CalculateDefend(mirrored)` + `MoveToDefensivePosition` が敵視点の自ゴールを使用 |
+| P2 Sub 攻撃抑止 / FreeBall | 未着手 | 難易度連動で敵 Sub 攻撃を抑制など |
+
+**操作**: TeamFacade の `EnemySquadControl` → Inspector「6-A: 難易度」  
+**目視**: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`  
+**CLI Play〜終了**: `./scripts/playtest/run-6a-enemy-ai-difficulty-playtest.sh`  
+（比較: `DIFFICULTY=Easy` / `DIFFICULTY=Hard`）
+
+### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
 | ID | 課題 | 状態 | ブランチ/PR |
 |----|------|------|-------------|
@@ -160,7 +182,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 ---
 
-## 次: ゲーム機能フェーズ（F1〜F5）
+## 完了: ゲーム機能フェーズ（F1〜F5）
 
 | 順 | ID | 機能 | 状態 | 主なファイル |
 |----|-----|------|------|-------------|
@@ -168,7 +190,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 2 | **F2** | ダッシュのスタミナ連動（不足時禁止） | **完了 (#54)** · 目視 OK | `AnimalAction_Dash.cs`, `GoapNpcMotor.cs` |
 | 3 | **F3** | GK 実装（GOAP 外・独立） | **完了 (#56+#57)** · 目視 OK | `GoalkeeperNpcBrain.cs`, `GoalkeeperPositioning.cs`, `GoalkeeperDistribution.cs` |
 | 4 | **F4** | Main NPC スライディング/タックル GOAP | **完了 (#58)** · 目視ログ OK | `SlideTackleActionSO.cs`, `AnimalAction_Sliding.cs` |
-| 5 | **F5** | 必殺技の NPC/GOAP 接続 | **EditMode OK** · 目視ログ OK | `UseSpecialActionSO.cs`, `AnimalAction_Special.cs` |
+| 5 | **F5** | 必殺技の NPC/GOAP 接続 | **完了 (#59)** · 目視ログ OK | `UseSpecialActionSO.cs`, `AnimalAction_Special.cs` |
 
 ### F1 実装内容
 
@@ -221,7 +243,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 | 順 | ID | 項目 | 理由 |
 |----|-----|------|------|
-| 1 | **6-A** | 敵 AI の対称化・難易度調整 | 味方 GOAP 安定後に敵 Main/Sub のバランス調整 |
+| 1 | **6-A** | 敵 AI の対称化・難易度調整 | **P0+P1 実装中**（難易度ノブ + 守備戦術ミラー）。P2 未着手 |
 | 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | F3 GK の延長、`BallKickoffAssignment` 連携 |
 | 3 | **6-C** | スタミナの GOAP 連携 | `hasStamina` Fact、`RegainStaminaGoalSO` |
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | 受け位置・ルーズボール追跡でのダッシュ判断 |

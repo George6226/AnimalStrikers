@@ -43,8 +43,6 @@ public static class MainNpcAttackPlanning
     public const float DefaultPassBaseCost = 1.12f;
     public const float DefaultShootBaseCost = 1.05f;
     public const float DefaultDribbleBaseCost = 1.18f;
-    private const float EnemyFieldPassPenalty = 0.40f;
-    private const float EnemyFieldShootDiscount = 0.28f;
     private const float DribbleFarFromGoalDiscount = 0.45f;
     private const float DribbleInShootingRangePenalty = 0.80f;
     private const float DribbleUnderPressurePenalty = 0.32f;
@@ -560,7 +558,7 @@ public static class MainNpcAttackPlanning
             return passAdjustment;
         }
 
-        return passAdjustment + EnemyFieldPassPenalty;
+        return passAdjustment + EnemyAiBalance.PassPenalty;
     }
 
     private static bool TryGetBackwardPassPenalty(PlayerBlackboard bb, out float penalty)
@@ -652,7 +650,7 @@ public static class MainNpcAttackPlanning
             return shootAdjustment;
         }
 
-        return shootAdjustment - EnemyFieldShootDiscount;
+        return shootAdjustment - EnemyAiBalance.ShootDiscount;
     }
 
     private static bool IsShotLaneBlocked(PlayerBlackboard bb)
