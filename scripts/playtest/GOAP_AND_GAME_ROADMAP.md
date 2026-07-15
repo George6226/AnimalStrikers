@@ -23,18 +23,21 @@
 **詳細表**: 下方「F5 完了後（フェーズ6）」を正とする。  
 **エージェント方針**: `.cursor/rules/phase6.mdc`
 
-### 6-A 進捗
+### 6-A 進捗 — **完了 (#63+#64)**
 
 | スライス | 状態 | 内容 |
 |----------|------|------|
-| **P0** 難易度ノブ | **完了 (#63)** | `EnemyAiDifficulty` / `EnemyAiBalance` — Easy/Normal/Hard |
-| **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` + `MoveToDefensivePosition` |
-| **P2** Sub 攻撃抑止 | **実装中** | Easy 時のみ敵 Sub から `BallPossessionAttack` を除外 |
+| **P0** 難易度ノブ | **完了 (#63)** | Easy/Normal/Hard |
+| **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
+| **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
 
-**操作**: TeamFacade の `EnemySquadControl` → Inspector「6-A: 難易度」  
-**目視**: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`  
-**CLI Play〜終了**: `./scripts/playtest/run-6a-enemy-ai-difficulty-playtest.sh`  
-（比較: `DIFFICULTY=Easy` / `DIFFICULTY=Hard`）
+### 6-B 進捗
+
+| スライス | 状態 | 内容 |
+|----------|------|------|
+| **P0** OutOfPlay 純ロジック | **実装中** | `OutOfPlayClassifier` / `SetPieceAssignmentRules`（ThrowIn・Corner・GoalKick 判定） |
+| P1 ゴールキック runtime | 未着手 | エンドライン外 → 守備 GK + 既存 Distribution |
+| P2 スローイン runtime | 未着手 | サイド線外 → フィールド選手 |
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
@@ -243,8 +246,8 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 
 | 順 | ID | 項目 | 理由 |
 |----|-----|------|------|
-| 1 | **6-A** | 敵 AI の対称化・難易度調整 | **P0+P1 完了 (#63)** · **P2 実装中**（Easy で敵 Sub 攻撃抑制） |
-| 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | F3 GK の延長、`BallKickoffAssignment` 連携 |
+| 1 | **6-A** | 敵 AI の対称化・難易度調整 | **完了 (#63+#64)** |
+| 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | **P0 実装中**（OutOfPlay 純ロジック）。P1 ゴールキック runtime 未着手 |
 | 3 | **6-C** | スタミナの GOAP 連携 | `hasStamina` Fact、`RegainStaminaGoalSO` |
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | 受け位置・ルーズボール追跡でのダッシュ判断 |
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | 必殺技 Photon、ボール保持者ズレ |
