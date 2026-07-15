@@ -12,6 +12,8 @@ public class EnemySquadControlController : MonoBehaviour
     [SerializeField] private bool _goapAllEnemyFieldNpcs = true;
     [SerializeField] private int _enemyMainFormationSlot;
     [SerializeField] private float _goapPlanningInterval = 5f;
+    [Header("6-A: 難易度")]
+    [SerializeField] private EnemyAiDifficulty _difficulty = EnemyAiDifficulty.Normal;
     [SerializeField] private List<GoapGoalSO> _goapSubNpcGoals = new List<GoapGoalSO>();
     [SerializeField] private List<GoapActionSO> _goapSubNpcActions = new List<GoapActionSO>();
     [SerializeField] private List<GoapGoalSO> _goapMainNpcGoals = new List<GoapGoalSO>();
@@ -22,6 +24,7 @@ public class EnemySquadControlController : MonoBehaviour
 
     public int EnemyMainFormationSlot => _enemyMainFormationSlot;
     public bool EnemyGoapEnabled => _enableEnemyGoap;
+    public EnemyAiDifficulty Difficulty => _difficulty;
 
 #if UNITY_EDITOR
     private const string DefensiveGoalAssetPath = "Assets/Scripts/Game/Goap/Goals/Goals/DefensivePositioningGoalSO.asset";
@@ -45,10 +48,17 @@ public class EnemySquadControlController : MonoBehaviour
 
     private void OnEnable()
     {
+        ApplyDifficultySettings();
 #if UNITY_EDITOR
         EnsureSubNpcAssetsAssigned();
         EnsureMainNpcAssetsAssigned();
 #endif
+    }
+
+    /// <summary>6-A: Inspector 難易度を攻撃バイアス / 計画間隔に反映。</summary>
+    public void ApplyDifficultySettings()
+    {
+        EnemyAiBalance.Apply(_difficulty);
     }
 
     public void OnLocalEnemyRegistered(AnimalFacade facade)
@@ -127,6 +137,8 @@ public class EnemySquadControlController : MonoBehaviour
             return;
         }
 
+        ApplyDifficultySettings();
+
         GoapNpcTier tier = facade != null ? ResolveNpcTier(facade) : GoapNpcTier.Sub;
         IReadOnlyList<GoapGoalSO> goals = tier == GoapNpcTier.Main ? _goapMainNpcGoals : _goapSubNpcGoals;
         IReadOnlyList<GoapActionSO> actions = tier == GoapNpcTier.Main ? _goapMainNpcActions : _goapSubNpcActions;
@@ -136,10 +148,13 @@ public class EnemySquadControlController : MonoBehaviour
             return;
         }
 
+        float planningInterval = EnemyAiBalance.ResolvePlanningInterval(
+            _difficulty,
+            _goapPlanningInterval);
         agent.ConfigurePilot(
             goals ?? new List<GoapGoalSO>(),
             actions ?? new List<GoapActionSO>(),
-            _goapPlanningInterval,
+            planningInterval,
             tier);
     }
 

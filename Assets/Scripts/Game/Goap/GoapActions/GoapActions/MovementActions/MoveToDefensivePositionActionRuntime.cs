@@ -287,15 +287,21 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
         Vector3 selfPos = GoapNpcMotor.GetSelfWorldPosition(bb);
         int slotIndex = ResolveFormationSlotIndex(bb);
         bool mirrored = GoapFieldNpcPerspective.IsMirrored(bb);
-        TeammateNpcTacticalPositionCalculator.Result tactical = mirrored
-            ? default
-            : TeammateNpcTacticalPositionCalculator.Calculate(
+        GoapFieldNpcPerspective.ResolveTeamPositions(
+            teamBB,
+            mirrored,
+            out List<Vector3> allyPositions,
+            out _);
+        var otherTeammates = FilterOtherPositions(selfPos, allyPositions);
+        TeammateNpcTacticalPositionCalculator.Result tactical =
+            TeammateNpcTacticalPositionCalculator.CalculateDefend(
                 selfPos,
                 slotIndex,
                 teamBB,
-                CollectOtherTeammatePositions(selfPos));
+                otherTeammates,
+                mirrored);
 
-        Vector3 target = !mirrored && tactical.IsValid && tactical.Mode == TeammateNpcTacticalMode.Defend
+        Vector3 target = tactical.IsValid && tactical.Mode == TeammateNpcTacticalMode.Defend
             ? tactical.TargetPosition
             : FallbackDefensivePosition(selfPos, teamBB, bb);
 
@@ -364,17 +370,21 @@ public class MoveToDefensivePositionActionRuntime : GoapActionRuntime
         return remainingSeconds > 0f;
     }
 
-    private static List<Vector3> CollectOtherTeammatePositions(Vector3 selfPos)
+    private static List<Vector3> FilterOtherPositions(Vector3 selfPos, List<Vector3> candidates)
     {
         var list = new List<Vector3>();
-        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
-        if (regist == null) return list;
-
-        foreach (var ally in regist.Allys)
+        if (candidates == null)
         {
-            if (ally == null || ally.IsGK()) continue;
-            Vector3 p = ally.transform.position;
-            if ((p - selfPos).sqrMagnitude < 0.25f) continue;
+            return list;
+        }
+
+        foreach (Vector3 p in candidates)
+        {
+            if ((p - selfPos).sqrMagnitude < 0.25f)
+            {
+                continue;
+            }
+
             list.Add(p);
         }
 
