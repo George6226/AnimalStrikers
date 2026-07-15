@@ -30,10 +30,21 @@ public static class GoapEnemyNpcCatalog
         else
         {
             GoapTeammateNpcCatalog.NormalizeLists(goals, actions);
-            EnsureGoal<BallPossessionAttackGoalSO>(goals);
-            EnsureAction<PassToTeammateActionSO>(actions);
-            EnsureAction<ShootAtGoalActionSO>(actions);
-            EnsureAction<DribbleTowardGoalActionSO>(actions);
+            if (EnemyAiBalance.AllowEnemySubBallPossessionAttack)
+            {
+                EnsureGoal<BallPossessionAttackGoalSO>(goals);
+                EnsureAction<PassToTeammateActionSO>(actions);
+                EnsureAction<ShootAtGoalActionSO>(actions);
+                EnsureAction<DribbleTowardGoalActionSO>(actions);
+            }
+            else
+            {
+                // 6-A P2 Easy: Inspector に残っていても攻撃ゴール/行動を外す。
+                RemoveGoalsOfType<BallPossessionAttackGoalSO>(goals);
+                RemoveActionsOfType<PassToTeammateActionSO>(actions);
+                RemoveActionsOfType<ShootAtGoalActionSO>(actions);
+                RemoveActionsOfType<DribbleTowardGoalActionSO>(actions);
+            }
         }
 
         foreach (GoapActionSO action in actions)
@@ -101,5 +112,15 @@ public static class GoapEnemyNpcCatalog
         }
 
         actions.Add(ScriptableObject.CreateInstance<T>());
+    }
+
+    private static void RemoveGoalsOfType<T>(List<GoapGoalSO> goals) where T : GoapGoalSO
+    {
+        goals.RemoveAll(g => g is T);
+    }
+
+    private static void RemoveActionsOfType<T>(List<GoapActionSO> actions) where T : GoapActionSO
+    {
+        actions.RemoveAll(a => a is T);
     }
 }

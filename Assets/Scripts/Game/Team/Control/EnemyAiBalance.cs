@@ -18,6 +18,11 @@ public static class EnemyAiBalance
 
     public static float PlanningIntervalSeconds { get; private set; } = NormalPlanningIntervalSeconds;
 
+    /// <summary>
+    /// 6-A P2: Easy では敵 Sub に BallPossessionAttack を載せない（Main は常に攻撃あり）。
+    /// </summary>
+    public static bool AllowEnemySubBallPossessionAttack { get; private set; } = true;
+
     /// <summary>難易度プリセットを適用。Inspector / 起動時から呼ぶ。</summary>
     public static void Apply(EnemyAiDifficulty difficulty)
     {
@@ -29,17 +34,20 @@ public static class EnemyAiBalance
                 PassPenalty = 0.15f;
                 ShootDiscount = 0.08f;
                 PlanningIntervalSeconds = NormalPlanningIntervalSeconds * 1.3f;
+                AllowEnemySubBallPossessionAttack = false;
                 break;
             case EnemyAiDifficulty.Hard:
                 // パス連携を残しつつシュートをさらに優遇、判断は速め。
                 PassPenalty = 0.22f;
                 ShootDiscount = 0.40f;
                 PlanningIntervalSeconds = NormalPlanningIntervalSeconds * 0.7f;
+                AllowEnemySubBallPossessionAttack = true;
                 break;
             default:
                 PassPenalty = NormalPassPenalty;
                 ShootDiscount = NormalShootDiscount;
                 PlanningIntervalSeconds = NormalPlanningIntervalSeconds;
+                AllowEnemySubBallPossessionAttack = true;
                 break;
         }
     }

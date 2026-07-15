@@ -22,6 +22,7 @@ public sealed class EnemyAiBalanceEditModeTests
         Assert.That(
             EnemyAiBalance.PlanningIntervalSeconds,
             Is.EqualTo(EnemyAiBalance.NormalPlanningIntervalSeconds).Within(0.001f));
+        Assert.That(EnemyAiBalance.AllowEnemySubBallPossessionAttack, Is.True);
     }
 
     [Test]
@@ -34,6 +35,7 @@ public sealed class EnemyAiBalanceEditModeTests
         Assert.That(
             EnemyAiBalance.PlanningIntervalSeconds,
             Is.GreaterThan(EnemyAiBalance.NormalPlanningIntervalSeconds));
+        Assert.That(EnemyAiBalance.AllowEnemySubBallPossessionAttack, Is.False);
     }
 
     [Test]
@@ -46,6 +48,7 @@ public sealed class EnemyAiBalanceEditModeTests
         Assert.That(
             EnemyAiBalance.PlanningIntervalSeconds,
             Is.LessThan(EnemyAiBalance.NormalPlanningIntervalSeconds));
+        Assert.That(EnemyAiBalance.AllowEnemySubBallPossessionAttack, Is.True);
     }
 
     [Test]
