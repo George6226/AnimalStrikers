@@ -22,6 +22,8 @@ public class GoalkeeperNpcBrain : MonoBehaviour
     [SerializeField] private float _saveReachDistance = 4.5f;
     [SerializeField] private float _goalAreaDepth = 6f;
     [SerializeField] private float _rushForwardDepth = 1.5f;
+    [Tooltip("ホーム Z からこの距離以上離れていたら XZ で戻る（Rush 後の前出しクリープ防止）")]
+    [SerializeField] private float _homeDepthReturnThreshold = 0.25f;
 
     [Header("配球")]
     [SerializeField] private float _distributionMinDelay = 0.75f;
@@ -117,6 +119,13 @@ public class GoalkeeperNpcBrain : MonoBehaviour
 
         bool mirrored = GoalkeeperPositioning.IsMirroredGoalkeeper(_facade);
         var ball = teamBB.BallInfo;
+        // 敵 GK はキックオフ深さ（2.0）をホームに使い、徐々に前へ残るのを防ぐ。
+        float lineDepth = GoalkeeperPositioning.ResolveHomeLineDepth(mirrored);
+        if (!mirrored && _lineDepth > 0.01f)
+        {
+            lineDepth = _lineDepth;
+        }
+
         var result = GoalkeeperPositioning.Compute(
             teamBB,
             mirrored,
@@ -124,7 +133,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
             ball.BallState,
             GoapFieldNpcPerspective.EffectiveEnemyHasBall(teamBB, mirrored),
             GoapFieldNpcPerspective.EffectiveTeamHasBall(teamBB, mirrored),
-            _lineDepth,
+            lineDepth,
             _goalMouthHalfWidth,
             _rushLooseBallDistance,
             _goalAreaDepth,
@@ -137,7 +146,12 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         }
 
         _currentMode = result.Mode;
-        if (result.Mode == GoalkeeperPositioning.Mode.RushLooseBall)
+        // Rush 以外も Z がホームから離れていれば戻す（MoveLaterally は X のみのため）。
+        bool needsDepthReturn = GoalkeeperPositioning.NeedsHomeDepthCorrection(
+            transform.position.z,
+            result.TargetPosition.z,
+            _homeDepthReturnThreshold);
+        if (result.Mode == GoalkeeperPositioning.Mode.RushLooseBall || needsDepthReturn)
         {
             MoveTowardTarget(result.TargetPosition);
         }
@@ -160,7 +174,7 @@ public class GoalkeeperNpcBrain : MonoBehaviour
         GoalkeeperDiagnosticLog.ResetSession();
     }
 
-    /// <summary>ゴールライン上の X 方向のみ移動（Z は位置取りロジックのホームラインを維持）。</summary>
+    /// <summary>ゴールライン上の X 方向のみ移動。Z 復帰は呼び出し側で MoveToward を使う。</summary>
     private void MoveLaterally(Vector3 target)
     {
         CacheMovementComponents();

@@ -188,6 +188,56 @@ public sealed class GoalkeeperPositioningEditModeTests
       Is.False);
   }
 
+  [Test]
+  public void ResolveHomeLineDepth_MatchesKickoffSpawnDepths()
+  {
+    Assert.That(
+      GoalkeeperPositioning.ResolveHomeLineDepth(mirrored: false),
+      Is.EqualTo(ConstData.GK_SPAWN_DEPTH_ALLY).Within(0.001f));
+    Assert.That(
+      GoalkeeperPositioning.ResolveHomeLineDepth(mirrored: true),
+      Is.EqualTo(ConstData.GK_SPAWN_DEPTH_ENEMY).Within(0.001f));
+  }
+
+  [Test]
+  public void Compute_MirroredEnemyGk_HoldsKickoffHomeZ()
+  {
+    var teamBB = CreateTeamBlackboard();
+    try
+    {
+      float enemyLineDepth = GoalkeeperPositioning.ResolveHomeLineDepth(mirrored: true);
+      var result = GoalkeeperPositioning.Compute(
+        teamBB,
+        mirrored: true,
+        ballPosition: new Vector3(0f, 0f, -5f),
+        BallManager_State.BALL_STATE.HOLD,
+        enemyHasBall: false,
+        teamHasBall: true,
+        lineDepth: enemyLineDepth);
+
+      // Enemy goal +20, depth 2.0 → home Z = +18（キックオフと同じ）
+      Assert.That(result.Mode, Is.EqualTo(GoalkeeperPositioning.Mode.HoldLine));
+      Assert.That(result.TargetPosition.z, Is.EqualTo(18f).Within(0.01f));
+    }
+    finally
+    {
+      Object.DestroyImmediate(teamBB.gameObject);
+    }
+  }
+
+  [Test]
+  public void NeedsHomeDepthCorrection_DetectsForwardCreep()
+  {
+    Assert.That(
+      GoalkeeperPositioning.NeedsHomeDepthCorrection(currentZ: 16.5f, targetZ: 18f, threshold: 0.25f),
+      Is.True,
+      "敵 GK がホームより前に出たら復帰が必要");
+    Assert.That(
+      GoalkeeperPositioning.NeedsHomeDepthCorrection(currentZ: 18.05f, targetZ: 18f, threshold: 0.25f),
+      Is.False,
+      "閾値以内ならラテラル維持");
+  }
+
   private static TeamBlackboard CreateTeamBlackboard()
   {
     var teamGo = new GameObject("teamBB");

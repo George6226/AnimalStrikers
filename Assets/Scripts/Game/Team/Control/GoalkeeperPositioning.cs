@@ -39,6 +39,23 @@ public static class GoalkeeperPositioning
         return tag == ConstData.ENEMY_TAG;
     }
 
+    /// <summary>
+    /// キックオフ深さに合わせたホームライン深さ。敵は浅いスポーン深度、味方は通常深さ。
+    /// </summary>
+    public static float ResolveHomeLineDepth(bool mirrored) =>
+        mirrored ? ConstData.GK_SPAWN_DEPTH_ENEMY : ConstData.GK_SPAWN_DEPTH_ALLY;
+
+    /// <summary>
+    /// Rush 後などに Z がホームから離れているとき、XZ 復帰移動が必要か。
+    /// </summary>
+    public static bool NeedsHomeDepthCorrection(
+        float currentZ,
+        float targetZ,
+        float threshold = 0.25f)
+    {
+        return Mathf.Abs(currentZ - targetZ) > Mathf.Max(0.05f, threshold);
+    }
+
     public static Result Compute(
         TeamBlackboard teamBB,
         bool mirrored,
