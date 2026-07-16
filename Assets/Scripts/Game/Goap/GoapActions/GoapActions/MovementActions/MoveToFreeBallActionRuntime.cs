@@ -78,7 +78,10 @@ public class MoveToFreeBallActionRuntime : GoapActionRuntime
         if (teamBB == null) return;
 
         TryPickupBallIfClose();
-        GoapNpcMotor.MoveToward(_bb, teamBB.BallInfo.BallPosition, _moveIntensity, "FreeBall");
+        Vector3 ballPos = teamBB.BallInfo.BallPosition;
+        float dist = Vector3.Distance(GoapNpcMotor.GetSelfWorldPosition(_bb), ballPos);
+        bool useDash = GoapDashPlanning.ResolveDashForFreeBall(_bb, dist);
+        GoapNpcMotor.MoveToward(_bb, ballPos, _moveIntensity, "FreeBall", useDash);
     }
 
     public override bool IsComplete()

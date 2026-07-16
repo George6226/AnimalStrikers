@@ -58,6 +58,11 @@ public static class GoapNpcMotor
         {
             TrySetDash(bb, true);
         }
+        else
+        {
+            // 6-D: useDash=false でも毎フレーム OFF 同期（一度 ON したあと残らないようにする）
+            TrySetDash(bb, false);
+        }
 
         if (!StateManager.Instance.isSameKind(StateManager.STATE_KIND.GAME)
             && debugCategory != "FreeBall"
