@@ -35,6 +35,14 @@ public class BallManager : MonoBehaviour
     public bool IsKickoffBallPickupSuppressed =>
         BallKickoffResetRules.ShouldRejectOwnershipClaim(1, _kickoffPickupSuppressUntil, Time.time);
 
+    private void Awake()
+    {
+        if (GetComponent<SetPieceRuntimeController>() == null)
+        {
+            gameObject.AddComponent<SetPieceRuntimeController>();
+        }
+    }
+
     // ボールを登録する
     public void RegisterBall(BallHandler ball)
     {
@@ -171,6 +179,49 @@ public class BallManager : MonoBehaviour
         }
 
         BeginKickoffPickupSuppress();
+        return true;
+    }
+
+    /// <summary>6-B P1: ゴールキック — ボールを配置し守備 GK に HOLD を渡す。</summary>
+    public bool AssignGoalKickPossession(
+        int ownerViewId,
+        Vector3 ballWorldPosition,
+        float suppressSeconds = GoalKickSetPieceRules.DefaultSuppressSeconds)
+    {
+        if (ownerViewId <= 0)
+        {
+            return false;
+        }
+
+        _kickoffPickupSuppressUntil = 0f;
+        _photon.ClearBallOwnerForKickoff();
+
+        if (_ball != null)
+        {
+            _ball.SetBallBuff(BallBuffKind.None);
+            _ball.stop();
+            changeBallParent();
+            Vector3 pos = ballWorldPosition;
+            if (pos.y < 0.2f)
+            {
+                pos.y = 0.5f;
+            }
+
+            _ball.transform.position = pos;
+            Rigidbody rb = _ball.Rigid;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+
+        if (!changeOwnership(ownerViewId, BallManager_State.BALL_STATE.HOLD))
+        {
+            return false;
+        }
+
+        BeginKickoffPickupSuppress(suppressSeconds);
         return true;
     }
 
