@@ -33,6 +33,41 @@ public static class SetPieceAssignmentRules
     public static AnimalFacade FindRestartingFieldPlayer(bool restartTeamIsOther, int formationSlot = 0) =>
         BallKickoffAssignment.FindFormationSlotLeader(restartTeamIsOther, formationSlot);
 
+    /// <summary>スローイン再開: サイド線付近に最も近いフィールド選手（GK除外）。</summary>
+    public static AnimalFacade FindNearestRestartingFieldPlayer(
+        bool restartTeamIsOther,
+        Vector3 nearWorld)
+    {
+        var regist = TeamFacade.Instance != null ? TeamFacade.Instance.TeamRegist : null;
+        if (regist == null)
+        {
+            return null;
+        }
+
+        var candidates = restartTeamIsOther ? regist.Enemies : regist.Allys;
+        AnimalFacade best = null;
+        float bestSq = float.MaxValue;
+        foreach (var facade in candidates)
+        {
+            if (facade == null || facade.IsGK())
+            {
+                continue;
+            }
+
+            Vector3 pos = facade.transform.position;
+            float dx = pos.x - nearWorld.x;
+            float dz = pos.z - nearWorld.z;
+            float sq = dx * dx + dz * dz;
+            if (sq < bestSq)
+            {
+                bestSq = sq;
+                best = facade;
+            }
+        }
+
+        return best ?? FindRestartingFieldPlayer(restartTeamIsOther);
+    }
+
     public static AnimalFacade FindRestartingPlayer(OutOfPlayClassifier.Result classify, int formationSlot = 0)
     {
         if (!classify.IsOutOfPlay || !classify.HasRestartTeam)
@@ -69,5 +104,32 @@ public static class SetPieceAssignmentRules
         towardCenter.Normalize();
         float depth = Mathf.Max(0.5f, homeDepth);
         return defendGoal + towardCenter * depth;
+    }
+
+    /// <summary>スローイン再開位置（サイド線上・Z はアウト位置をフィールド内にクランプ）。</summary>
+    public static Vector3 ResolveThrowInBallPosition(
+        TeamFieldInfo field,
+        float sideSignX,
+        float ballWorldZ)
+    {
+        if (field == null)
+        {
+            return Vector3.zero;
+        }
+
+        float halfW = field.FieldWidth * 0.5f;
+        float halfL = field.FieldLength * 0.5f;
+        float sign = Mathf.Sign(sideSignX);
+        if (Mathf.Approximately(sign, 0f))
+        {
+            sign = 1f;
+        }
+
+        float x = field.FieldCenter.x + sign * halfW;
+        float z = Mathf.Clamp(
+            ballWorldZ,
+            field.FieldCenter.z - halfL,
+            field.FieldCenter.z + halfL);
+        return new Vector3(x, 0.5f, z);
     }
 }

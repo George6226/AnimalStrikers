@@ -2,7 +2,8 @@ using Photon.Pun;
 using UnityEngine;
 
 /// <summary>
-/// 6-B P1: FREE ボールがゴールキック条件を満たしたら守備 GK に HOLD を割り当てる。
+/// 6-B: FREE ボールのアウトオブプレイを検知しセットプレイを開始する。
+/// P1=ゴールキック / P2=スローイン（コーナーは未接続）。
 /// </summary>
 public class SetPieceRuntimeController : MonoBehaviour
 {
@@ -27,10 +28,10 @@ public class SetPieceRuntimeController : MonoBehaviour
 
     private void Update()
     {
-        TryBeginGoalKick();
+        TryBeginSetPiece();
     }
 
-    private void TryBeginGoalKick()
+    private void TryBeginSetPiece()
     {
         if (!ShouldAuthorityHandleSetPiece())
         {
@@ -63,24 +64,47 @@ public class SetPieceRuntimeController : MonoBehaviour
             return;
         }
 
+        bool? lastTouchByOther = ThrowInSetPieceRules.ResolveLastTouchByOtherTeam(
+            teamBB.BallInfo.LastPossessionBelongTeam);
         var classify = OutOfPlayClassifier.Classify(
             ball.transform.position,
-            teamBB.FieldInfo);
-        if (!GoalKickSetPieceRules.IsGoalKickCandidate(classify))
+            teamBB.FieldInfo,
+            lastTouchByOtherTeam: lastTouchByOther);
+
+        if (GoalKickSetPieceRules.IsGoalKickCandidate(classify))
         {
+            if (TryAssignGoalKick(ballManager, teamBB, classify))
+            {
+                MarkCooldown();
+            }
+
             return;
         }
 
+        if (ThrowInSetPieceRules.IsThrowInCandidate(classify))
+        {
+            if (TryAssignThrowIn(ballManager, teamBB, classify, ball.transform.position))
+            {
+                MarkCooldown();
+            }
+        }
+    }
+
+    private bool TryAssignGoalKick(
+        BallManager ballManager,
+        TeamBlackboard teamBB,
+        OutOfPlayClassifier.Result classify)
+    {
         var gk = SetPieceAssignmentRules.FindRestartingGoalkeeper(classify.RestartTeamIsOther);
         if (gk == null)
         {
-            return;
+            return false;
         }
 
         var avatar = gk.GetAvatar();
         if (avatar == null || avatar.ViewID <= 0)
         {
-            return;
+            return false;
         }
 
         float depth = GoalKickSetPieceRules.ResolveHomeDepth(classify.RestartTeamIsOther);
@@ -92,13 +116,55 @@ public class SetPieceRuntimeController : MonoBehaviour
 
         if (!ballManager.AssignGoalKickPossession(avatar.ViewID, ballPos, _suppressSeconds))
         {
-            return;
+            return false;
         }
 
-        _cooldownUntil = Time.time + Mathf.Max(0.5f, _cooldownSeconds);
         Debug.Log(
             $"[SetPiece] GoalKick assigned gk={gk.name} otherTeam={classify.RestartTeamIsOther} " +
             $"ballPos={ballPos}");
+        return true;
+    }
+
+    private bool TryAssignThrowIn(
+        BallManager ballManager,
+        TeamBlackboard teamBB,
+        OutOfPlayClassifier.Result classify,
+        Vector3 ballWorld)
+    {
+        Vector3 ballPos = SetPieceAssignmentRules.ResolveThrowInBallPosition(
+            teamBB.FieldInfo,
+            classify.SideSignX,
+            ballWorld.z);
+        ballPos.y = Mathf.Max(0.35f, ballPos.y);
+
+        var taker = SetPieceAssignmentRules.FindNearestRestartingFieldPlayer(
+            classify.RestartTeamIsOther,
+            ballPos);
+        if (taker == null)
+        {
+            return false;
+        }
+
+        var avatar = taker.GetAvatar();
+        if (avatar == null || avatar.ViewID <= 0)
+        {
+            return false;
+        }
+
+        if (!ballManager.AssignThrowInPossession(avatar.ViewID, ballPos, _suppressSeconds))
+        {
+            return false;
+        }
+
+        Debug.Log(
+            $"[SetPiece] ThrowIn assigned taker={taker.name} otherTeam={classify.RestartTeamIsOther} " +
+            $"side={classify.SideSignX} ballPos={ballPos}");
+        return true;
+    }
+
+    private void MarkCooldown()
+    {
+        _cooldownUntil = Time.time + Mathf.Max(0.5f, _cooldownSeconds);
     }
 
     private static bool ShouldAuthorityHandleSetPiece()

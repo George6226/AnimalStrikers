@@ -186,7 +186,21 @@ public class BallManager : MonoBehaviour
     public bool AssignGoalKickPossession(
         int ownerViewId,
         Vector3 ballWorldPosition,
-        float suppressSeconds = GoalKickSetPieceRules.DefaultSuppressSeconds)
+        float suppressSeconds = GoalKickSetPieceRules.DefaultSuppressSeconds) =>
+        AssignSetPiecePossession(ownerViewId, ballWorldPosition, suppressSeconds);
+
+    /// <summary>6-B P2: スローイン — ボールを配置しフィールド選手に HOLD を渡す。</summary>
+    public bool AssignThrowInPossession(
+        int ownerViewId,
+        Vector3 ballWorldPosition,
+        float suppressSeconds = ThrowInSetPieceRules.DefaultSuppressSeconds) =>
+        AssignSetPiecePossession(ownerViewId, ballWorldPosition, suppressSeconds);
+
+    /// <summary>セットプレイ共通: 配置 + HOLD + pickup suppress。</summary>
+    public bool AssignSetPiecePossession(
+        int ownerViewId,
+        Vector3 ballWorldPosition,
+        float suppressSeconds)
     {
         if (ownerViewId <= 0)
         {
