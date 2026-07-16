@@ -69,8 +69,13 @@ public class BallHandler : MonoBehaviourPunCallbacks, IPunOwnershipCallbacks
     private void synchronizedBallState(int ownerID, PhotonMessageInfo info)
     {
         Debug.Log("ボール同期中:" + ownerID);
-        // ボールの所持者IDとチームを変更・同期する
-        TeamFacade.Instance.BallManager.setBallOwnerIDAndTeam(ownerID);
+        var ballManager = TeamFacade.Instance != null ? TeamFacade.Instance.BallManager : null;
+        if (ballManager != null)
+        {
+            // 6-E: Photon BallOwnerID + BallState + TeamBB を RPC ペイロードに揃える
+            ballManager.ApplyOwnershipFromNetwork(ownerID);
+        }
+
         // ボールの当たり判定/物理を変更・同期する
         changeBallCollider(ownerID);
         // ボールの階層構造を変更・同期する
