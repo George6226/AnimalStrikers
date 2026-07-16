@@ -24,6 +24,12 @@ public static class GoapMatchPlayGate
             return true;
         }
 
-        return stateManager.isSameKind(StateManager.STATE_KIND.GAME);
+        if (!stateManager.isSameKind(StateManager.STATE_KIND.GAME))
+        {
+            return false;
+        }
+
+        // 6-F P0: 得点直後のリスタート中は GOAP を止め、配置完了後に MatchPlayStarted replan へ。
+        return !PostGoalRestartGate.IsGoapPlanningSuppressed();
     }
 }
