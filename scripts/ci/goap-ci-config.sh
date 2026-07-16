@@ -4,8 +4,8 @@ set -euo pipefail
 
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
-GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|TeammateNpcDefensePlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests|StaminaMoveSpeedEditModeTests|StaminaDashEditModeTests|StaminaChangeEditModeTests|GoalkeeperPositioningEditModeTests|GoalkeeperDistributionEditModeTests|SlideTacklePlanningEditModeTests|UseSpecialPlanningEditModeTests|ShootAimPolicyEditModeTests|EnemyAiBalanceEditModeTests|TeammateNpcTacticalDefendMirrorEditModeTests|GoapEnemyNpcCatalogEditModeTests|OutOfPlayClassifierEditModeTests|GoalKickSetPieceRulesEditModeTests|RegainStaminaPlanningEditModeTests|GoapDashPlanningEditModeTests|BallOwnershipNetworkApplyRulesEditModeTests|PostGoalRestartRulesEditModeTests|GoapReplanLoadRulesEditModeTests|GoapSlideTackleBatchRulesEditModeTests|SpecialNetworkRulesEditModeTests|GoapRegainStaminaBatchRulesEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-310}"
+GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|TeammateNpcDefensePlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests|StaminaMoveSpeedEditModeTests|StaminaDashEditModeTests|StaminaChangeEditModeTests|GoalkeeperPositioningEditModeTests|GoalkeeperDistributionEditModeTests|SlideTacklePlanningEditModeTests|UseSpecialPlanningEditModeTests|ShootAimPolicyEditModeTests|EnemyAiBalanceEditModeTests|TeammateNpcTacticalDefendMirrorEditModeTests|GoapEnemyNpcCatalogEditModeTests|OutOfPlayClassifierEditModeTests|GoalKickSetPieceRulesEditModeTests|RegainStaminaPlanningEditModeTests|GoapDashPlanningEditModeTests|BallOwnershipNetworkApplyRulesEditModeTests|PostGoalRestartRulesEditModeTests|GoapReplanLoadRulesEditModeTests|GoapSlideTackleBatchRulesEditModeTests|SpecialNetworkRulesEditModeTests|GoapRegainStaminaBatchRulesEditModeTests|GoalkeeperBatchVerifyRulesEditModeTests}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-314}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(
@@ -19,10 +19,11 @@ GOAP_BATCH_PROFILES=(
   "defenseDrive|-goapBatchVerify=defenseDrive|goap-batch-defense-drive-result.txt|goap-batch-defense-drive-verify.log|守備ドライブ #7-#8 (SELECTION+RUNTIME 2/2)"
   "slideTackle|-goapBatchVerify=slideTackle|goap-batch-slide-tackle-result.txt|goap-batch-slide-tackle-verify.log|SlideTackle 近接選出 #10 (SELECTION 1/1)"
   "regainStamina|-goapBatchVerify=regainStamina|goap-batch-regain-stamina-result.txt|goap-batch-regain-stamina-verify.log|RegainStamina 低スタミナ選出 #8 (SELECTION 1/1)"
+  "goalkeeper|-goalkeeperBatchVerify|goap-batch-goalkeeper-result.txt|goap-batch-goalkeeper-verify.log|GK TrackBall 敵脅威 (SELECTION 1/1)"
   "mainNpcAttack|-goapMainNpcAttackVerify|goap-main-npc-attack-result.txt|goap-main-npc-attack-verify.log|Main NPC 攻撃+パス後サポート (M1/M2)"
 )
 
-GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-main-npc-attack batch-defense batch-defense-tactical batch-defense-combined batch-defense-combined-drive batch-defense-drive batch-slide-tackle batch-regain-stamina)
+GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-main-npc-attack batch-defense batch-defense-tactical batch-defense-combined batch-defense-combined-drive batch-defense-drive batch-slide-tackle batch-regain-stamina batch-goalkeeper)
 
 goap_ci_script_dir() {
   cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd
@@ -44,8 +45,9 @@ goap_ci_print_usage() {
   echo "  batch-defense-drive     defenseDrive 守備ドライブのみ（Phase 6 MTD単体・任意）" >&2
   echo "  batch-slide-tackle      slideTackle SlideTackle 近接選出のみ" >&2
   echo "  batch-regain-stamina    regainStamina RegainStamina 低スタミナ選出のみ" >&2
-  echo "  batch           上記10バッチ連続（defenseDrive は含まない）" >&2
-  echo "  all             EditMode + 10バッチ（CI 相当・約18-22分）" >&2
+  echo "  batch-goalkeeper        goalkeeper GK TrackBall 敵脅威のみ" >&2
+  echo "  batch           上記11バッチ連続（defenseDrive は含まない）" >&2
+  echo "  all             EditMode + 11バッチ（CI 相当・約18-22分）" >&2
 }
 
 goap_ci_mode_valid() {
@@ -65,7 +67,7 @@ goap_ci_mode_runs_editmode() {
 
 goap_ci_mode_runs_batch() {
   case "${1}" in
-    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-main-npc-attack|batch-defense|batch-defense-tactical|batch-defense-combined|batch-defense-combined-drive|batch-defense-drive|batch-slide-tackle|batch-regain-stamina) return 0 ;;
+    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-main-npc-attack|batch-defense|batch-defense-tactical|batch-defense-combined|batch-defense-combined-drive|batch-defense-drive|batch-slide-tackle|batch-regain-stamina|batch-goalkeeper) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -114,6 +116,9 @@ goap_ci_batch_profiles_for_mode() {
         ;;
       batch-regain-stamina)
         [[ "${token}" == "regainStamina" ]] && echo "${token}"
+        ;;
+      batch-goalkeeper)
+        [[ "${token}" == "goalkeeper" ]] && echo "${token}"
         ;;
     esac
   done
@@ -185,6 +190,10 @@ goap_ci_batch_diag_candidates() {
       echo "${log_dir}/GoapDiag_regain_stamina_latest.txt"
       echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
       echo "${log_dir}/GoapDiag_latest.txt"
+      ;;
+    goalkeeper)
+      echo "${log_dir}/GkDiag_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GkDiag_latest.txt"
       ;;
     mainNpcAttack)
       echo "${log_dir}/GoapSummary_latest.txt"

@@ -75,13 +75,13 @@
 | スライス | 状態 | 内容 |
 |----------|------|------|
 | **P0** SlideTackle バッチ検証 | **完了 (#74)** | `slideTackle` プロファイル + #10 NearContact（SELECTION 1/1）、CI 9 バッチ |
-| **P1** RegainStamina バッチ検証 | **進行中** | `regainStamina` プロファイル + #8 RwOwner_WingHold（SELECTION 1/1） |
+| **P1** RegainStamina バッチ検証 | **完了 (#77)** | `regainStamina` プロファイル + #8 RwOwner_WingHold（SELECTION 1/1） |
+| **P2** GK バッチ runner | **進行中** | `goalkeeper` プロファイル + 敵脅威 TrackBall（SELECTION 1/1） |
 
 ### フェーズ6 後続候補（未着手・優先度はユーザー指定）
 
 | 候補 | 内容 |
 |------|------|
-| 6-H P1 | `regainStamina` バッチ（utility goal 用 Setup 新設） |
 | 6-H P2 | GK バッチ（`GoalkeeperNpcBrain` 専用 runner） |
 
 ---
