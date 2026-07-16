@@ -107,6 +107,82 @@ public class PhotonAnimalFacade : MonoBehaviourPunCallbacks
         }
     }
 
+    /// <summary>6-E 残: 必殺発動を他クライアントへ同期（オーナーのみ呼ぶ）。</summary>
+    public void BroadcastSpecialActivated()
+    {
+        if (photonView == null || !SpecialNetworkRules.ShouldOwnerBroadcastSpecialRpc(photonView.IsMine))
+        {
+            return;
+        }
+
+        if (!SpecialNetworkRules.ShouldSyncSpecialOverPhoton(ResolveBattleMode(), PhotonNetwork.InRoom))
+        {
+            return;
+        }
+
+        photonView.RPC(nameof(RPC_SpecialActivated), RpcTarget.Others);
+    }
+
+    [PunRPC]
+    private void RPC_SpecialActivated()
+    {
+        if (photonView != null && photonView.IsMine)
+        {
+            return;
+        }
+
+        AnimalAction_Special special = ResolveSpecialAction();
+        if (special != null)
+        {
+            special.ApplySpecialActivatedFromNetwork();
+        }
+    }
+
+    /// <summary>6-E 残: 必殺終了を他クライアントへ同期（オーナーのみ呼ぶ）。</summary>
+    public void BroadcastSpecialFinished()
+    {
+        if (photonView == null || !SpecialNetworkRules.ShouldOwnerBroadcastSpecialRpc(photonView.IsMine))
+        {
+            return;
+        }
+
+        if (!SpecialNetworkRules.ShouldSyncSpecialOverPhoton(ResolveBattleMode(), PhotonNetwork.InRoom))
+        {
+            return;
+        }
+
+        photonView.RPC(nameof(RPC_SpecialFinished), RpcTarget.Others);
+    }
+
+    [PunRPC]
+    private void RPC_SpecialFinished()
+    {
+        if (photonView != null && photonView.IsMine)
+        {
+            return;
+        }
+
+        AnimalAction_Special special = ResolveSpecialAction();
+        if (special != null)
+        {
+            special.ApplySpecialFinishedFromNetwork();
+        }
+    }
+
+    private AnimalAction_Special ResolveSpecialAction()
+    {
+        return _animalFacade != null
+            ? _animalFacade.GetComponentInChildren<AnimalAction_Special>(true)
+            : null;
+    }
+
+    private static ConstData.BATTLE_MODE ResolveBattleMode()
+    {
+        return PhotonPlayerInfo.Instance != null
+            ? PhotonPlayerInfo.Instance.BattleMode
+            : ConstData.BATTLE_MODE.NPC;
+    }
+
     private void ApplyDamageLocal(float damageAmount)
     {
         if (_animalFacade == null)
