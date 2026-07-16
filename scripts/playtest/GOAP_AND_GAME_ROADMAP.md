@@ -35,8 +35,8 @@
 
 | スライス | 状態 | 内容 |
 |----------|------|------|
-| **P0** OutOfPlay 純ロジック | **実装中** | `OutOfPlayClassifier` / `SetPieceAssignmentRules`（ThrowIn・Corner・GoalKick 判定） |
-| P1 ゴールキック runtime | 未着手 | エンドライン外 → 守備 GK + 既存 Distribution |
+| **P0** OutOfPlay 純ロジック | **完了 (#65)** | `OutOfPlayClassifier` / `SetPieceAssignmentRules` |
+| **P1** ゴールキック runtime | **実装中** | FREE + ゴールキック判定 → 守備 GK HOLD + suppress → 既存 Distribution |
 | P2 スローイン runtime | 未着手 | サイド線外 → フィールド選手 |
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
@@ -247,7 +247,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 順 | ID | 項目 | 理由 |
 |----|-----|------|------|
 | 1 | **6-A** | 敵 AI の対称化・難易度調整 | **完了 (#63+#64)** |
-| 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | **P0 実装中**（OutOfPlay 純ロジック）。P1 ゴールキック runtime 未着手 |
+| 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | **P1 実装中**（ゴールキック runtime）。P0 完了 (#65)。P2 スローイン未着手 |
 | 3 | **6-C** | スタミナの GOAP 連携 | `hasStamina` Fact、`RegainStaminaGoalSO` |
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | 受け位置・ルーズボール追跡でのダッシュ判断 |
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | 必殺技 Photon、ボール保持者ズレ |
