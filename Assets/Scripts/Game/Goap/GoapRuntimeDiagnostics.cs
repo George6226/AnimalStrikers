@@ -57,10 +57,14 @@ public static class GoapRuntimeDiagnostics
             || message.StartsWith("NoGoalIdle(")
             || message.StartsWith("ReplanDeferred(")
             || message.StartsWith("ReplanCooldown(")
+            || message.StartsWith("ReplanCoalesced(")
             || message.StartsWith("AbortDeferred(")
             || message.StartsWith("ActionDeferred(")
             || message.StartsWith("SkipPlanning(")
-            || message.StartsWith("GoalAlreadyAchieved("))
+            || message.StartsWith("GoalAlreadyAchieved(")
+            || message.StartsWith("BallContextChanged(")
+            || message.StartsWith("EnemyLayoutChanged(")
+            || message.StartsWith("BallOwnerMoved("))
         {
             return false;
         }

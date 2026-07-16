@@ -17,6 +17,9 @@ public class GoapRuntimeDiagnosticsEditModeTests
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("PlanningStart(reason=interval, attempt=3)"), Is.False);
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("NoGoalIdle(wait=0.6s, reason=interval, attempt=3)"), Is.False);
         Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReplanCooldown(seconds=1.20, streak=2, category=NoPlan)"), Is.False);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("ReplanCoalesced(reason=EnemyLayoutChanged, until=12.30)"), Is.False);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("BallContextChanged(teamHasBall=true, enemyHasBall=false, ballState=HOLD, reason=BallPossessionChanged)"), Is.False);
+        Assert.That(GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog("EnemyLayoutChanged(enemies=4, maxDelta=1.20, threshold=0.80)"), Is.False);
     }
 
     [Test]
