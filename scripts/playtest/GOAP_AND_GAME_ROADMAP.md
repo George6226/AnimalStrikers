@@ -14,14 +14,14 @@
 - **GOAP 仕上げ G0〜G6**（下記アーカイブ）
 - **F1〜F5**（スタミナ / ダッシュ / GK / SlideTackle / UseSpecial）
 - GK follow-up: #60（狙い・守備即完了）、#61（replan churn）、#62（敵 GK ホーム深さ復帰）
+- **フェーズ6（6-A〜6-H）**: #63〜#74（敵AI・GKセットプレイ・スタミナGOAP・ダッシュ・マルチ同期・得失点後・ログ・CI拡張）
 
 ---
 
-## 現在: フェーズ6（6-A 〜 6-H）
+## 完了: フェーズ6（6-A 〜 6-H）— **全項目完了 (#63〜#74)**
 
-**進行順**: 6-A → 6-B → … → 6-H（並列は明示時のみ）  
-**詳細表**: 下方「F5 完了後（フェーズ6）」を正とする。  
-**エージェント方針**: `.cursor/rules/phase6.mdc`
+**エージェント方針（アーカイブ）**: `.cursor/rules/phase6.mdc`  
+**詳細表**: 下方「F5 完了後（フェーズ6）」
 
 ### 6-A 進捗 — **完了 (#63+#64)**
 
@@ -69,11 +69,25 @@
 |----------|------|------|
 | **P0** replan coalesce + Summary 整備 | **完了 (#73)** | volatile 即時 replan の coalesce、`GoapPassDiagnostic` Summary フィルタ |
 
-### 6-H 進捗
+### 6-H 進捗 — **完了 (#74)**
 
 | スライス | 状態 | 内容 |
 |----------|------|------|
-| **P0** SlideTackle バッチ検証 | **実装中** | `slideTackle` プロファイル + #10 NearContact レイアウト（SELECTION 1/1） |
+| **P0** SlideTackle バッチ検証 | **完了 (#74)** | `slideTackle` プロファイル + #10 NearContact（SELECTION 1/1）、CI 9 バッチ |
+
+### フェーズ6 後続候補（未着手・優先度はユーザー指定）
+
+| 候補 | 内容 |
+|------|------|
+| 6-H P1 | `regainStamina` バッチ（utility goal 用 Setup 新設） |
+| 6-H P2 | GK バッチ（`GoalkeeperNpcBrain` 専用 runner） |
+| 6-E 残 | 必殺技 Photon 同期（`AnimalAction_Special` TODO） |
+
+---
+
+## 現在: フェーズ6 完了 — 次フェーズ未定
+
+ロードマップ上の **6-A〜6-H はすべて完了**。新規着手はユーザーがスコープを指定してから。
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
@@ -289,7 +303,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | **完了 (#71)** |
 | 6 | **6-F** | 試合メタ（得失点後の挙動） | **完了 (#72)** |
 | 7 | **6-G** | パフォーマンス・ログ整備 | **完了 (#73)** |
-| 8 | **6-H** | バッチ検証 CI 拡張 | **P0 実装中**（SlideTackle バッチ #10） |
+| 8 | **6-H** | バッチ検証 CI 拡張 | **完了 (#74)**。P0=SlideTackle バッチ。P1/P2（スタミナ・GK）は後続候補 |
 
 ---
 
@@ -310,5 +324,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
   ↓
 [F5] 必殺技GOAP接続
   ↓
-[6-A]〜[6-H]
+[6-A]〜[6-H]  ← 完了
+  ↓
+（次フェーズ未定）
 ```

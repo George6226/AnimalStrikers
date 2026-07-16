@@ -1,38 +1,43 @@
 ---
-description: Phase 6（6-A〜6-H）専用エージェント方針
+description: Phase 6（6-A〜6-H）専用エージェント方針 — 完了アーカイブ
 alwaysApply: true
 ---
 
-# Phase 6 エージェント
+# Phase 6 エージェント（完了）
 
-このワークスペースの作業スコープは **フェーズ6（6-A〜6-H）**。  
-F1〜F5・G0〜G6・GK follow-up（#60〜#62）・**6-A（#63+#64）** は完了済み。新規に戻さない。
+**フェーズ6（6-A〜6-H）はすべて完了**（#63〜#74、main @ 55820c8 以降）。  
+F1〜F5・G0〜G6・GK follow-up（#60〜#62）も完了済み。新規に戻さない。
 
 ## 正本
 
-- ロードマップ: `scripts/playtest/GOAP_AND_GAME_ROADMAP.md` の「現在: フェーズ6」
-- 進行順: **6-A → 6-B → 6-C → 6-D → 6-E → 6-F → 6-G → 6-H**
-- 順番を飛ばす・並列するときはユーザー明示時のみ
+- ロードマップ: `scripts/playtest/GOAP_AND_GAME_ROADMAP.md`
+- CI: EditMode **301** 件、`mode=all` = EditMode + **9** バッチ
 
-| ID | 項目 |
-|----|------|
-| 6-A | 敵 AI の対称化・難易度調整（完了） |
-| 6-B | セットプレイ（ゴールキックのみ・スローイン／コーナーは非採用） |
-| 6-C | スタミナの GOAP 連携 |
-| 6-D | GOAP ダッシュの戦術統合 |
-| 6-E | マルチプレイ同期の堅牢化（完了 #71） |
-| 6-F | 試合メタ（得失点後）（完了 #72） |
-| 6-G | パフォーマンス・ログ整備（完了 #73） |
-| 6-H | バッチ検証 CI 拡張 |
+## フェーズ6 完了一覧
+
+| ID | PR | 内容 |
+|----|-----|------|
+| 6-A | #63+#64 | 敵AI難易度・守備ミラー・Easy Sub攻撃抑止 |
+| 6-B | #65+#66 | ゴールキック（スローイン／コーナー非採用） |
+| 6-C | #69 | hasStamina + RegainStamina GOAP |
+| 6-D | #70 | FreeBall/ReceivePass ダッシュ |
+| 6-E | #71 | ボール所有権 RPC 同期 |
+| 6-F | #72 | 得点後 GOAP 抑制窓 + キックオフ割当 |
+| 6-G | #73 | replan coalesce + Summary フィルタ |
+| 6-H | #74 | SlideTackle バッチ（`slideTackle` #10） |
+
+## 後続候補（フェーズ6 外・ユーザー指定時のみ）
+
+- 6-H P1: `regainStamina` バッチ
+- 6-H P2: GK バッチ runner
+- 6-E 残: 必殺 Photon 同期
 
 ## 作業ルール
 
-- 着手時に対象 ID（例: 6-B）を明示し、その範囲に閉じる
-- 小さく PR 可能単位で進め、EditMode →（必要なら）playtest 準備まで
-- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コアを壊さない
-- 完了・マージ後はロードマップの状態を更新する
-- Phase 6 外の依頼が来たら、スコープ外であることを短く伝えて確認する
+- **新規依頼はフェーズ6 外**。着手前にスコープをユーザーと確認する
+- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コア / CI 301 + 9 バッチ
+- 小さく PR 可能単位、EditMode →（必要なら）playtest
 
 ## いまのデフォルト
 
-未指定なら **6-H（CI 拡張）**。6-G 完了 (#73)。P0=SlideTackle バッチプロファイル（#10 NearContact）。
+未指定なら **後続候補のどれを優先するかユーザーに確認**。ロードマップ更新のみの依頼は docs PR で対応可。
