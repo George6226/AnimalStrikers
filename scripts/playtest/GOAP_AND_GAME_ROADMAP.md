@@ -56,7 +56,7 @@
 | スライス | 状態 | 内容 |
 |----------|------|------|
 | **P0** ボール保持者ネットワーク適用 | **完了 (#71)** | RPC で `BallOwnerID` / BallState / TeamBB を揃える（kickoff suppress bypass） |
-| **P1** 必殺技 Photon 同期 | **進行中** | 発動時ゲージ RPC + 終了時 `EndSpecial` RPC（NPC モード skip） |
+| **P1** 必殺技 Photon 同期 | **完了 (#76)** | 発動時ゲージ RPC + 終了時 `EndSpecial` RPC（NPC モード skip） |
 
 ### 6-F 進捗 — **完了 (#72)**
 
@@ -75,6 +75,7 @@
 | スライス | 状態 | 内容 |
 |----------|------|------|
 | **P0** SlideTackle バッチ検証 | **完了 (#74)** | `slideTackle` プロファイル + #10 NearContact（SELECTION 1/1）、CI 9 バッチ |
+| **P1** RegainStamina バッチ検証 | **進行中** | `regainStamina` プロファイル + #8 RwOwner_WingHold（SELECTION 1/1） |
 
 ### フェーズ6 後続候補（未着手・優先度はユーザー指定）
 
@@ -82,7 +83,6 @@
 |------|------|
 | 6-H P1 | `regainStamina` バッチ（utility goal 用 Setup 新設） |
 | 6-H P2 | GK バッチ（`GoalkeeperNpcBrain` 専用 runner） |
-| 6-E 残 | 必殺技 Photon 同期（`AnimalAction_Special` TODO） |
 
 ---
 

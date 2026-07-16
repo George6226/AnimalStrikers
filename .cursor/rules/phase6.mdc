@@ -11,7 +11,7 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）も完了済み。新規に戻さ
 ## 正本
 
 - ロードマップ: `scripts/playtest/GOAP_AND_GAME_ROADMAP.md`
-- CI: EditMode **301** 件、`mode=all` = EditMode + **9** バッチ
+- CI: EditMode **310** 件、`mode=all` = EditMode + **10** バッチ
 
 ## フェーズ6 完了一覧
 
@@ -21,21 +21,20 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）も完了済み。新規に戻さ
 | 6-B | #65+#66 | ゴールキック（スローイン／コーナー非採用） |
 | 6-C | #69 | hasStamina + RegainStamina GOAP |
 | 6-D | #70 | FreeBall/ReceivePass ダッシュ |
-| 6-E | #71 | ボール所有権 RPC 同期 |
+| 6-E | #71+#76 | ボール所有権 RPC + 必殺 Photon 同期 |
 | 6-F | #72 | 得点後 GOAP 抑制窓 + キックオフ割当 |
 | 6-G | #73 | replan coalesce + Summary フィルタ |
 | 6-H | #74 | SlideTackle バッチ（`slideTackle` #10） |
 
 ## 後続候補（フェーズ6 外・ユーザー指定時のみ）
 
-- 6-H P1: `regainStamina` バッチ
+- 6-H P1: `regainStamina` バッチ（進行中）
 - 6-H P2: GK バッチ runner
-- 6-E 残: 必殺 Photon 同期
 
 ## 作業ルール
 
 - **新規依頼はフェーズ6 外**。着手前にスコープをユーザーと確認する
-- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コア / CI 301 + 9 バッチ
+- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コア / CI 308 + 10 バッチ
 - 小さく PR 可能単位、EditMode →（必要なら）playtest
 
 ## いまのデフォルト

@@ -119,4 +119,8 @@ public static class GoapSupportLayoutPatternCatalog
         int number = GetNumber(pattern);
         return number >= 2 && number <= 12;
     }
+
+    /// <summary>6-H P1: 味方保持・低スタミナで slot0 の StandRecoverStamina 選出。</summary>
+    public static List<GoapSupportLayoutPatternId> BuildRegainStaminaSuite() =>
+        BuildList(8);
 }
