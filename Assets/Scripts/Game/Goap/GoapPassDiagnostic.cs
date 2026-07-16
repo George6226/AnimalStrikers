@@ -84,6 +84,11 @@ public static class GoapPassDiagnostic
 
     private static void AppendSummary(string line)
     {
+        if (!GoapRuntimeDiagnostics.ShouldIncludeInSummaryLog(line))
+        {
+            return;
+        }
+
         try
         {
             if (!_summaryInitialized)

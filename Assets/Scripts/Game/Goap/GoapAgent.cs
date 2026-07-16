@@ -74,6 +74,7 @@ public class GoapAgent : MonoBehaviour
     private float _nextNoConfigLogTime;
     private const float NoConfigLogInterval = 1.0f;
     private float _nextAllowedReplanTime;
+    private float _nextVolatileImmediateReplanCoalesceUntil;
     private float _lastReceiveActionCompleteTime = -999f;
     private float _postShootDefenseGraceUntil = float.NegativeInfinity;
     private float _postPassSupportGraceUntil = float.NegativeInfinity;
@@ -664,10 +665,30 @@ public class GoapAgent : MonoBehaviour
             return;
         }
 
+        float now = Time.time;
+        if (GoapReplanLoadRules.ShouldCoalesceImmediateReplan(
+                replanReason,
+                now,
+                _nextVolatileImmediateReplanCoalesceUntil))
+        {
+            if (GoapRuntimeDiagnostics.VerboseLoggingEnabled)
+            {
+                LogSummary($"ReplanCoalesced(reason={replanReason}, until={_nextVolatileImmediateReplanCoalesceUntil:F2})");
+            }
+
+            return;
+        }
+
         _lastReplanReason = replanReason;
         _nextAllowedReplanTime = 0f;
         _sameFailureStreak = 0;
         _planFailed = false;
+
+        float coalesceCooldown = GoapReplanLoadRules.ResolveCoalesceCooldownSeconds(replanReason);
+        if (coalesceCooldown > 0f)
+        {
+            _nextVolatileImmediateReplanCoalesceUntil = GoapReplanLoadRules.ComputeCoalesceUntil(now, replanReason);
+        }
 
         if (_currentAction != null || _currentPlan.Count > 0)
         {
