@@ -4,8 +4,8 @@ set -euo pipefail
 
 GOAP_UNITY_VERSION="${GOAP_UNITY_VERSION:-${UNITY_VERSION:-6000.2.7f2}}"
 GOAP_DOCKER_IMAGE="${GOAP_UNITY_DOCKER_IMAGE:-unityci/editor:ubuntu-${GOAP_UNITY_VERSION}-base-3}"
-GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|TeammateNpcDefensePlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests|StaminaMoveSpeedEditModeTests|StaminaDashEditModeTests|StaminaChangeEditModeTests|GoalkeeperPositioningEditModeTests|GoalkeeperDistributionEditModeTests|SlideTacklePlanningEditModeTests|UseSpecialPlanningEditModeTests|ShootAimPolicyEditModeTests|EnemyAiBalanceEditModeTests|TeammateNpcTacticalDefendMirrorEditModeTests|GoapEnemyNpcCatalogEditModeTests|OutOfPlayClassifierEditModeTests|GoalKickSetPieceRulesEditModeTests|RegainStaminaPlanningEditModeTests|GoapDashPlanningEditModeTests|BallOwnershipNetworkApplyRulesEditModeTests|PostGoalRestartRulesEditModeTests|GoapReplanLoadRulesEditModeTests}"
-GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-296}"
+GOAP_EDITMODE_TEST_FILTER="${GOAP_EDITMODE_TEST_FILTER:-GoapBatchVerificationLogParserTests|TeammateNpcSupportPlanningEditModeTests|TeammateNpcDefensePlanningEditModeTests|GoapProductionSelectionExpectationsEditModeTests|GoapDefenseProductionSelectionExpectationsEditModeTests|GoapMainNpcCatalogEditModeTests|MainNpcPostPassPlanningEditModeTests|MainNpcAttackPlanningEditModeTests|GoapPassTargetSelectionEditModeTests|PassLaneKickPolicyEditModeTests|GoapFieldNpcPerspectiveEditModeTests|AnimalActionAccuracyPolicyEditModeTests|StaminaMoveSpeedEditModeTests|StaminaDashEditModeTests|StaminaChangeEditModeTests|GoalkeeperPositioningEditModeTests|GoalkeeperDistributionEditModeTests|SlideTacklePlanningEditModeTests|UseSpecialPlanningEditModeTests|ShootAimPolicyEditModeTests|EnemyAiBalanceEditModeTests|TeammateNpcTacticalDefendMirrorEditModeTests|GoapEnemyNpcCatalogEditModeTests|OutOfPlayClassifierEditModeTests|GoalKickSetPieceRulesEditModeTests|RegainStaminaPlanningEditModeTests|GoapDashPlanningEditModeTests|BallOwnershipNetworkApplyRulesEditModeTests|PostGoalRestartRulesEditModeTests|GoapReplanLoadRulesEditModeTests|GoapSlideTackleBatchRulesEditModeTests}"
+GOAP_EDITMODE_EXPECTED_TESTS="${GOAP_EDITMODE_EXPECTED_TESTS:-301}"
 
 # token|cli_flag|result_file|unity_log|label
 GOAP_BATCH_PROFILES=(
@@ -17,10 +17,11 @@ GOAP_BATCH_PROFILES=(
   "defenseCombined|-goapBatchVerify=defenseCombined|goap-batch-defense-combined-result.txt|goap-batch-defense-combined-verify.log|守備統合 #2-#6,#9 (SELECTION 6/6)"
   "defenseCombinedDrive|-goapBatchVerify=defenseCombinedDrive|goap-batch-defense-combined-drive-result.txt|goap-batch-defense-combined-drive-verify.log|守備統合ドライブ #7-#8,#9 (SELECTION+RUNTIME 3/3)"
   "defenseDrive|-goapBatchVerify=defenseDrive|goap-batch-defense-drive-result.txt|goap-batch-defense-drive-verify.log|守備ドライブ #7-#8 (SELECTION+RUNTIME 2/2)"
+  "slideTackle|-goapBatchVerify=slideTackle|goap-batch-slide-tackle-result.txt|goap-batch-slide-tackle-verify.log|SlideTackle 近接選出 #10 (SELECTION 1/1)"
   "mainNpcAttack|-goapMainNpcAttackVerify|goap-main-npc-attack-result.txt|goap-main-npc-attack-verify.log|Main NPC 攻撃+パス後サポート (M1/M2)"
 )
 
-GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-main-npc-attack batch-defense batch-defense-tactical batch-defense-combined batch-defense-combined-drive batch-defense-drive)
+GOAP_CI_MODES=(all editmode batch batch-combined batch-wing batch-cf-drive batch-main-npc-attack batch-defense batch-defense-tactical batch-defense-combined batch-defense-combined-drive batch-defense-drive batch-slide-tackle)
 
 goap_ci_script_dir() {
   cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd
@@ -40,8 +41,9 @@ goap_ci_print_usage() {
   echo "  batch-defense-combined  defenseCombined 守備統合本番選出のみ" >&2
   echo "  batch-defense-combined-drive  defenseCombinedDrive 守備統合ドライブのみ" >&2
   echo "  batch-defense-drive     defenseDrive 守備ドライブのみ（Phase 6 MTD単体・任意）" >&2
-  echo "  batch           上記8バッチ連続（defenseDrive は含まない）" >&2
-  echo "  all             EditMode + 8バッチ（CI 相当・約16-20分）" >&2
+  echo "  batch-slide-tackle      slideTackle SlideTackle 近接選出のみ" >&2
+  echo "  batch           上記9バッチ連続（defenseDrive は含まない）" >&2
+  echo "  all             EditMode + 9バッチ（CI 相当・約18-22分）" >&2
 }
 
 goap_ci_mode_valid() {
@@ -61,7 +63,7 @@ goap_ci_mode_runs_editmode() {
 
 goap_ci_mode_runs_batch() {
   case "${1}" in
-    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-main-npc-attack|batch-defense|batch-defense-tactical|batch-defense-combined|batch-defense-combined-drive|batch-defense-drive) return 0 ;;
+    batch|all|batch-combined|batch-wing|batch-cf-drive|batch-main-npc-attack|batch-defense|batch-defense-tactical|batch-defense-combined|batch-defense-combined-drive|batch-defense-drive|batch-slide-tackle) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -104,6 +106,9 @@ goap_ci_batch_profiles_for_mode() {
         ;;
       batch-defense-drive)
         [[ "${token}" == "defenseDrive" ]] && echo "${token}"
+        ;;
+      batch-slide-tackle)
+        [[ "${token}" == "slideTackle" ]] && echo "${token}"
         ;;
     esac
   done
@@ -163,6 +168,11 @@ goap_ci_batch_diag_candidates() {
       ;;
     defenseDrive)
       echo "${log_dir}/GoapDiag_defense_drive_latest.txt"
+      echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
+      echo "${log_dir}/GoapDiag_latest.txt"
+      ;;
+    slideTackle)
+      echo "${log_dir}/GoapDiag_slide_tackle_latest.txt"
       echo "${project_root}/Assets/DebugLog/GoapDiag_latest.txt"
       echo "${log_dir}/GoapDiag_latest.txt"
       ;;

@@ -29,14 +29,15 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `batch-defense-combined` | 守備統合本番選出 #2-#6,#9 | 約3分 |
 | `batch-defense-combined-drive` | 守備統合ドライブ #7-#8,#9 | 約3分 |
 | `batch-defense-drive` | 守備ドライブ #7-#8（Phase 6 MTD単体・任意） | 約2分 |
-| `batch` | 上記8バッチ連続 | 約16分 |
-| `all` | EditMode + 8バッチ（CI 相当） | 約16-20分 |
+| `batch-slide-tackle` | SlideTackle 近接選出 #10 | 約1.5分 |
+| `batch` | 上記9バッチ連続 | 約18分 |
+| `all` | EditMode + 9バッチ（CI 相当） | 約18-22分 |
 
 設定の単一ソース: `scripts/ci/goap-ci-config.sh`
 
 ## 合格基準
 
-### EditMode（296 件）
+### EditMode（301 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -68,6 +69,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 - `BallOwnershipNetworkApplyRulesEditModeTests`
 - `PostGoalRestartRulesEditModeTests`
 - `GoapReplanLoadRulesEditModeTests`
+- `GoapSlideTackleBatchRulesEditModeTests`
 
 ### バッチ検証
 
@@ -84,10 +86,11 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 | `defenseCombined` | #2-#6,#9 守備統合本番選出 | SELECTION 6/6 |
 | `defenseCombinedDrive` | #7-#8,#9 守備統合ドライブ | SELECTION 3/3 + RUNTIME 3/3 |
 | `defenseDrive` | #7-#8 守備ドライブ（MTD単体） | SELECTION 2/2 + RUNTIME 2/2（`mode=all` では未実行。`defenseCombinedDrive` が担当） |
+| `slideTackle` | #10 近接 SlideTackle | SELECTION 1/1 |
 
 `mode=all` / `batch` の実行順（`goap-ci-config.sh` の定義順）:
 
-1. `combined` → 2. `wingDrive` → 3. `cfDrive` → 4. `defenseBaseline` → 5. `defenseTactical` → 6. `defenseCombined` → 7. `defenseCombinedDrive` → 8. `mainNpcAttack`
+1. `combined` → 2. `wingDrive` → 3. `cfDrive` → 4. `defenseBaseline` → 5. `defenseTactical` → 6. `defenseCombined` → 7. `defenseCombinedDrive` → 8. `slideTackle` → 9. `mainNpcAttack`
 
 `defenseCombinedDrive` が #7/#8/#9 のドライブ検証を担い、`mainNpcAttack` が M1/M2 の Play 検証を担います。Phase 6 の MTD 単体検証が必要なときだけ `batch-defense-drive` を実行してください。
 
@@ -146,6 +149,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `297` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `301` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `900` | バッチの timeout 秒（終了ハング時はマーカー判定で救済） |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |

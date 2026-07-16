@@ -26,4 +26,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>守備統合ドライブ追従（DefenseCombinedDrive #7〜#8）。</summary>
     DefenseCombinedDrive = 7,
+
+    /// <summary>6-H P0: SlideTackle 本番選出（NearContact #10）。</summary>
+    SlideTackle = 8,
 }

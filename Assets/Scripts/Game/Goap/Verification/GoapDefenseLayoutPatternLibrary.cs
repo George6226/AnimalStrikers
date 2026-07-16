@@ -105,6 +105,16 @@ public static class GoapDefenseLayoutPatternLibrary
                     + ctx.ToGoal * (ctx.FieldLength * 0.30f)
                     - ctx.Right * wingLane;
                 break;
+
+            case GoapDefenseLayoutPatternId.EnemyOwner_NearContact:
+                map[0] = enemyOwner + ctx.ToGoal * Mathf.Min(1.2f, ctx.FieldLength * 0.03f);
+                map[1] = enemyOwner
+                    + ctx.Right * wingLane
+                    + ctx.ToGoal * (ctx.FieldLength * 0.12f);
+                map[2] = enemyOwner
+                    - ctx.Right * wingLane
+                    + ctx.ToGoal * (ctx.FieldLength * 0.12f);
+                break;
         }
 
         return map;

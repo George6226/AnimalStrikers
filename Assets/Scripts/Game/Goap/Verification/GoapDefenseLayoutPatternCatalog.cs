@@ -5,7 +5,7 @@ using UnityEngine;
 public static class GoapDefenseLayoutPatternCatalog
 {
     public const int NumberMin = 0;
-    public const int NumberMax = 9;
+    public const int NumberMax = 10;
 
     public static bool TryGetByNumber(int number, out GoapDefenseLayoutPatternId pattern)
     {
@@ -86,4 +86,8 @@ public static class GoapDefenseLayoutPatternCatalog
 
         return list;
     }
+
+    /// <summary>6-H P0: 敵保持者に近接した slot0 の SlideTackle 選出。</summary>
+    public static List<GoapDefenseLayoutPatternId> BuildSlideTackleSuite() =>
+        BuildRange(10, 10);
 }
