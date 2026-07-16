@@ -9,13 +9,13 @@ public sealed class PostGoalRestartRulesEditModeTests
     [SetUp]
     public void SetUp()
     {
-        PostGoalRestartGate.ResetForEditModeTests();
+        ResetGateSuppressUntilForTests(0f);
     }
 
     [TearDown]
     public void TearDown()
     {
-        PostGoalRestartGate.ResetForEditModeTests();
+        ResetGateSuppressUntilForTests(0f);
         var existing = Object.FindObjectsOfType<StateManager>();
         foreach (var sm in existing)
         {
@@ -73,7 +73,7 @@ public sealed class PostGoalRestartRulesEditModeTests
         var stateManager = stateGo.AddComponent<StateManager>();
         SetStateKind(stateManager, StateManager.STATE_KIND.GAME);
 
-        PostGoalRestartGate.SetSuppressUntilForEditModeTests(100f);
+        ResetGateSuppressUntilForTests(100f);
         try
         {
             Assert.That(GoapMatchPlayGate.IsMatchPlayActive(), Is.False);
@@ -91,7 +91,7 @@ public sealed class PostGoalRestartRulesEditModeTests
         var stateManager = stateGo.AddComponent<StateManager>();
         SetStateKind(stateManager, StateManager.STATE_KIND.GAME);
 
-        PostGoalRestartGate.SetSuppressUntilForEditModeTests(0f);
+        ResetGateSuppressUntilForTests(0f);
         try
         {
             Assert.That(GoapMatchPlayGate.IsMatchPlayActive(), Is.True);
@@ -108,6 +108,13 @@ public sealed class PostGoalRestartRulesEditModeTests
             "_stateKind",
             BindingFlags.Instance | BindingFlags.NonPublic);
         field!.SetValue(stateManager, kind);
+    }
+
+    private static void ResetGateSuppressUntilForTests(float until)
+    {
+        typeof(PostGoalRestartGate)
+            .GetField("_goapSuppressUntil", BindingFlags.Static | BindingFlags.NonPublic)
+            ?.SetValue(null, until);
     }
 }
 #endif

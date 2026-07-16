@@ -14,16 +14,4 @@ public static class PostGoalRestartGate
 
     public static bool IsGoapPlanningSuppressed() =>
         PostGoalRestartRules.ShouldSuppressGoapPlanning(_goapSuppressUntil, Time.time);
-
-#if UNITY_EDITOR
-    internal static void ResetForEditModeTests()
-    {
-        _goapSuppressUntil = 0f;
-    }
-
-    internal static void SetSuppressUntilForEditModeTests(float until)
-    {
-        _goapSuppressUntil = until;
-    }
-#endif
 }
