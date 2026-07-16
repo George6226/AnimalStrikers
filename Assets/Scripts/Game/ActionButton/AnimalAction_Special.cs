@@ -1,7 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Photon.Pun;
 
 // アニマルの必殺技アクション(個別)
 public class AnimalAction_Special : AnimalAction_Base
@@ -57,11 +56,83 @@ public class AnimalAction_Special : AnimalAction_Base
         _specialGauge.ResetGauge();
         // スペシャルアクションを実行
         _specialAction.ExecuteSpecial();
+        TryBroadcastSpecialActivated();
     }
 
     public void onSpecialFinished()
     {
-        // TODO:Photonの同期処理を行う
+        ApplySpecialFinishedLocal();
+        TryBroadcastSpecialFinished();
+    }
+
+    /// <summary>6-E: Photon RPC 受信側。ゲージをオーナーと揃える。</summary>
+    public void ApplySpecialActivatedFromNetwork()
+    {
+        if (!SpecialNetworkRules.ShouldResetGaugeOnNetworkMirror())
+        {
+            return;
+        }
+
+        if (_specialGauge != null)
+        {
+            _specialGauge.ResetGauge();
+        }
+    }
+
+    /// <summary>6-E: Photon RPC 受信側。終了処理をオーナーと揃える。</summary>
+    public void ApplySpecialFinishedFromNetwork()
+    {
+        ApplySpecialFinishedLocal();
+    }
+
+    private void ApplySpecialFinishedLocal()
+    {
         _isSpecialActive = false;
+        if (_specialAction != null)
+        {
+            _specialAction.EndSpecial();
+        }
+    }
+
+    private void TryBroadcastSpecialActivated()
+    {
+        if (!ShouldSyncSpecialOverPhoton())
+        {
+            return;
+        }
+
+        PhotonAnimalFacade photonFacade = ResolvePhotonAnimalFacade();
+        if (photonFacade != null)
+        {
+            photonFacade.BroadcastSpecialActivated();
+        }
+    }
+
+    private void TryBroadcastSpecialFinished()
+    {
+        if (!ShouldSyncSpecialOverPhoton())
+        {
+            return;
+        }
+
+        PhotonAnimalFacade photonFacade = ResolvePhotonAnimalFacade();
+        if (photonFacade != null)
+        {
+            photonFacade.BroadcastSpecialFinished();
+        }
+    }
+
+    private static bool ShouldSyncSpecialOverPhoton()
+    {
+        ConstData.BATTLE_MODE battleMode = PhotonPlayerInfo.Instance != null
+            ? PhotonPlayerInfo.Instance.BattleMode
+            : ConstData.BATTLE_MODE.NPC;
+        return SpecialNetworkRules.ShouldSyncSpecialOverPhoton(battleMode, PhotonNetwork.InRoom);
+    }
+
+    private PhotonAnimalFacade ResolvePhotonAnimalFacade()
+    {
+        AnimalFacade facade = GetComponentInParent<AnimalFacade>();
+        return facade != null ? facade.GetPhotonAnimalFacade() : null;
     }
 }

@@ -56,6 +56,7 @@
 | スライス | 状態 | 内容 |
 |----------|------|------|
 | **P0** ボール保持者ネットワーク適用 | **完了 (#71)** | RPC で `BallOwnerID` / BallState / TeamBB を揃える（kickoff suppress bypass） |
+| **P1** 必殺技 Photon 同期 | **進行中** | 発動時ゲージ RPC + 終了時 `EndSpecial` RPC（NPC モード skip） |
 
 ### 6-F 進捗 — **完了 (#72)**
 
