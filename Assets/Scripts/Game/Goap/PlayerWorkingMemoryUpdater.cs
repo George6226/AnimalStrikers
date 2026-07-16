@@ -44,6 +44,14 @@ public class PlayerWorkingMemoryUpdater
         SetBooleanFact(SymbolTag.Basic.HAS_BALL, playerBB.BallState.HasBall);
         // 自分が動いているか?
         SetBooleanFact(SymbolTag.Basic.IS_MOVING, playerBB.PhysicalState.IsMoving);
+        // スタミナが十分か（ゲージ未解決時は true 扱い＝誤って回復ゴールを選ばない）
+        bool hasStamina = true;
+        if (GoapStaminaPlanning.TryReadStaminaRatio(playerBB, out float staminaRatio))
+        {
+            hasStamina = GoapStaminaPlanning.HasSufficientStamina(staminaRatio);
+        }
+
+        SetBooleanFact(SymbolTag.Basic.HAS_STAMINA, hasStamina);
 
         /***** Action情報 ******/
         // 移動可能か TODO:スタン状態でない

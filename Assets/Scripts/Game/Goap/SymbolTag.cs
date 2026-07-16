@@ -11,6 +11,8 @@ public static class SymbolTag
     {
         public const string HAS_BALL = "hasBall";
         public const string IS_MOVING = "isMoving";
+        /// <summary>スタミナが十分（低スタミナ減速閾値以上）。</summary>
+        public const string HAS_STAMINA = "hasStamina";
     }
     
     // === アクション状態（汎用的） ===

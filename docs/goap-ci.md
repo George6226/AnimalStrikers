@@ -36,7 +36,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 
 ## 合格基準
 
-### EditMode（266 件）
+### EditMode（275 件）
 
 - `GoapBatchVerificationLogParserTests`
 - `TeammateNpcSupportPlanningEditModeTests`
@@ -63,6 +63,7 @@ export UNITY_EMAIL=... UNITY_PASSWORD=... UNITY_SERIAL=...
 - `GoapEnemyNpcCatalogEditModeTests`
 - `OutOfPlayClassifierEditModeTests`
 - `GoalKickSetPieceRulesEditModeTests`
+- `RegainStaminaPlanningEditModeTests`
 
 ### バッチ検証
 
@@ -141,6 +142,6 @@ scripts/ci/
 |------|------|------|
 | `UNITY_PATH` | （自動検出） | ローカル Unity 実行ファイル |
 | `GOAP_UNITY_VERSION` | `6000.2.7f2` | Hub / Docker イメージのバージョン |
-| `GOAP_EDITMODE_EXPECTED_TESTS` | `266` | ドキュメント・進捗表示用 |
+| `GOAP_EDITMODE_EXPECTED_TESTS` | `275` | ドキュメント・進捗表示用 |
 | `GOAP_UNITY_DOCKER_TIMEOUT` | `900` | バッチの timeout 秒（終了ハング時はマーカー判定で救済） |
 | `GOAP_EDITMODE_DOCKER_TIMEOUT` | `2700` | EditMode の timeout 秒 |

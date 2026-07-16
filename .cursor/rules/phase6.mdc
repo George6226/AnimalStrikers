@@ -35,4 +35,4 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）・**6-A（#63+#64）** は完了
 
 ## いまのデフォルト
 
-未指定なら **6-C（スタミナ GOAP）**。6-A/6-B 完了。スローイン／コーナー runtime は本ゲーム非採用のため作らない。
+未指定なら **6-C（スタミナ GOAP）**。P0=`hasStamina` Fact + `RegainStamina`（StandRecover）。次: 6-D ダッシュ戦術。

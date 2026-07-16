@@ -14,7 +14,8 @@ public static class GoapTeammateNpcCatalog
             || goal is IncomingPassReceiveGoalSO
             || goal is TeamBallSupportGoalSO
             || goal is EnemyBallDefenseGoalSO
-            || goal is DefensivePositioningGoalSO;
+            || goal is DefensivePositioningGoalSO
+            || goal is RegainStaminaGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
@@ -29,7 +30,8 @@ public static class GoapTeammateNpcCatalog
             || action is RetreatToDefensiveLineActionSO
             || action is GetOpenActionSO
             || action is CreateSupportAngleActionSO
-            || action is MakeRunBehindActionSO;
+            || action is MakeRunBehindActionSO
+            || action is StandRecoverStaminaActionSO;
     }
 
     /// <summary>ゴールに応じてプランナー候補アクションを絞る（守備/攻撃の相互混入防止。WM ラグを避ける）。</summary>
@@ -70,6 +72,11 @@ public static class GoapTeammateNpcCatalog
         if (goal is IncomingPassReceiveGoalSO)
         {
             return actions.Where(a => a is MoveToReceivePassActionSO).ToList();
+        }
+
+        if (goal is RegainStaminaGoalSO)
+        {
+            return actions.Where(a => a is StandRecoverStaminaActionSO).ToList();
         }
 
         return actions;
@@ -129,6 +136,7 @@ public static class GoapTeammateNpcCatalog
         EnsureGoal<IncomingPassReceiveGoalSO>(goals);
         EnsureGoal<EnemyBallDefenseGoalSO>(goals);
         EnsureGoal<DefensivePositioningGoalSO>(goals);
+        EnsureGoal<RegainStaminaGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
         EnsureAction<MoveToReceivePassActionSO>(actions);
@@ -143,6 +151,7 @@ public static class GoapTeammateNpcCatalog
         EnsureAction<GetOpenActionSO>(actions);
         EnsureAction<CreateSupportAngleActionSO>(actions);
         EnsureAction<MakeRunBehindActionSO>(actions);
+        EnsureAction<StandRecoverStaminaActionSO>(actions);
 
         foreach (GoapActionSO action in actions)
         {
