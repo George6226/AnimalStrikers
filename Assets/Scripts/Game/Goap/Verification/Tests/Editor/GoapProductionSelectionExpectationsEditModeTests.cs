@@ -196,6 +196,44 @@ public sealed class GoapProductionSelectionExpectationsEditModeTests
         Assert.That(result.DetailText, Does.Contain("CreateSupportAngle(PlanCosts:last-matching)"));
     }
 
+    private static IEnumerable<TestCaseData> RegainStaminaCases()
+    {
+        foreach (GoapSupportLayoutPatternId pattern in GoapSupportLayoutPatternCatalog.BuildRegainStaminaSuite())
+        {
+            int number = GoapSupportLayoutPatternCatalog.GetNumber(pattern);
+            yield return new TestCaseData(pattern, 0, "StandRecoverStamina")
+                .SetName($"RegainStamina_#{number:D2}_slot0_StandRecoverStamina");
+        }
+    }
+
+    [TestCaseSource(nameof(RegainStaminaCases))]
+    public void RegainStamina_MatchesExpectedAction(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        string expectedAction)
+    {
+        bool ok = GoapProductionSelectionExpectations.RegainStamina.TryGetExpectation(
+            pattern,
+            slot,
+            out string action,
+            out bool shouldEvaluate);
+        Assert.IsTrue(ok);
+        Assert.IsTrue(shouldEvaluate);
+        Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [Test]
+    public void RegainStamina_Slot1SkipsEvaluation()
+    {
+        bool ok = GoapProductionSelectionExpectations.RegainStamina.TryGetExpectation(
+            GoapSupportLayoutPatternId.RwOwner_WingHold,
+            1,
+            out _,
+            out bool shouldEvaluate);
+        Assert.IsTrue(ok);
+        Assert.IsFalse(shouldEvaluate, "Only slot0 should be evaluated for RegainStamina batch");
+    }
+
     private static bool MatchesExpectedAction(string expectedAction, string actualAction)
     {
         if (string.IsNullOrEmpty(expectedAction) || string.IsNullOrEmpty(actualAction))

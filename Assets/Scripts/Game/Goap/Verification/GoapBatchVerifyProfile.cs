@@ -29,4 +29,7 @@ public enum GoapBatchVerifyProfile
 
     /// <summary>6-H P0: SlideTackle 本番選出（NearContact #10）。</summary>
     SlideTackle = 8,
+
+    /// <summary>6-H P1: RegainStamina 本番選出（RwOwner_WingHold #8）。</summary>
+    RegainStamina = 9,
 }

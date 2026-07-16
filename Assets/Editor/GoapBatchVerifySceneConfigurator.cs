@@ -24,10 +24,12 @@ public static class GoapBatchVerifySceneConfigurator
         var defenseCombined = EnsureDefenseCombinedSetup(combined);
         var defenseCombinedDrive = EnsureDefenseCombinedDriveSetup(combined);
         var slideTackle = EnsureSlideTackleSetup(combined);
+        var regainStamina = EnsureRegainStaminaSetup(combined);
 
         if (combined == null && wingDrive == null && cfDrive == null
             && defenseBaseline == null && defenseTactical == null && defenseDrive == null
-            && defenseCombined == null && defenseCombinedDrive == null && slideTackle == null)
+            && defenseCombined == null && defenseCombinedDrive == null && slideTackle == null
+            && regainStamina == null)
         {
             Debug.LogError("[GOAP_BATCH] no Goap verification setup found in scene");
             return;
@@ -42,6 +44,7 @@ public static class GoapBatchVerifySceneConfigurator
         ConfigureDefenseSetup(defenseCombined, profile == GoapBatchVerifyProfile.DefenseCombined);
         ConfigureDefenseSetup(defenseCombinedDrive, profile == GoapBatchVerifyProfile.DefenseCombinedDrive);
         ConfigureDefenseSetup(slideTackle, profile == GoapBatchVerifyProfile.SlideTackle);
+        ConfigureSupportSetup(regainStamina, profile == GoapBatchVerifyProfile.RegainStamina);
         ConfigureMainNpcVerifyForBatch();
         ConfigureEnemySquadForBatch();
 
@@ -56,7 +59,36 @@ public static class GoapBatchVerifySceneConfigurator
             $"defenseDrive={(defenseDrive != null && profile == GoapBatchVerifyProfile.DefenseDrive)} " +
             $"defenseCombined={(defenseCombined != null && profile == GoapBatchVerifyProfile.DefenseCombined)} " +
             $"defenseCombinedDrive={(defenseCombinedDrive != null && profile == GoapBatchVerifyProfile.DefenseCombinedDrive)} " +
-            $"slideTackle={(slideTackle != null && profile == GoapBatchVerifyProfile.SlideTackle)}");
+            $"slideTackle={(slideTackle != null && profile == GoapBatchVerifyProfile.SlideTackle)} " +
+            $"regainStamina={(regainStamina != null && profile == GoapBatchVerifyProfile.RegainStamina)}");
+    }
+
+    private static GoapRegainStaminaDebugSetup EnsureRegainStaminaSetup(
+        GoapCombinedSupportRegressionDebugSetup combined)
+    {
+        var setup = Object.FindFirstObjectByType<GoapRegainStaminaDebugSetup>(FindObjectsInactive.Include);
+        if (setup != null)
+        {
+            return setup;
+        }
+
+        if (combined == null)
+        {
+            return null;
+        }
+
+        setup = combined.gameObject.AddComponent<GoapRegainStaminaDebugSetup>();
+        var serialized = new SerializedObject(setup);
+        SetBool(serialized, "_runBatchVerificationOnStart", true);
+        SetBool(serialized, "_verifyProductionSelection", true);
+        SetBool(serialized, "_verificationOnlyCreateSupportAngle", false);
+        SetBool(serialized, "_assignBallToOwnerOnApply", true);
+        SetInt(serialized, "_ballOwnerFormationSlot", 1);
+        SetInt(serialized, "_batchPatternIndexStart", 8);
+        SetInt(serialized, "_batchPatternIndexEnd", 8);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[GOAP_BATCH] added GoapRegainStaminaDebugSetup to scene");
+        return setup;
     }
 
     private static GoapCombinedDefenseSlideTackleDebugSetup EnsureSlideTackleSetup(

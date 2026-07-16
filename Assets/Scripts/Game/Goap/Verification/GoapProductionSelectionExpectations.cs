@@ -24,6 +24,10 @@ public static class GoapProductionSelectionExpectations
     /// <summary>ドライブ #13〜#18: 保持者移動中の本番選出（翼 CSA / 翼保持時 MTS+CSA）。</summary>
     public static readonly IGoapProductionSelectionExpectation Drive =
         new GoapDriveProductionSelectionExpectation();
+
+    /// <summary>6-H P1: 味方保持・低スタミナで slot0=StandRecoverStamina。</summary>
+    public static readonly IGoapProductionSelectionExpectation RegainStamina =
+        new GoapRegainStaminaProductionSelectionExpectation();
 }
 
 /// <summary>CSA 本番選出: slot1/2=CreateSupportAngle, slot0=MoveToSupportPosition。</summary>
@@ -264,6 +268,35 @@ public sealed class GoapDriveProductionSelectionExpectation : IGoapProductionSel
 
         shouldEvaluate = true;
         expectedAction = slot == 0 ? "MoveToSupportPosition" : "GetOpen|CreateSupportAngle";
+        return true;
+    }
+}
+
+/// <summary>6-H P1: RwOwner_WingHold (#8) で slot0 のみ StandRecoverStamina を期待。</summary>
+public sealed class GoapRegainStaminaProductionSelectionExpectation : IGoapProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapSupportLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        if (pattern == GoapSupportLayoutPatternId.Baseline
+            || pattern == GoapSupportLayoutPatternId.Custom)
+        {
+            return true;
+        }
+
+        if (pattern != GoapSupportLayoutPatternId.RwOwner_WingHold || slot != 0)
+        {
+            return true;
+        }
+
+        shouldEvaluate = true;
+        expectedAction = "StandRecoverStamina";
         return true;
     }
 }
