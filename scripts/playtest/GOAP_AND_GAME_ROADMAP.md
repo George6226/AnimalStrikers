@@ -1,6 +1,6 @@
 # AnimalStrikers GOAP & ゲーム機能ロードマップ
 
-最終更新: 2026-07-15
+最終更新: 2026-07-16
 
 ## 完了済み
 
@@ -31,13 +31,13 @@
 | **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
 | **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
 
-### 6-B 進捗
+### 6-B 進捗 — **完了 (#65+#66)**
 
 | スライス | 状態 | 内容 |
 |----------|------|------|
 | **P0** OutOfPlay 純ロジック | **完了 (#65)** | `OutOfPlayClassifier` / `SetPieceAssignmentRules` |
-| **P1** ゴールキック runtime | **実装中** | FREE + ゴールキック判定 → 守備 GK HOLD + suppress → 既存 Distribution |
-| P2 スローイン runtime | 未着手 | サイド線外 → フィールド選手 |
+| **P1** ゴールキック runtime | **完了 (#66)** | FREE + GoalKick → 守備 GK HOLD + suppress → Distribution |
+| ~~P2 スローイン~~ / コーナー | **不要** | 本ゲーム非採用。#67 はクローズ |
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
@@ -247,7 +247,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 順 | ID | 項目 | 理由 |
 |----|-----|------|------|
 | 1 | **6-A** | 敵 AI の対称化・難易度調整 | **完了 (#63+#64)** |
-| 2 | **6-B** | セットプレイ（スローイン・コーナー・ゴールキック） | **P1 実装中**（ゴールキック runtime）。P0 完了 (#65)。P2 スローイン未着手 |
+| 2 | **6-B** | セットプレイ（ゴールキック） | **完了 (#65+#66)**。スローイン／コーナーは本ゲーム非採用（#67 closed） |
 | 3 | **6-C** | スタミナの GOAP 連携 | `hasStamina` Fact、`RegainStaminaGoalSO` |
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | 受け位置・ルーズボール追跡でのダッシュ判断 |
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | 必殺技 Photon、ボール保持者ズレ |
