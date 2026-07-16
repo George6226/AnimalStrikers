@@ -58,10 +58,9 @@ public class FieldCollider_Goal : MonoBehaviour
             return;
         }
 
-        // Master 側ゴールに入った = 失点側は Master / Sub 側ゴール = 失点側は Sub(NPC)
-        bool concedingTeamIsMaster = isMasterGoal;
-        int kickoffOwnerIndex = BallKickoffAssignment.GetStoredOwnerIndexForTeamLeader(concedingTeamIsMaster);
+        int kickoffOwnerIndex = PostGoalRestartRules.ResolveKickoffOwnerStoredIndex(isMasterGoal);
         ES3.Save(DataKey.DATAKEY_GAME_INFO + DataKey.INT_BALL_OWNER, kickoffOwnerIndex);
+        PostGoalRestartGate.BeginPostGoalRestart();
 
         var teamReg = teamFacade.TeamRegist;
         if (teamReg != null)
