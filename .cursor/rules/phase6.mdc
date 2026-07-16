@@ -35,4 +35,4 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）・**6-A（#63+#64）** は完了
 
 ## いまのデフォルト
 
-未指定なら **6-C（スタミナ GOAP）**。P0=`hasStamina` Fact + `RegainStamina`（StandRecover）。次: 6-D ダッシュ戦術。
+未指定なら **6-D（ダッシュ戦術）**。6-C 完了 (#69)。P0=FreeBall/ReceivePass の距離ベース dash。

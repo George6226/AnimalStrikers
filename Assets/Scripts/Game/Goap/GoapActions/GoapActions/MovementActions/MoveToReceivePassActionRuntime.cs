@@ -52,7 +52,10 @@ public class MoveToReceivePassActionRuntime : GoapActionRuntime
             return;
         }
 
-        GoapNpcMotor.MoveToward(_bb, target, _moveIntensity, DiagCategory);
+        float dist = Vector3.Distance(GoapNpcMotor.GetSelfWorldPosition(_bb), target);
+        bool catchPhase = IncomingPassPlanning.IsReceiveCatchPhase(_bb);
+        bool useDash = GoapDashPlanning.ResolveDashForReceivePass(_bb, dist, catchPhase);
+        GoapNpcMotor.MoveToward(_bb, target, _moveIntensity, DiagCategory, useDash);
     }
 
     public override bool IsComplete()
