@@ -121,6 +121,25 @@ public class BallManager : MonoBehaviour
             return;
         }
 
+        ApplyBallOwnerIDAndTeamInternal(ownerID);
+    }
+
+    /// <summary>
+    /// 6-E P0: RPC 受信で所有権を適用する（kickoff suppress / changeOwnership guard を bypass）。
+    /// </summary>
+    public void ApplyOwnershipFromNetwork(int ownerID)
+    {
+        _photon.ApplyOwnerIdFromNetwork(ownerID);
+
+        BallManager_State.BALL_STATE bState =
+            BallOwnershipNetworkApplyRules.ResolveBallStateFromOwnerId(ownerID);
+        _state.BallState = bState;
+        _goap.updateBallState(bState);
+        ApplyBallOwnerIDAndTeamInternal(ownerID);
+    }
+
+    private void ApplyBallOwnerIDAndTeamInternal(int ownerID)
+    {
         var character = _photon.FindCharacterByOwnerId(ownerID);
         Vector3 ownerPosition = _state.getBallOwnerPosition(character);
         int resolvedViewId = character != null ? character.ViewID : -1;

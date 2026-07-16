@@ -129,5 +129,22 @@ public class BallManager_Photon : MonoBehaviour
         BallOwnerID = -1;
         resetGuardID();
     }
+
+    /// <summary>
+    /// 6-E P0: RPC 受信側で論理 owner を合わせる（canChangeOwnership / Transfer は行わない）。
+    /// </summary>
+    public void ApplyOwnerIdFromNetwork(int ownerId)
+    {
+        if (!BallOwnershipNetworkApplyRules.ShouldApplyPhotonOwnerId(ownerId, BallOwnerID))
+        {
+            return;
+        }
+
+        BallOwnerID = BallOwnershipNetworkApplyRules.ResolveAppliedPhotonOwnerId(ownerId);
+        if (ownerId <= 0)
+        {
+            resetGuardID();
+        }
+    }
 }
 
