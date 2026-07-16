@@ -63,11 +63,17 @@
 |----------|------|------|
 | **P0** 得点後リスタート安定化 | **完了 (#72)** | 失点側キックオフ割当純関数化 + 得点直後 GOAP 抑制窓（2s） |
 
-### 6-G 進捗
+### 6-G 進捗 — **完了 (#73)**
 
 | スライス | 状態 | 内容 |
 |----------|------|------|
-| **P0** replan coalesce + Summary 整備 | **実装中** | volatile 即時 replan の coalesce、`GoapPassDiagnostic` Summary フィルタ |
+| **P0** replan coalesce + Summary 整備 | **完了 (#73)** | volatile 即時 replan の coalesce、`GoapPassDiagnostic` Summary フィルタ |
+
+### 6-H 進捗
+
+| スライス | 状態 | 内容 |
+|----------|------|------|
+| **P0** SlideTackle バッチ検証 | **実装中** | `slideTackle` プロファイル + #10 NearContact レイアウト（SELECTION 1/1） |
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
@@ -282,8 +288,8 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | **完了 (#70)** |
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | **完了 (#71)** |
 | 6 | **6-F** | 試合メタ（得失点後の挙動） | **完了 (#72)** |
-| 7 | **6-G** | パフォーマンス・ログ整備 | **P0 実装中**（volatile replan coalesce・Summary フィルタ） |
-| 8 | **6-H** | バッチ検証 CI 拡張 | GK・スタミナ・タックルシナリオ追加 |
+| 7 | **6-G** | パフォーマンス・ログ整備 | **完了 (#73)** |
+| 8 | **6-H** | バッチ検証 CI 拡張 | **P0 実装中**（SlideTackle バッチ #10） |
 
 ---
 

@@ -106,6 +106,16 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         }
     }
 
+    private static IEnumerable<TestCaseData> SlideTackleCases()
+    {
+        foreach (GoapDefenseLayoutPatternId pattern in GoapDefenseLayoutPatternCatalog.BuildSlideTackleSuite())
+        {
+            int number = GoapDefenseLayoutPatternCatalog.GetNumber(pattern);
+            yield return new TestCaseData(pattern, 0, "SlideTackle")
+                .SetName($"SlideTackle_#{number:D2}_slot0_SlideTackle");
+        }
+    }
+
     [TestCaseSource(nameof(DefenseBaselineCases))]
     public void DefenseBaseline_MatchesExpectedAction(
         GoapDefenseLayoutPatternId pattern,
@@ -189,6 +199,36 @@ public sealed class GoapDefenseProductionSelectionExpectationsEditModeTests
         Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
         Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
         Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [TestCaseSource(nameof(SlideTackleCases))]
+    public void SlideTackle_MatchesExpectedAction(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        string expectedAction)
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.SlideTackle.TryGetExpectation(
+            pattern,
+            slot,
+            out string action,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok, $"TryGetExpectation failed for {pattern} slot{slot}");
+        Assert.IsTrue(shouldEvaluate, $"{pattern} slot{slot} should be evaluated");
+        Assert.AreEqual(expectedAction, action, $"{pattern} slot{slot} expected action");
+    }
+
+    [Test]
+    public void SlideTackle_Slot1SkipsEvaluation()
+    {
+        bool ok = GoapDefenseProductionSelectionExpectations.SlideTackle.TryGetExpectation(
+            GoapDefenseLayoutPatternId.EnemyOwner_NearContact,
+            1,
+            out _,
+            out bool shouldEvaluate);
+
+        Assert.IsTrue(ok);
+        Assert.IsFalse(shouldEvaluate, "Only slot0 should be evaluated for SlideTackle batch");
     }
 
     [Test]

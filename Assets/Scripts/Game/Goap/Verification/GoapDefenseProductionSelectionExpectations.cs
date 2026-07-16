@@ -26,6 +26,9 @@ public static class GoapDefenseProductionSelectionExpectations
 
     public static readonly IGoapDefenseProductionSelectionExpectation DefenseCombinedDrive =
         new GoapDefenseCombinedDriveProductionSelectionExpectation();
+
+    public static readonly IGoapDefenseProductionSelectionExpectation SlideTackle =
+        new GoapSlideTackleProductionSelectionExpectation();
 }
 
 /// <summary>
@@ -270,5 +273,35 @@ public sealed class GoapDefenseCombinedDriveProductionSelectionExpectation
             slot,
             out expectedAction,
             out shouldEvaluate);
+    }
+}
+
+/// <summary>6-H P0: 近接配置で slot0 のみ SlideTackle を期待。</summary>
+public sealed class GoapSlideTackleProductionSelectionExpectation
+    : IGoapDefenseProductionSelectionExpectation
+{
+    public bool TryGetExpectation(
+        GoapDefenseLayoutPatternId pattern,
+        int slot,
+        out string expectedAction,
+        out bool shouldEvaluate)
+    {
+        expectedAction = null;
+        shouldEvaluate = false;
+
+        if (pattern == GoapDefenseLayoutPatternId.Baseline
+            || pattern == GoapDefenseLayoutPatternId.Custom)
+        {
+            return true;
+        }
+
+        if (pattern != GoapDefenseLayoutPatternId.EnemyOwner_NearContact || slot != 0)
+        {
+            return true;
+        }
+
+        shouldEvaluate = true;
+        expectedAction = "SlideTackle";
+        return true;
     }
 }

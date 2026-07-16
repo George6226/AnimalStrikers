@@ -231,6 +231,12 @@ public static class TeammateNpcDefensePlanning
             return true;
         }
 
+        if (GoapSlideTackleBatchRules.IsActiveBatchProfile()
+            && GoapSlideTackleBatchRules.IsMainSelectionSlot(facade))
+        {
+            return true;
+        }
+
         return false;
     }
 
