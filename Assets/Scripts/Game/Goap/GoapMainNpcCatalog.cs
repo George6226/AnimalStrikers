@@ -15,7 +15,8 @@ public static class GoapMainNpcCatalog
             || goal is IncomingPassReceiveGoalSO
             || goal is TeamBallSupportGoalSO
             || goal is DefensivePositioningGoalSO
-            || goal is EnemyBallDefenseGoalSO;
+            || goal is EnemyBallDefenseGoalSO
+            || goal is RegainStaminaGoalSO;
     }
 
     public static bool IsAllowedAction(GoapActionSO action)
@@ -25,6 +26,7 @@ public static class GoapMainNpcCatalog
             || action is PassToTeammateActionSO
             || action is ShootAtGoalActionSO
             || action is DribbleTowardGoalActionSO
+            || action is StandRecoverStaminaActionSO
             || IsTeamBallSupportAction(action)
             || GoapTeammateNpcCatalog.IsDefenseAction(action);
     }
@@ -82,6 +84,11 @@ public static class GoapMainNpcCatalog
             return actions.Where(GoapTeammateNpcCatalog.IsDefenseAction).ToList();
         }
 
+        if (goal is RegainStaminaGoalSO)
+        {
+            return actions.Where(a => a is StandRecoverStaminaActionSO).ToList();
+        }
+
         return actions;
     }
 
@@ -120,6 +127,7 @@ public static class GoapMainNpcCatalog
         EnsureGoal<BallPossessionAttackGoalSO>(goals);
         EnsureGoal<DefensivePositioningGoalSO>(goals);
         EnsureGoal<EnemyBallDefenseGoalSO>(goals);
+        EnsureGoal<RegainStaminaGoalSO>(goals);
 
         EnsureAction<MoveToFreeBallActionSO>(actions);
         EnsureAction<MoveToReceivePassActionSO>(actions);
@@ -131,6 +139,7 @@ public static class GoapMainNpcCatalog
         EnsureAction<ShootAtGoalActionSO>(actions);
         EnsureAction<DribbleTowardGoalActionSO>(actions);
         EnsureAction<UseSpecialActionSO>(actions);
+        EnsureAction<StandRecoverStaminaActionSO>(actions);
         EnsureDefenseActions(actions);
 
         foreach (GoapActionSO action in actions)

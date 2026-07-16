@@ -21,6 +21,7 @@ public sealed class GoapMainNpcCatalogEditModeTests
         Assert.That(goals.Exists(g => g is IncomingPassReceiveGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is DefensivePositioningGoalSO), Is.True);
         Assert.That(goals.Exists(g => g is EnemyBallDefenseGoalSO), Is.True);
+        Assert.That(goals.Exists(g => g is RegainStaminaGoalSO), Is.True);
     }
 
     [Test]

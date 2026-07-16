@@ -39,6 +39,12 @@
 | **P1** ゴールキック runtime | **完了 (#66)** | FREE + GoalKick → 守備 GK HOLD + suppress → Distribution |
 | ~~P2 スローイン~~ / コーナー | **不要** | 本ゲーム非採用。#67 はクローズ |
 
+### 6-C 進捗
+
+| スライス | 状態 | 内容 |
+|----------|------|------|
+| **P0** hasStamina + RegainStamina | **実装中** | Fact / Goal / StandRecover / Catalog（緊急文脈では非選出） |
+
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
 | ID | 課題 | 状態 | ブランチ/PR |
@@ -248,7 +254,7 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog
 |----|-----|------|------|
 | 1 | **6-A** | 敵 AI の対称化・難易度調整 | **完了 (#63+#64)** |
 | 2 | **6-B** | セットプレイ（ゴールキック） | **完了 (#65+#66)**。スローイン／コーナーは本ゲーム非採用（#67 closed） |
-| 3 | **6-C** | スタミナの GOAP 連携 | `hasStamina` Fact、`RegainStaminaGoalSO` |
+| 3 | **6-C** | スタミナの GOAP 連携 | **P0 実装中**（`hasStamina` / `RegainStaminaGoalSO`） |
 | 4 | **6-D** | GOAP ダッシュの戦術統合 | 受け位置・ルーズボール追跡でのダッシュ判断 |
 | 5 | **6-E** | マルチプレイ同期の堅牢化 | 必殺技 Photon、ボール保持者ズレ |
 | 6 | **6-F** | 試合メタ（得失点後の挙動） | リスタート配置・攻守切り替え |
