@@ -289,6 +289,28 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
         }
     }
 
+    [Test]
+    public void NeedsForcedDefensePlanWhenNoGoal_TrueWhenHasBallFactStaleButNotActivelyHolding()
+    {
+        var (teamGo, enemyBb) = CreateEnemyBallDefenseScene(AnimalControlRole.EnemyFieldNpc);
+        SetDefenseFacts(enemyBb);
+        enemyBb.SetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true"), true);
+        var teamBB = teamGo.GetComponent<TeamBlackboard>();
+        teamBB.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
+        teamBB.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
+
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.NeedsForcedDefensePlanWhenNoGoal(enemyBb),
+                Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
     private static (GameObject teamGo, PlayerBlackboard bb, List<GoapGoalSO> goals, List<GoapActionSO> actions)
         CreateOwnTeamShootReleaseScene(bool enemyNpc)
     {
