@@ -31,12 +31,15 @@
 | **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
 | **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
 
-#### 6-A 目視確認（P1）— **Normal: NG（2026-07-17）**
+#### 6-A 目視確認（P1）— **Normal: P0 解消・P1/P2 着手予定（2026-07-17）**
 
-下準備: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`（`DIFFICULTY=Normal`）  
-main @ 5269ed5 · 観戦 3 分 · 難易度差（Easy/Hard 比較）は未実施
+下準備: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`（`DIFFICULTY=Normal`）
 
-| 指標 | 今回 | ゲート | 判定 |
+##### 初回目視 — NG（main @ 5269ed5）
+
+観戦 3 分 · 難易度差（Easy/Hard 比較）は未実施
+
+| 指標 | 初回 | ゲート | 判定 |
 |------|------|--------|------|
 | `missed+nogal` | 0 | 0 | ✅ |
 | `NoGoalIdle(wait>=3s)` | 0 | 0 | ✅ |
@@ -47,32 +50,50 @@ main @ 5269ed5 · 観戦 3 分 · 難易度差（Easy/Hard 比較）は未実施
 | Pass 選択 / Dribble 選択 | 22 / 21 | — | △ Pass 偏重（体感） |
 | パス受け失敗（timeout 等） | 8 | — | △ |
 
-**目視 NG 項目（P0 バグ候補）**
+**初回 NG 項目**
 
-| # | 現象 | ログ / コード上の根拠 | 分類 |
-|---|------|----------------------|------|
-| 1 | 移動中パスでミス | `MoveToReceivePass` + `ReplanDeferred(BallOwnerMoved)` 多発、`ReceivePassTransition(received=false, timeout)` × 7 | バグ |
-| 2 | パスばかりで前に進まない | `passAdj:0.21` 等で `PassToTeammate` が `DribbleTowardGoal` を僅差で上回る | チューニング |
-| 3 | 敵 GK が相手側 GK まで移動 | `IsMirroredGoalkeeper` が `EnemyAgent` タグ依存 → ミラー失敗時 `needsDepthReturn` で全幅移動（GkDiag は味方 GK のみ） | バグ |
-| 4 | 残り ~2:00 で全員停止 | t≈65s（13:24:25〜37）Crocodile `SelectBestGoal returned null` → `NoGoalSelected` × 11 + `NoGoalIdle(0.4s)` 連鎖 | バグ |
+| # | 現象 | 分類 | 対応 |
+|---|------|------|------|
+| 1 | 移動中パスでミス | バグ（P1） | **着手予定** |
+| 2 | パスばかりで前に進まない | チューニング（P2） | **着手予定** |
+| 3 | 敵 GK が相手側 GK まで移動 | P0 バグ | **完了 (#81)** |
+| 4 | 残り ~2:00 で全員停止 | P0 バグ | **完了 (#81+#82)** |
 
-**フォローアップ（着手予定）**
+**P0 修正 PR**
 
-| P | 内容 |
-|---|------|
-| P0 | 敵 GK ミラー判定（Role / 陣営ベースへ） |
-| P0 | 敵 Main ボール保持中の `NoGoalSelected` 連鎖（Crocodile） |
-| P1 | 移動中パスの受け手予測 |
-| P2 | Normal `PassPenalty` 見直し（ドリブル前進バランス） |
+| PR | 内容 |
+|----|------|
+| #81 | 敵 GK ミラー（`NPC` タグ）+ `HAS_BALL` 残存時の NoGoal 強制守備 |
+| #82 | 相手 `SHOOT` 遷移中の `IsOpponentBallDefenseContext` 拡張 |
+
+##### 再目視 — OK（main @ 533e8e4 · #82 後）
+
+観戦 ~3 分（`15:39:01`〜`15:42:01`）· 目視: **最後まで停止なし**
+
+| 指標 | 再目視 | ゲート | 判定 |
+|------|--------|--------|------|
+| `missed+nogal` | 0 | 0 | ✅ |
+| `NoGoalIdle(wait>=3s)` | 0 | 0 | ✅ |
+| 全体 `NoGoalSelected` | **0** | < 20 | ✅ |
+| Crocodile / Boar / Lion / Gorilla NoGoal | **0** | — | ✅ |
+| Pass / Dribble / Shoot 選択 | 278 / 132 / 172 | — | △ Pass 偏重 |
+| パス受け失敗（timeout） | 15 | — | △ |
+
+**6-A Normal フォローアップ（次）**
+
+| P | 内容 | 状態 |
+|---|------|------|
+| P1 | 移動中パスの受け手予測（`MoveToReceivePass` + timeout） | **着手予定** |
+| P2 | Normal `PassPenalty` 見直し（ドリブル前進バランス） | **着手予定** |
 
 アーカイブ:
 
-- `Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_20260717_20260717_134145.txt`
-- `Assets/DebugLog/archives/GkDiag_phase6_visual_6a_normal_20260717_20260717_134145.txt`
+- 初回 NG: `Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_20260717_20260717_134145.txt`
+- #82 後 OK: `Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_shoot_defense_ok_20260717_20260717_154307.txt`
 
 ```bash
 MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
-  Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_20260717_20260717_134145.txt
+  Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_shoot_defense_ok_20260717_20260717_154307.txt
 ```
 
 **P1 目視残り**: Easy / Hard 比較 → 6-B GK 配球 → 6-C スタミナ → 6-E 必殺（オンライン2人）→ 6-F 得点後リスタート
@@ -130,10 +151,11 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
 
 ---
 
-## 現在: フェーズ6 実装完了 — P1 目視 + P0 バグ修正中
+## 現在: フェーズ6 実装完了 — 6-A Normal P0 解消 · P1/P2 着手
 
 ロードマップ上の **6-A〜6-H 実装はすべて完了**。  
-**P1 目視**（6-A Normal で NG 4 件）と **P0 バグ修正**（敵 GK ミラー / Crocodile NoGoal）を進行中。  
+**6-A Normal 目視 P0**（#81 敵 GK / HAS_BALL、#82 相手 SHOOT 守備文脈）は **再目視 OK**（`NoGoalSelected=0`）。  
+**次**: 6-A **P1**（移動中パス）→ **P2**（PassPenalty）→ P1 目視残り（Easy/Hard 比較〜）。  
 フェーズ7 の新規着手はユーザーがスコープを指定してから。
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
