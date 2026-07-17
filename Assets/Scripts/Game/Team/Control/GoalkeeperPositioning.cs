@@ -26,17 +26,31 @@ public static class GoalkeeperPositioning
         }
     }
 
-    /// <summary>敵 GK は ENEMY タグでミラー視点。</summary>
+    /// <summary>敵 GK は NPC/Enemy タグまたは +Z 半球でミラー視点（Photon 敵は NPC タグ）。</summary>
     public static bool IsMirroredGoalkeeper(AnimalFacade facade)
     {
-        var avatar = facade != null ? facade.GetAvatar() : null;
-        if (avatar == null)
+        if (facade == null || !facade.IsGK())
         {
             return false;
         }
 
-        string tag = !string.IsNullOrEmpty(avatar.CurrentTag) ? avatar.CurrentTag : avatar.tag;
-        return tag == ConstData.ENEMY_TAG;
+        var avatar = facade.GetAvatar();
+        if (avatar != null)
+        {
+            string tag = !string.IsNullOrEmpty(avatar.CurrentTag) ? avatar.CurrentTag : avatar.tag;
+            if (tag == ConstData.ENEMY_TAG || tag == ConstData.NPC_TAG)
+            {
+                return true;
+            }
+
+            if (tag == ConstData.PLAYER_TAG)
+            {
+                return false;
+            }
+        }
+
+        // タグ未設定時: 敵 GK は +Z 側にスポーン
+        return facade.transform.position.z > 0f;
     }
 
     /// <summary>

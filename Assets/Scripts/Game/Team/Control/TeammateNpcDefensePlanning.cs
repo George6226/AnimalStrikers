@@ -407,7 +407,7 @@ public static class TeammateNpcDefensePlanning
             return true;
         }
 
-        if (bb.GetFact(new Fact(SymbolTag.Basic.HAS_BALL, "true")) == true)
+        if (MainNpcAttackPlanning.IsActivelyHoldingBall(bb))
         {
             return false;
         }
