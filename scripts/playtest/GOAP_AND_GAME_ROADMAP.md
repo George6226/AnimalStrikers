@@ -1,6 +1,6 @@
 # AnimalStrikers GOAP & ゲーム機能ロードマップ
 
-最終更新: 2026-07-16
+最終更新: 2026-07-17
 
 ## 完了済み
 
@@ -30,6 +30,52 @@
 | **P0** 難易度ノブ | **完了 (#63)** | Easy/Normal/Hard |
 | **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
 | **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
+
+#### 6-A 目視確認（P1）— **Normal: NG（2026-07-17）**
+
+下準備: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`（`DIFFICULTY=Normal`）  
+main @ 5269ed5 · 観戦 3 分 · 難易度差（Easy/Hard 比較）は未実施
+
+| 指標 | 今回 | ゲート | 判定 |
+|------|------|--------|------|
+| `missed+nogal` | 0 | 0 | ✅ |
+| `NoGoalIdle(wait>=3s)` | 0 | 0 | ✅ |
+| Phase D コア | PASS 22/22 WARN 1 | — | ✅ |
+| 全体 `NoGoalSelected` | 19 | < 20（G6 WARN） | ✅ |
+| Crocodile `NoGoalSelected` | 14 | ≤ 20 | ✅ |
+| 味方 Boar `NoGoalSelected` | 0 | ≤ 8 | ✅ |
+| Pass 選択 / Dribble 選択 | 22 / 21 | — | △ Pass 偏重（体感） |
+| パス受け失敗（timeout 等） | 8 | — | △ |
+
+**目視 NG 項目（P0 バグ候補）**
+
+| # | 現象 | ログ / コード上の根拠 | 分類 |
+|---|------|----------------------|------|
+| 1 | 移動中パスでミス | `MoveToReceivePass` + `ReplanDeferred(BallOwnerMoved)` 多発、`ReceivePassTransition(received=false, timeout)` × 7 | バグ |
+| 2 | パスばかりで前に進まない | `passAdj:0.21` 等で `PassToTeammate` が `DribbleTowardGoal` を僅差で上回る | チューニング |
+| 3 | 敵 GK が相手側 GK まで移動 | `IsMirroredGoalkeeper` が `EnemyAgent` タグ依存 → ミラー失敗時 `needsDepthReturn` で全幅移動（GkDiag は味方 GK のみ） | バグ |
+| 4 | 残り ~2:00 で全員停止 | t≈65s（13:24:25〜37）Crocodile `SelectBestGoal returned null` → `NoGoalSelected` × 11 + `NoGoalIdle(0.4s)` 連鎖 | バグ |
+
+**フォローアップ（着手予定）**
+
+| P | 内容 |
+|---|------|
+| P0 | 敵 GK ミラー判定（Role / 陣営ベースへ） |
+| P0 | 敵 Main ボール保持中の `NoGoalSelected` 連鎖（Crocodile） |
+| P1 | 移動中パスの受け手予測 |
+| P2 | Normal `PassPenalty` 見直し（ドリブル前進バランス） |
+
+アーカイブ:
+
+- `Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_20260717_20260717_134145.txt`
+- `Assets/DebugLog/archives/GkDiag_phase6_visual_6a_normal_20260717_20260717_134145.txt`
+
+```bash
+MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
+  Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_20260717_20260717_134145.txt
+```
+
+**P1 目視残り**: Easy / Hard 比較 → 6-B GK 配球 → 6-C スタミナ → 6-E 必殺（オンライン2人）→ 6-F 得点後リスタート
 
 ### 6-B 進捗 — **完了 (#65+#66)**
 
@@ -84,9 +130,11 @@
 
 ---
 
-## 現在: フェーズ6 完了 — 次フェーズ未定
+## 現在: フェーズ6 実装完了 — P1 目視 + P0 バグ修正中
 
-ロードマップ上の **6-A〜6-H はすべて完了**。新規着手はユーザーがスコープを指定してから。
+ロードマップ上の **6-A〜6-H 実装はすべて完了**。  
+**P1 目視**（6-A Normal で NG 4 件）と **P0 バグ修正**（敵 GK ミラー / Crocodile NoGoal）を進行中。  
+フェーズ7 の新規着手はユーザーがスコープを指定してから。
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
 
