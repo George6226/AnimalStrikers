@@ -328,6 +328,44 @@ public sealed class IncomingPassPlanningEditModeTests
     }
 
     [Test]
+    public void TryGetReceiveMoveTarget_UsesBallKeepDuringPassWhenRegisteredTarget()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, new Vector3(0f, 0f, 5f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        AttachBallKeep(target, new Vector3(0f, 0f, 1.5f));
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
+        targetBb.BallState.updateBallInfo(false, 4f, new Vector3(0f, 0f, 5f));
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+
+        try
+        {
+            Assert.That(
+                IncomingPassPlanning.TryGetReceiveMoveTarget(targetBb, out Vector3 targetPos),
+                Is.True);
+            Assert.That(targetPos.z, Is.EqualTo(1.5f).Within(0.01f));
+            Assert.That(targetPos.z, Is.Not.EqualTo(5f).Within(0.01f));
+        }
+        finally
+        {
+            GoapPassFlightTracker.Clear();
+            Object.DestroyImmediate(passer);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void TryGetReceiveMoveTarget_ReturnsBallPositionInCatchPhase()
     {
         var root = CreateTeamFacadeRoot();
@@ -615,6 +653,17 @@ public sealed class IncomingPassPlanningEditModeTests
         typeof(PlayerBasicData).GetProperty("PlayerID")!
             .SetValue(bb.BasicData, playerId, null);
         return go;
+    }
+
+    private static void AttachBallKeep(GameObject npc, Vector3 localPosition)
+    {
+        var ballKeep = new GameObject("ballKeep");
+        ballKeep.transform.SetParent(npc.transform, false);
+        ballKeep.transform.localPosition = localPosition;
+
+        var animalInfo = npc.AddComponent<AnimalInfo>();
+        SetPrivateField(animalInfo, "_ballKeep", ballKeep);
+        SetPrivateField(npc.GetComponent<AnimalFacade>(), "_animalInfo", animalInfo);
     }
 
     private static void SetPrivateField(object target, string fieldName, object value)

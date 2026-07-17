@@ -168,6 +168,11 @@ public static class IncomingPassPlanning
         if (ball.BallState == BallManager_State.BALL_STATE.PASS
             || (ball.BallFree && ball.BallVelocity.sqrMagnitude > 0.05f))
         {
+            if (TryResolvePassTargetInterceptPosition(bb, out target))
+            {
+                return true;
+            }
+
             target = ball.BallPosition;
             return true;
         }
@@ -180,14 +185,8 @@ public static class IncomingPassPlanning
             return true;
         }
 
-        if (GoapPassFlightTracker.TryGetActivePass(out _)
-            && GoapPassFlightTracker.IsTargetPlayer(bb))
+        if (TryResolvePassTargetInterceptPosition(bb, out target))
         {
-            AnimalFacade selfFacade = GoapMainNpcAttackBridge.ResolveFacade(bb);
-            GameObject ballKeep = selfFacade != null ? selfFacade.GetBallKeep() : null;
-            target = ballKeep != null
-                ? ballKeep.transform.position
-                : bb.PhysicalState.Position;
             return true;
         }
 
@@ -198,6 +197,25 @@ public static class IncomingPassPlanning
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 登録済みパス受け手は飛翔中ボールの現在地ではなく ballKeep（移動する受け位置）へ向かう。
+    /// </summary>
+    private static bool TryResolvePassTargetInterceptPosition(PlayerBlackboard bb, out Vector3 intercept)
+    {
+        intercept = default;
+        if (bb == null || !GoapPassFlightTracker.IsTargetPlayer(bb))
+        {
+            return false;
+        }
+
+        AnimalFacade selfFacade = GoapMainNpcAttackBridge.ResolveFacade(bb);
+        GameObject ballKeep = selfFacade != null ? selfFacade.GetBallKeep() : null;
+        intercept = ballKeep != null
+            ? ballKeep.transform.position
+            : bb.PhysicalState.Position;
+        return true;
     }
 
     public static bool HasReceivedIncomingPass(PlayerBlackboard bb)
