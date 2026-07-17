@@ -66,6 +66,26 @@ public sealed class EnemyAiBalanceEditModeTests
     }
 
     [Test]
+    public void NormalPassPenalty_EnemyMidRangePassCostExceedsDribble()
+    {
+        EnemyAiBalance.Apply(EnemyAiDifficulty.Normal);
+
+        float passAdjustment = MainNpcAttackPlanning.ComputePassCostAdjustment(
+            goalDistance: 60f,
+            maxShootDistance: 55f,
+            pressureCount: 0,
+            passRouteClear: true);
+        passAdjustment += EnemyAiBalance.PassPenalty;
+        float passCost = MainNpcAttackPlanning.DefaultPassBaseCost + passAdjustment;
+        float dribbleCost = MainNpcAttackPlanning.EstimateDribbleCost(
+            goalDistance: 36f,
+            maxShootDistance: 55f,
+            pressureCount: 0);
+
+        Assert.That(dribbleCost, Is.LessThan(passCost));
+    }
+
+    [Test]
     public void DifficultyOrdering_ShootDiscount_EasyLessThanNormalLessThanHard()
     {
         EnemyAiBalance.Apply(EnemyAiDifficulty.Easy);

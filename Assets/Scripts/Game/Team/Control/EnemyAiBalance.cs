@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public static class EnemyAiBalance
 {
-    public const float NormalPassPenalty = 0.40f;
+    public const float NormalPassPenalty = 0.55f;
     public const float NormalShootDiscount = 0.28f;
     public const float NormalPlanningIntervalSeconds = 5f;
 
