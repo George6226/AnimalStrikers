@@ -333,7 +333,7 @@ public sealed class GoapFieldNpcPerspectiveEditModeTests
         try
         {
             Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, enemyBb), Is.True);
-            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, allyBb), Is.False);
+            Assert.That(GoapFieldNpcPerspective.IsOpponentBallDefenseContext(teamBB, allyBb), Is.True);
             Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, enemyBb), Is.True);
             Assert.That(GoapFieldNpcPerspective.IsTeamBallAttackContext(teamBB, allyBb), Is.False);
         }

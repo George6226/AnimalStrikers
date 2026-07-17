@@ -112,9 +112,9 @@ public static class GoapFieldNpcPerspective
                 return true;
             }
 
-            // パス遷移中のみ相手最終保持側を守備扱いにする。
-            // シュート遷移は上のシュート側判定のみで扱い、受け手側は守備文脈にしない。
-            return ball.BallState == BallManager_State.BALL_STATE.PASS
+            // 相手最終保持のパス/シュート遷移: 守備側 NPC は守備文脈を維持（NoGoal 固着防止）。
+            return (ball.BallState == BallManager_State.BALL_STATE.PASS
+                    || ball.BallState == BallManager_State.BALL_STATE.SHOOT)
                 && ball.LastPossessionBelongTeam == ResolveGlobalOpponentTeam(mirrored);
         }
 
