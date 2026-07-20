@@ -1,6 +1,6 @@
 # AnimalStrikers GOAP & ゲーム機能ロードマップ
 
-最終更新: 2026-07-17
+最終更新: 2026-07-20
 
 ## 完了済み
 
@@ -31,7 +31,7 @@
 | **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
 | **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
 
-#### 6-A 目視確認（P1）— **Normal: P0 解消・P1/P2 着手予定（2026-07-17）**
+#### 6-A 目視確認（P1）— **Normal: 停止 OK · パスは停止受け △（2026-07-20）**
 
 下準備: `./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`（`DIFFICULTY=Normal`）
 
@@ -54,8 +54,8 @@
 
 | # | 現象 | 分類 | 対応 |
 |---|------|------|------|
-| 1 | 移動中パスでミス | バグ（P1） | **着手予定** |
-| 2 | パスばかりで前に進まない | チューニング（P2） | **着手予定** |
+| 1 | 移動中パスでミス | バグ（P1） | **部分対応**（下記） |
+| 2 | パスばかりで前に進まない | チューニング（P2） | **完了 (#85)** · 再目視 △ |
 | 3 | 敵 GK が相手側 GK まで移動 | P0 バグ | **完了 (#81)** |
 | 4 | 残り ~2:00 で全員停止 | P0 バグ | **完了 (#81+#82)** |
 
@@ -79,12 +79,43 @@
 | Pass / Dribble / Shoot 選択 | 278 / 132 / 172 | — | △ Pass 偏重 |
 | パス受け失敗（timeout） | 15 | — | △ |
 
-**6-A Normal フォローアップ（次）**
+##### P1+#84 / P2+#85 マージ後 再目視 — NG（main @ 96f693e · 2026-07-17）
+
+| PR | 内容 | 再目視 |
+|----|------|--------|
+| #84 | `TryGetReceiveMoveTarget` が PASS 中 ballKeep 追従 | パスミス継続 |
+| #85 | `NormalPassPenalty` 0.40→**0.55** | Dribble↑（△〜○）· Pass 偏重は緩和 |
+
+**目視 NG**
+
+| # | 現象 | ログ根拠 | 対応 |
+|---|------|----------|------|
+| 1 | パスミス継続（受け手移動） | `ReceivePass timeout` 16 / received 少 | 停止受け方針へ（下記） |
+| 2 | 残り ~30s 全員停止 | `AIContextSwitcher` PASS/FREE 中立で Abort 連発（`NoGoalSelected=0`） | **P0'**（下記） |
+
+##### フォローアップ修正（ローカル · 未マージ PR 想定）
+
+| ID | 内容 | EditMode | 目視 |
+|----|------|----------|------|
+| **P0'** | `PossessionContextSwitchRules`: PASS/FREE 中立では Abort しない | ✅ | 一部再発後さらに防御 |
+| **P1b** | キック側リード無効 + intended 受け点共有 · **停止受け**優先 | ✅ | 停止受けは成功率○ |
+| **P0''** | Forced 守備: 到達済み `MoveToDefensive` 除外 + Skip 時 0.75s 抑制（Forced→Skip 無限ループ） | ✅（342 件） | **2026-07-20 OK** |
+
+**P0'' 再発経緯**: P0' 後も残り ~1:00〜1:30 で停止。原因は Abort ではなく `ForcedTactical → MoveToDefensivePosition → ActionSkipped(context_changed)` の毎フレームループ。
+
+##### 最新目視 — 停止 OK（2026-07-20）
+
+- **全員停止はなし**（P0'' 後）
+- パス: 止まって受けるのは成功率高 · **走りながら受けは未解決**（キック／受けの約束合わせが次）
+
+**6-A Normal フォローアップ**
 
 | P | 内容 | 状態 |
 |---|------|------|
-| P1 | 移動中パスの受け手予測（`MoveToReceivePass` + timeout） | **着手予定** |
-| P2 | Normal `PassPenalty` 見直し（ドリブル前進バランス） | **着手予定** |
+| P0 / P0' / P0'' | 全員停止（NoGoal / Abort / Forced Skip） | **目視 OK（2026-07-20）** · コードは未マージなら PR 化 |
+| P1 | 移動中パス受け | **△** 停止受けは実用可 · ラン受けは未着手 |
+| P2 | Normal `PassPenalty` 0.55（#85） | **完了** · 目視はドリブル増で部分 OK |
+| P1c（任意） | 走りながら受け（ラン維持 + 同一会合点） | **未着手** |
 
 アーカイブ:
 
@@ -151,11 +182,16 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
 
 ---
 
-## 現在: フェーズ6 実装完了 — 6-A Normal P0 解消 · P1/P2 着手
+## 現在: フェーズ6 実装完了 — 6-A Normal 停止 OK · パスは停止受け △
 
 ロードマップ上の **6-A〜6-H 実装はすべて完了**。  
-**6-A Normal 目視 P0**（#81 敵 GK / HAS_BALL、#82 相手 SHOOT 守備文脈）は **再目視 OK**（`NoGoalSelected=0`）。  
-**次**: 6-A **P1**（移動中パス）→ **P2**（PassPenalty）→ P1 目視残り（Easy/Hard 比較〜）。  
+**6-A Normal**:
+
+- **全員停止**: P0（#81+#82）+ P0'/P0''（ContextSwitcher Abort / Forced Skip ループ）→ **2026-07-20 目視 OK**
+- **パス**: #84+#85 + 停止受け方針 → 実用可 · **走り受けは未着手（P1c）**
+- **CI**: EditMode **342** 件 · `mode=all` = EditMode + **11** バッチ
+
+**次（優先候補）**: 未マージ修正の PR 化 → Easy/Hard 比較目視 →（任意）P1c ラン受け → 6-B 以降の目視残り。  
 フェーズ7 の新規着手はユーザーがスコープを指定してから。
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
