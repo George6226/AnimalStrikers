@@ -2039,7 +2039,21 @@ public class GoapAgent : MonoBehaviour
             if (IsMovementActionStaleReject(_currentAction))
             {
                 RecordTacticalContextGrace(DebugCurrentGoalName);
-                LogSummary($"ActionSkipped(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName}, reason=context_changed)");
+                // 到達済み MoveToDefensive の Forced→Skip 無限ループ防止（見ため全員停止）。
+                if (_currentAction is MoveToDefensivePositionActionRuntime
+                    && MoveToDefensivePositionActionRuntime.IsHoldingTacticalDefensivePosition(
+                        _playerBlackboard))
+                {
+                    _nextAllowedReplanTime = Mathf.Max(_nextAllowedReplanTime, Time.time + 0.75f);
+                    LogSummary(
+                        $"ActionSkipped(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName}, reason=already_holding_defensive)");
+                }
+                else
+                {
+                    LogSummary(
+                        $"ActionSkipped(action={_currentAction.DisplayName}, goal={DebugCurrentGoalName}, reason=context_changed)");
+                }
+
                 _currentAction = null;
                 _currentPlan.Clear();
                 _planFailed = false;

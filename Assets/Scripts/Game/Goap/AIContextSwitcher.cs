@@ -46,7 +46,12 @@ public class AIContextSwitcher : MonoBehaviour
         
         if (nowTeamHasBall != _lastTeamHasBall || nowEnemyHasBall != _lastEnemyHasBall)
         {
-            if (!ShouldDeferAbort())
+            if (PossessionContextSwitchRules.ShouldAbortOnPossessionChange(
+                    _lastTeamHasBall,
+                    _lastEnemyHasBall,
+                    nowTeamHasBall,
+                    nowEnemyHasBall)
+                && !ShouldDeferAbort())
             {
                 Abort();
             }

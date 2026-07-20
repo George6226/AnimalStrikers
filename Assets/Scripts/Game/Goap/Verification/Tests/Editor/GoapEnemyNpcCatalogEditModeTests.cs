@@ -53,7 +53,7 @@ public sealed class GoapEnemyNpcCatalogEditModeTests
     }
 
     [Test]
-    public void FilterActionsForGoal_SubBallPossession_ReturnsPassAndShootOnly()
+    public void FilterActionsForGoal_SubBallPossession_ReturnsPassShootDribbleAndSpecial()
     {
         EnemyAiBalance.Apply(EnemyAiDifficulty.Normal);
         var goals = new List<GoapGoalSO>();
@@ -63,7 +63,7 @@ public sealed class GoapEnemyNpcCatalogEditModeTests
         var goal = goals.Find(g => g is BallPossessionAttackGoalSO);
         var filtered = GoapEnemyNpcCatalog.FilterActionsForGoal(goal, actions, GoapNpcTier.Sub);
 
-        Assert.That(filtered.Count, Is.EqualTo(3));
+        Assert.That(filtered.Count, Is.EqualTo(4));
         Assert.That(filtered.TrueForAll(GoapMainNpcCatalog.IsBallPossessionAttackAction), Is.True);
     }
 

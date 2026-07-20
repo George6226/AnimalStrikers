@@ -1,6 +1,10 @@
 using UnityEngine;
 
-/// <summary>パス先のリード位置と距離制限。</summary>
+/// <summary>
+/// パス先のリード位置と距離制限。
+/// NPC/GOAP パスは受け手停止受けと両立させるため、キック側ではリードをかけない
+/// （<see cref="AnimalAction_Pass"/> が receiverIsMoving=false で呼ぶ）。
+/// </summary>
 public static class PassLeadPolicy
 {
     public static Vector3 ResolveKickTargetPosition(

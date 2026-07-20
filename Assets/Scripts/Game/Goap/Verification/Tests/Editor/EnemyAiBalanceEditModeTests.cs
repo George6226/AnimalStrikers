@@ -71,7 +71,7 @@ public sealed class EnemyAiBalanceEditModeTests
         EnemyAiBalance.Apply(EnemyAiDifficulty.Normal);
 
         float passAdjustment = MainNpcAttackPlanning.ComputePassCostAdjustment(
-            goalDistance: 60f,
+            goalDistance: 45f,
             maxShootDistance: 55f,
             pressureCount: 0,
             passRouteClear: true);

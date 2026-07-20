@@ -10,12 +10,21 @@ public static class GoapPassFlightTracker
         public readonly int PasserPlayerId;
         public readonly int TargetPlayerId;
         public readonly float StartedAt;
+        public readonly bool HasIntendedReceivePosition;
+        public readonly Vector3 IntendedReceivePosition;
 
-        public PassFlight(int passerPlayerId, int targetPlayerId, float startedAt)
+        public PassFlight(
+            int passerPlayerId,
+            int targetPlayerId,
+            float startedAt,
+            bool hasIntendedReceivePosition = false,
+            Vector3 intendedReceivePosition = default)
         {
             PasserPlayerId = passerPlayerId;
             TargetPlayerId = targetPlayerId;
             StartedAt = startedAt;
+            HasIntendedReceivePosition = hasIntendedReceivePosition;
+            IntendedReceivePosition = intendedReceivePosition;
         }
     }
 
@@ -33,6 +42,35 @@ public static class GoapPassFlightTracker
         }
 
         _active = new PassFlight(passerId, targetId, Time.time);
+    }
+
+    /// <summary>PassLeadPolicy で決めたキック目標（受け手 GOAP が同一点へ向かう）。</summary>
+    public static void SetIntendedReceivePosition(Vector3 worldPosition)
+    {
+        if (!_active.HasValue)
+        {
+            return;
+        }
+
+        PassFlight flight = _active.Value;
+        _active = new PassFlight(
+            flight.PasserPlayerId,
+            flight.TargetPlayerId,
+            flight.StartedAt,
+            hasIntendedReceivePosition: true,
+            intendedReceivePosition: worldPosition);
+    }
+
+    public static bool TryGetIntendedReceivePosition(out Vector3 worldPosition)
+    {
+        if (_active.HasValue && _active.Value.HasIntendedReceivePosition)
+        {
+            worldPosition = _active.Value.IntendedReceivePosition;
+            return true;
+        }
+
+        worldPosition = default;
+        return false;
     }
 
     public static void Clear()
