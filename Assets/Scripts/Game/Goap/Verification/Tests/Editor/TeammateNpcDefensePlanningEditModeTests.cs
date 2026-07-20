@@ -89,6 +89,52 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
     }
 
     [Test]
+    public void IsForcedDefenseActionEligible_FalseWhenActionCoolingDown()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        var mark = ScriptableObject.CreateInstance<MarkOpponentActionSO>();
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.IsForcedDefenseActionEligible(humanBb, mark),
+                Is.True);
+            TeammateNpcDefensePlanning.MarkTacticalDefenseActionCompleted(humanBb, "MarkOpponent");
+            Assert.That(
+                TeammateNpcDefensePlanning.IsForcedDefenseActionEligible(humanBb, mark),
+                Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(mark);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
+    public void ForcedDefenseStabilityRank_PrefersMoveToDefensivePosition()
+    {
+        var move = ScriptableObject.CreateInstance<MoveToDefensivePositionActionSO>();
+        var block = ScriptableObject.CreateInstance<BlockShotLaneActionSO>();
+        var mark = ScriptableObject.CreateInstance<MarkOpponentActionSO>();
+        var retreat = ScriptableObject.CreateInstance<RetreatToDefensiveLineActionSO>();
+        try
+        {
+            Assert.That(TeammateNpcDefensePlanning.ForcedDefenseStabilityRank(move), Is.EqualTo(0));
+            Assert.That(TeammateNpcDefensePlanning.ForcedDefenseStabilityRank(block), Is.EqualTo(1));
+            Assert.That(TeammateNpcDefensePlanning.ForcedDefenseStabilityRank(mark), Is.EqualTo(2));
+            Assert.That(TeammateNpcDefensePlanning.ForcedDefenseStabilityRank(retreat), Is.EqualTo(2));
+        }
+        finally
+        {
+            Object.DestroyImmediate(move);
+            Object.DestroyImmediate(block);
+            Object.DestroyImmediate(mark);
+            Object.DestroyImmediate(retreat);
+        }
+    }
+
+    [Test]
     public void ProductionMain_InDefensivePosition_CanBuildForcedTacticalDefensePlan()
     {
         var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
@@ -108,6 +154,13 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
                 Is.True);
             Assert.That(plan, Is.Not.Null);
             Assert.That(plan.Count, Is.GreaterThan(0));
+            Assert.That(
+                TeammateNpcDefensePlanning.IsForcedDefenseActionEligible(humanBb, plan.Peek()),
+                Is.True);
+            // 到達済みなら MoveToDefensive は除外され Block/Mark 等になる。
+            Assert.That(
+                plan.Peek(),
+                Is.Not.Null);
         }
         finally
         {

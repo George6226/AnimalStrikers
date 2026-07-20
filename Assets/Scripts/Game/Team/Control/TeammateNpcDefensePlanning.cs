@@ -10,7 +10,8 @@ using UnityEngine;
 public static class TeammateNpcDefensePlanning
 {
     private const float TemporarilyDisabledActionCostPenalty = 50f;
-    private const float TacticalDefenseReTriggerSeconds = 0.55f;
+    /// <summary>短すぎると Forced Mark↔Retreat フリップで見ため停止になる（残り1:00付近）。</summary>
+    private const float TacticalDefenseReTriggerSeconds = 1.8f;
     private static readonly Dictionary<string, float> TacticalDefenseCooldownUntilByKey = new();
 
     /// <summary>EnemyBallDefense より DefensivePositioning を優先する味方NPC向け。</summary>
@@ -308,6 +309,49 @@ public static class TeammateNpcDefensePlanning
         return ShouldUseTacticalDefenseGoal(bb);
     }
 
+    /// <summary>
+    /// Forced 守備の安定優先度（小さいほど優先）。MoveToDefensivePosition を最優先。
+    /// </summary>
+    public static int ForcedDefenseStabilityRank(GoapActionSO action)
+    {
+        if (action is MoveToDefensivePositionActionSO)
+        {
+            return 0;
+        }
+
+        if (action is BlockShotLaneActionSO || action is BlockPassLaneActionSO)
+        {
+            return 1;
+        }
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Forced 候補として実行可能か。到達済みの MoveToDefensivePosition を選ぶと
+    /// ActionSkipped 無限ループで見ため停止する。
+    /// </summary>
+    public static bool IsForcedDefenseActionEligible(PlayerBlackboard bb, GoapActionSO action)
+    {
+        if (bb == null || action == null)
+        {
+            return false;
+        }
+
+        if (IsTacticalDefenseActionCoolingDown(bb, action.ActionName))
+        {
+            return false;
+        }
+
+        if (action is MoveToDefensivePositionActionSO
+            && MoveToDefensivePositionActionRuntime.IsHoldingTacticalDefensivePosition(bb))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     /// <summary>プランナーが空プランを返したとき、戦術守備移動を強制する。</summary>
     public static bool TryBuildForcedTacticalDefensePlan(
         PlayerBlackboard bb,
@@ -327,9 +371,11 @@ public static class TeammateNpcDefensePlanning
         }
         else
         {
+            // 到達済み MoveToDefensive を除外したうえで、安定配置 → コスト順。
             action = scopedActions
-                .Where(a => a != null && !IsTacticalDefenseActionCoolingDown(bb, a.ActionName))
-                .OrderBy(a => a.CalculateDynamicCost(bb))
+                .Where(a => IsForcedDefenseActionEligible(bb, a))
+                .OrderBy(ForcedDefenseStabilityRank)
+                .ThenBy(a => a.CalculateDynamicCost(bb))
                 .ThenBy(a => a.CalculateTacticalSelectionCost(bb))
                 .FirstOrDefault();
         }

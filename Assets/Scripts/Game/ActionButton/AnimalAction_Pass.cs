@@ -87,6 +87,7 @@ public class AnimalAction_Pass : AnimalAction_Base
 
         GoapPassDiagnostic.LogPhase(_myFacade, ally, "Start", myPos, allyPos, d, needsLob);
         GoapPassFlightTracker.RegisterPass(_myFacade, ally);
+        GoapPassFlightTracker.SetIntendedReceivePosition(allyPos);
 
         // 味方に選択を移す
         var allyAvatar = ally.GetAvatar();
@@ -131,17 +132,18 @@ public class AnimalAction_Pass : AnimalAction_Base
         GameObject myBallKeep = _myFacade.GetBallKeep();
         GameObject allyBallKeep = target.GetBallKeep();
         Vector3 myPos = myBallKeep != null ? myBallKeep.transform.position : _myFacade.transform.position;
-        bool receiverMoving = GoapPassTargetSelection.IsReceiverMoving(target);
-        Vector3 allyPos = allyBallKeep != null ? allyBallKeep.transform.position : target.transform.position;
-        float distance = Vector3.Distance(myPos, allyPos);
-        float flightSeconds = PassLeadPolicy.EstimateGroundPassFlightSeconds(distance);
-        allyPos = PassLeadPolicy.ResolveKickTargetPosition(target, myPos, flightSeconds, receiverMoving);
+        // 受け手 GOAP は停止受けで成功率が高い。リードキックは受け手が走り続ける前提のため外す。
+        Vector3 allyPos = PassLeadPolicy.ResolveKickTargetPosition(
+            target,
+            myPos,
+            estimatedFlightSeconds: 0f,
+            receiverIsMoving: false);
+        GoapPassFlightTracker.SetIntendedReceivePosition(allyPos);
         Vector3 dir = (allyPos - myPos).normalized;
-        distance = Vector3.Distance(myPos, allyPos);
-        distance = PassLeadPolicy.ClampPassDistance(distance);
+        float distance = PassLeadPolicy.ClampPassDistance(Vector3.Distance(myPos, allyPos));
         bool needsLobKick = _animalPassSearch != null
             && _animalPassSearch.IsCharacterInPassLine(_myFacade.gameObject, target.gameObject);
-        needsLobKick = !PassLeadPolicy.ShouldPreferGroundPass(distance, receiverMoving, needsLobKick)
+        needsLobKick = !PassLeadPolicy.ShouldPreferGroundPass(distance, receiverIsMoving: false, needsLobKick)
             && needsLobKick;
         _myFacade.transform.forward = new Vector3(dir.x, 0.0f, dir.z);
 

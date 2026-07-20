@@ -168,6 +168,12 @@ public static class IncomingPassPlanning
         if (ball.BallState == BallManager_State.BALL_STATE.PASS
             || (ball.BallFree && ball.BallVelocity.sqrMagnitude > 0.05f))
         {
+            if (IsReceiveCatchPhase(bb))
+            {
+                target = ball.BallPosition;
+                return true;
+            }
+
             if (TryResolvePassTargetInterceptPosition(bb, out target))
             {
                 return true;
@@ -200,7 +206,8 @@ public static class IncomingPassPlanning
     }
 
     /// <summary>
-    /// 登録済みパス受け手は飛翔中ボールの現在地ではなく ballKeep（移動する受け位置）へ向かう。
+    /// 登録済みパス受け手の移動先。
+    /// 1) キック側 PassLead 目標 2) 未設定時 PASS 中はその場 3) wind-up 中は ballKeep。
     /// </summary>
     private static bool TryResolvePassTargetInterceptPosition(PlayerBlackboard bb, out Vector3 intercept)
     {
@@ -210,12 +217,39 @@ public static class IncomingPassPlanning
             return false;
         }
 
+        if (GoapPassFlightTracker.TryGetIntendedReceivePosition(out intercept))
+        {
+            return true;
+        }
+
+        var teamBB = TeamFacade.Instance != null ? TeamFacade.Instance.TeamBlackboard : null;
+        if (teamBB != null && IsPassInFlight(teamBB.BallInfo))
+        {
+            intercept = bb.PhysicalState.Position;
+            return true;
+        }
+
         AnimalFacade selfFacade = GoapMainNpcAttackBridge.ResolveFacade(bb);
         GameObject ballKeep = selfFacade != null ? selfFacade.GetBallKeep() : null;
         intercept = ballKeep != null
             ? ballKeep.transform.position
             : bb.PhysicalState.Position;
         return true;
+    }
+
+    private static bool IsPassInFlight(TeamBallInfo ball)
+    {
+        if (ball == null)
+        {
+            return false;
+        }
+
+        if (ball.BallState == BallManager_State.BALL_STATE.PASS)
+        {
+            return true;
+        }
+
+        return ball.BallFree && ball.BallVelocity.sqrMagnitude > 0.05f;
     }
 
     public static bool HasReceivedIncomingPass(PlayerBlackboard bb)

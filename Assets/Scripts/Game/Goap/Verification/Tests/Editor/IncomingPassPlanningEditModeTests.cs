@@ -328,13 +328,92 @@ public sealed class IncomingPassPlanningEditModeTests
     }
 
     [Test]
-    public void TryGetReceiveMoveTarget_UsesBallKeepDuringPassWhenRegisteredTarget()
+    public void TryGetReceiveMoveTarget_UsesIntendedReceivePositionDuringPass()
     {
         var root = CreateTeamFacadeRoot();
         var teamBb = root.GetComponent<TeamBlackboard>();
         teamBb.BallInfo.setExistBall();
         teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, new Vector3(0f, 0f, 5f));
         teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        AttachBallKeep(target, new Vector3(0f, 0f, 1.5f));
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+        GoapPassFlightTracker.SetIntendedReceivePosition(new Vector3(0f, 0f, 3f));
+
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
+        targetBb.BallState.updateBallInfo(false, 4f, new Vector3(0f, 0f, 5f));
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+
+        try
+        {
+            Assert.That(
+                IncomingPassPlanning.TryGetReceiveMoveTarget(targetBb, out Vector3 targetPos),
+                Is.True);
+            Assert.That(targetPos.z, Is.EqualTo(3f).Within(0.01f));
+            Assert.That(targetPos.z, Is.Not.EqualTo(1.5f).Within(0.01f));
+        }
+        finally
+        {
+            GoapPassFlightTracker.Clear();
+            Object.DestroyImmediate(passer);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void TryGetReceiveMoveTarget_HoldsPositionDuringPassWhenIntendedMissing()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, new Vector3(0f, 0f, 5f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
+        var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        AttachBallKeep(target, new Vector3(0f, 0f, 1.5f));
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+
+        var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
+        var holdPos = new Vector3(2f, 0f, 4f);
+        targetBb.PhysicalState.updatePhysicalInfo(holdPos, Vector3.zero);
+        targetBb.BallState.updateBallInfo(false, 4f, new Vector3(0f, 0f, 5f));
+        targetBb.SetFact(new Fact(SymbolTag.Action.CAN_MOVE, "true"), true);
+
+        try
+        {
+            Assert.That(
+                IncomingPassPlanning.TryGetReceiveMoveTarget(targetBb, out Vector3 targetPos),
+                Is.True);
+            Assert.That(targetPos.x, Is.EqualTo(holdPos.x).Within(0.01f));
+            Assert.That(targetPos.z, Is.EqualTo(holdPos.z).Within(0.01f));
+            Assert.That(targetPos.z, Is.Not.EqualTo(1.5f).Within(0.01f));
+        }
+        finally
+        {
+            GoapPassFlightTracker.Clear();
+            Object.DestroyImmediate(passer);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void TryGetReceiveMoveTarget_UsesBallKeepDuringWindUpWhenRegisteredTarget()
+    {
+        var root = CreateTeamFacadeRoot();
+        var teamBb = root.GetComponent<TeamBlackboard>();
+        teamBb.BallInfo.setExistBall();
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, new Vector3(0f, 0f, 5f));
+        teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.HOLD);
 
         var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
         var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
@@ -354,7 +433,6 @@ public sealed class IncomingPassPlanningEditModeTests
                 IncomingPassPlanning.TryGetReceiveMoveTarget(targetBb, out Vector3 targetPos),
                 Is.True);
             Assert.That(targetPos.z, Is.EqualTo(1.5f).Within(0.01f));
-            Assert.That(targetPos.z, Is.Not.EqualTo(5f).Within(0.01f));
         }
         finally
         {
@@ -371,10 +449,16 @@ public sealed class IncomingPassPlanningEditModeTests
         var root = CreateTeamFacadeRoot();
         var teamBb = root.GetComponent<TeamBlackboard>();
         teamBb.BallInfo.setExistBall();
-        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, new Vector3(0f, 0f, 1f));
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
         teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+        teamBb.BallInfo.updateBallPhysics(new Vector3(0f, 0f, 1f), Vector3.forward);
 
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
         var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+
         var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
         targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
         targetBb.BallState.updateBallInfo(false, 1.0f, new Vector3(0f, 0f, 1f));
@@ -390,6 +474,8 @@ public sealed class IncomingPassPlanningEditModeTests
         }
         finally
         {
+            GoapPassFlightTracker.Clear();
+            Object.DestroyImmediate(passer);
             Object.DestroyImmediate(target);
             Object.DestroyImmediate(root);
         }
@@ -401,10 +487,16 @@ public sealed class IncomingPassPlanningEditModeTests
         var root = CreateTeamFacadeRoot();
         var teamBb = root.GetComponent<TeamBlackboard>();
         teamBb.BallInfo.setExistBall();
-        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
         teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+        teamBb.BallInfo.updateBallPhysics(Vector3.forward, Vector3.forward);
 
+        var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
         var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
+        GoapPassFlightTracker.RegisterPass(
+            passer.GetComponent<AnimalFacade>(),
+            target.GetComponent<AnimalFacade>());
+
         var targetBb = target.GetComponentInChildren<PlayerBlackboard>();
         targetBb.PhysicalState.updatePhysicalInfo(Vector3.zero, Vector3.zero);
         targetBb.BallState.updateBallInfo(false, 1.0f, Vector3.forward);
@@ -418,6 +510,8 @@ public sealed class IncomingPassPlanningEditModeTests
         }
         finally
         {
+            GoapPassFlightTracker.Clear();
+            Object.DestroyImmediate(passer);
             Object.DestroyImmediate(target);
             Object.DestroyImmediate(root);
         }
@@ -429,8 +523,9 @@ public sealed class IncomingPassPlanningEditModeTests
         var root = CreateTeamFacadeRoot();
         var teamBb = root.GetComponent<TeamBlackboard>();
         teamBb.BallInfo.setExistBall();
-        teamBb.BallInfo.updateBallID(-1, BallManager_State.BELONG_TEAM.FREE, Vector3.forward);
+        teamBb.BallInfo.updateBallID(1001, BallManager_State.BELONG_TEAM.PLAYER, Vector3.zero);
         teamBb.BallInfo.updateBallState(BallManager_State.BALL_STATE.PASS);
+        teamBb.BallInfo.updateBallPhysics(Vector3.forward, Vector3.forward);
 
         var passer = CreateFieldNpc(1001, AnimalControlRole.TeammateNpc);
         var target = CreateFieldNpc(1002, AnimalControlRole.TeammateNpc);
