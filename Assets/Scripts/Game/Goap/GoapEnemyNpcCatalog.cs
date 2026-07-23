@@ -30,18 +30,17 @@ public static class GoapEnemyNpcCatalog
         else
         {
             GoapTeammateNpcCatalog.NormalizeLists(goals, actions);
+            // 保持時は必ず攻撃ゴールを載せる（外すと SelectBestGoal null → 棒立ち）。
+            EnsureGoal<BallPossessionAttackGoalSO>(goals);
+            EnsureAction<PassToTeammateActionSO>(actions);
             if (EnemyAiBalance.AllowEnemySubBallPossessionAttack)
             {
-                EnsureGoal<BallPossessionAttackGoalSO>(goals);
-                EnsureAction<PassToTeammateActionSO>(actions);
                 EnsureAction<ShootAtGoalActionSO>(actions);
                 EnsureAction<DribbleTowardGoalActionSO>(actions);
             }
             else
             {
-                // 6-A P2 Easy: Inspector に残っていても攻撃ゴール/行動を外す。
-                RemoveGoalsOfType<BallPossessionAttackGoalSO>(goals);
-                RemoveActionsOfType<PassToTeammateActionSO>(actions);
+                // 6-A P2 Easy: パスでボールを捌くだけ。Shoot/Dribble は抑止（Special は守備用に残す）。
                 RemoveActionsOfType<ShootAtGoalActionSO>(actions);
                 RemoveActionsOfType<DribbleTowardGoalActionSO>(actions);
             }
@@ -60,7 +59,14 @@ public static class GoapEnemyNpcCatalog
     {
         if (goal is BallPossessionAttackGoalSO)
         {
-            return actions.Where(GoapMainNpcCatalog.IsBallPossessionAttackAction).ToList();
+            var attackActions = actions.Where(GoapMainNpcCatalog.IsBallPossessionAttackAction);
+            // Easy Sub: 保持時はパスのみ（UseSpecial はカタログに残しても攻撃文脈では出さない）。
+            if (tier == GoapNpcTier.Sub && !EnemyAiBalance.AllowEnemySubBallPossessionAttack)
+            {
+                attackActions = attackActions.Where(a => a is PassToTeammateActionSO);
+            }
+
+            return attackActions.ToList();
         }
 
         if (goal is IncomingPassReceiveGoalSO)
@@ -112,11 +118,6 @@ public static class GoapEnemyNpcCatalog
         }
 
         actions.Add(ScriptableObject.CreateInstance<T>());
-    }
-
-    private static void RemoveGoalsOfType<T>(List<GoapGoalSO> goals) where T : GoapGoalSO
-    {
-        goals.RemoveAll(g => g is T);
     }
 
     private static void RemoveActionsOfType<T>(List<GoapActionSO> actions) where T : GoapActionSO
