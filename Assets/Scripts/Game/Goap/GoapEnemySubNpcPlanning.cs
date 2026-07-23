@@ -31,9 +31,11 @@ public static class GoapEnemySubNpcPlanning
 
         if (MainNpcAttackPlanning.IsBallPossessionAttackContext(bb))
         {
+            // Easy (pass-only): パス可なら GOAP 継続。不可でも true にして NoGoal 棒立ちを避ける
+            // （Planner が Pass を選ぶ／完了するまで保持文脈を維持する）。
             if (!EnemyAiBalance.AllowEnemySubBallPossessionAttack)
             {
-                return false;
+                return true;
             }
 
             return MainNpcAttackPlanning.CanPassToTeammate(bb)

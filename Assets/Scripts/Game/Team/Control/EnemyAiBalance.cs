@@ -19,7 +19,9 @@ public static class EnemyAiBalance
     public static float PlanningIntervalSeconds { get; private set; } = NormalPlanningIntervalSeconds;
 
     /// <summary>
-    /// 6-A P2: Easy では敵 Sub に BallPossessionAttack を載せない（Main は常に攻撃あり）。
+    /// 6-A P2: Easy では敵 Sub の保持時攻撃をパスのみにする（Shoot/Dribble なし）。
+    /// false でも BallPossessionAttack + Pass は残す（除外すると保持時 NoGoal で棒立ちする）。
+    /// Main は常にフル攻撃あり。
     /// </summary>
     public static bool AllowEnemySubBallPossessionAttack { get; private set; } = true;
 
@@ -31,6 +33,7 @@ public static class EnemyAiBalance
         {
             case EnemyAiDifficulty.Easy:
                 // バイアスを弱め、判断も遅め → 攻めが荒くなりにくい。
+                // Sub はフル攻撃オフ（パスのみ）— 攻撃ゴール自体は残す（保持時 NoGoal 防止）。
                 PassPenalty = 0.15f;
                 ShootDiscount = 0.08f;
                 PlanningIntervalSeconds = NormalPlanningIntervalSeconds * 1.3f;

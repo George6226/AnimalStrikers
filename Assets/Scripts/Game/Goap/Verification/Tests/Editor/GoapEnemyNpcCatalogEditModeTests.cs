@@ -29,7 +29,7 @@ public sealed class GoapEnemyNpcCatalogEditModeTests
     }
 
     [Test]
-    public void NormalizeLists_SubTier_Easy_OmitsBallPossessionAttack()
+    public void NormalizeLists_SubTier_Easy_KeepsPassOnlyBallPossessionAttack()
     {
         EnemyAiBalance.Apply(EnemyAiDifficulty.Easy);
         var goals = new List<GoapGoalSO>
@@ -41,15 +41,32 @@ public sealed class GoapEnemyNpcCatalogEditModeTests
             ScriptableObject.CreateInstance<PassToTeammateActionSO>(),
             ScriptableObject.CreateInstance<ShootAtGoalActionSO>(),
             ScriptableObject.CreateInstance<DribbleTowardGoalActionSO>(),
+            ScriptableObject.CreateInstance<UseSpecialActionSO>(),
         };
 
         GoapEnemyNpcCatalog.NormalizeLists(goals, actions, GoapNpcTier.Sub);
 
-        Assert.That(goals.Exists(g => g is BallPossessionAttackGoalSO), Is.False);
-        Assert.That(actions.Exists(a => a is PassToTeammateActionSO), Is.False);
+        Assert.That(goals.Exists(g => g is BallPossessionAttackGoalSO), Is.True);
+        Assert.That(actions.Exists(a => a is PassToTeammateActionSO), Is.True);
         Assert.That(actions.Exists(a => a is ShootAtGoalActionSO), Is.False);
         Assert.That(actions.Exists(a => a is DribbleTowardGoalActionSO), Is.False);
+        Assert.That(actions.Exists(a => a is UseSpecialActionSO), Is.True);
         Assert.That(goals.Exists(g => g is FreeBallRecoveryGoalSO), Is.True);
+    }
+
+    [Test]
+    public void FilterActionsForGoal_SubBallPossession_Easy_ReturnsPassOnly()
+    {
+        EnemyAiBalance.Apply(EnemyAiDifficulty.Easy);
+        var goals = new List<GoapGoalSO>();
+        var actions = new List<GoapActionSO>();
+        GoapEnemyNpcCatalog.NormalizeLists(goals, actions, GoapNpcTier.Sub);
+
+        var goal = goals.Find(g => g is BallPossessionAttackGoalSO);
+        var filtered = GoapEnemyNpcCatalog.FilterActionsForGoal(goal, actions, GoapNpcTier.Sub);
+
+        Assert.That(filtered.Count, Is.EqualTo(1));
+        Assert.That(filtered[0], Is.InstanceOf<PassToTeammateActionSO>());
     }
 
     [Test]
