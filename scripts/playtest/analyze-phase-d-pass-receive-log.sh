@@ -289,6 +289,56 @@ else
 fi
 echo ""
 
+# --- 移動フリーズ / Forced→Skip（#89 系・P0'' 系）---
+echo "========================================"
+echo " 移動停止ゲート（自動）"
+echo "========================================"
+DIAG_LOG="${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"
+if [[ "${LOG}" == *"GoapSummary"* ]]; then
+  # Summary パスから同セッション Diag を推測（*_latest または同名置換）
+  candidate_diag="${LOG/GoapSummary/GoapDiag}"
+  if [[ -f "${candidate_diag}" ]]; then
+    DIAG_LOG="${candidate_diag}"
+  fi
+fi
+
+freeze_rc=0
+set +e
+"${SCRIPT_DIR}/analyze-locomotion-freeze-log.sh" "${DIAG_LOG}"
+freeze_rc=$?
+set -e
+if [[ "${freeze_rc}" -ne 0 ]]; then
+  fail_count=$((fail_count + 1))
+fi
+
+skip_rc=0
+set +e
+"${SCRIPT_DIR}/analyze-forced-skip-burst-log.sh" "${LOG}"
+skip_rc=$?
+set -e
+if [[ "${skip_rc}" -ne 0 ]]; then
+  fail_count=$((fail_count + 1))
+fi
+
+special_timeout=$(grep -c 'Finish timeout — ForceFinishSpecial' "${DIAG_LOG}" 2>/dev/null || true)
+if [[ ! -f "${DIAG_LOG}" ]]; then
+  special_timeout=0
+fi
+if [[ "${special_timeout}" -gt 0 ]]; then
+  echo "  ⚠️  UseSpecial ForceFinish(timeout): ${special_timeout} 件（張り付き回復が動いた）"
+  warn_count=$((warn_count + 1))
+else
+  echo "  ℹ️  UseSpecial ForceFinish(timeout): 0"
+fi
+echo ""
+
+echo "--- 最終サマリ（フリーズゲート込み） ---"
+echo "  PASS: ${pass_count} / WARN: ${warn_count} / FAIL: ${fail_count}"
+if [[ "${fail_count}" -ne 0 ]]; then
+  echo "  判定: FAIL — 移動停止またはコア回帰を要調査"
+fi
+echo ""
+
 if [[ "${MODE}" == "full" ]]; then
   echo "========================================"
   echo " 統合サマリ（Phase C 互換）"
@@ -303,4 +353,8 @@ else
   echo " 味方 Main 詳細"
   echo "========================================"
   "${SCRIPT_DIR}/analyze-main-npc-goap-log.sh" "${LOG}" "owner=${ALLY_OWNER}"
+fi
+
+if [[ "${fail_count}" -ne 0 ]]; then
+  exit 1
 fi
