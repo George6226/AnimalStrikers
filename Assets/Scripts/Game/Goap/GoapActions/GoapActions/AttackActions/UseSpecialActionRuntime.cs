@@ -64,11 +64,17 @@ public class UseSpecialActionRuntime : GoapActionRuntime
 
         if (Time.time - _startTime >= _timeoutSeconds)
         {
-            GoapMovementDiagnostic.Log(DiagCategory, "Finish timeout", _bb);
+            // AnimEvent が来ない場合でも全体フラグを下ろす（全員 move 停止の防止）。
+            GoapMovementDiagnostic.Log(DiagCategory, "Finish timeout — ForceFinishSpecial", _bb);
+            GoapSpecialBridge.ForceFinishSpecial(_bb);
         }
         else
         {
             GoapMovementDiagnostic.Log(DiagCategory, "Finish special settled", _bb);
+            if (AnimalAction_Special.IsSpecialActive)
+            {
+                GoapSpecialBridge.ForceFinishSpecial(_bb);
+            }
         }
 
         _isExecuting = false;
@@ -77,6 +83,11 @@ public class UseSpecialActionRuntime : GoapActionRuntime
 
     public override void Cancel()
     {
+        if (_started)
+        {
+            GoapSpecialBridge.ForceFinishSpecial(_bb);
+        }
+
         _isExecuting = false;
         _bb = null;
     }

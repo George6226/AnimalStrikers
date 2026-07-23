@@ -330,10 +330,17 @@ public static class TeammateNpcDefensePlanning
     /// <summary>
     /// Forced 候補として実行可能か。到達済みの MoveToDefensivePosition を選ぶと
     /// ActionSkipped 無限ループで見ため停止する。
+    /// UseSpecial を Forced すると AnimEvent 欠落時に IsSpecialActive が張り付き全員停止する。
     /// </summary>
     public static bool IsForcedDefenseActionEligible(PlayerBlackboard bb, GoapActionSO action)
     {
         if (bb == null || action == null)
+        {
+            return false;
+        }
+
+        // 必殺は通常プラン選出のみ。Forced フォールバックには使わない。
+        if (action is UseSpecialActionSO)
         {
             return false;
         }
@@ -544,7 +551,9 @@ public static class TeammateNpcDefensePlanning
             GoapActionSO action = VerificationOnlyDefenseAction != GoapDefenseActionUnderTest.None
                 ? scopedActions.FirstOrDefault(a => VerificationOnlyDefenseAction.MatchesAction(a))
                 : scopedActions
-                    .OrderBy(a => a.CalculateDynamicCost(bb))
+                    .Where(a => IsForcedDefenseActionEligible(bb, a))
+                    .OrderBy(ForcedDefenseStabilityRank)
+                    .ThenBy(a => a.CalculateDynamicCost(bb))
                     .ThenBy(a => a.CalculateTacticalSelectionCost(bb))
                     .FirstOrDefault();
             if (action == null)

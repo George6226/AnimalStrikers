@@ -13,7 +13,7 @@ public class AnimalAction_Special : AnimalAction_Base
     // スペシャルアクション
     [SerializeField] private AnimalSpecialActionBase _specialAction;
 
-    // スペシャル発動中（全体フラグ）
+    // スペシャル発動中（全体フラグ）。AnimEvent 欠落時に張り付くと AnimalHandler.move が全員で no-op になる。
     private static bool _isSpecialActive = false;
     public static bool IsSpecialActive => _isSpecialActive;
 
@@ -53,9 +53,17 @@ public class AnimalAction_Special : AnimalAction_Base
         // スペシャル発動(アニメーション)
         _animalHandler.special();
         // ゲージをリセット
-        _specialGauge.ResetGauge();
-        // スペシャルアクションを実行
-        _specialAction.ExecuteSpecial();
+        if (_specialGauge != null)
+        {
+            _specialGauge.ResetGauge();
+        }
+
+        // スペシャルアクションを実行（早期 return しても AnimEvent 待ち。GOAP 側タイムアウトで ForceFinish する）
+        if (_specialAction != null)
+        {
+            _specialAction.ExecuteSpecial();
+        }
+
         TryBroadcastSpecialActivated();
     }
 
@@ -63,6 +71,27 @@ public class AnimalAction_Special : AnimalAction_Base
     {
         ApplySpecialFinishedLocal();
         TryBroadcastSpecialFinished();
+    }
+
+    /// <summary>
+    /// AnimEvent 欠落・GOAP タイムアウト時に全体フラグを下ろす。
+    /// 下りないと AnimalHandler.move / rotate が全キャラでスキップされ見ため全員停止になる。
+    /// </summary>
+    public void ForceFinishSpecial()
+    {
+        if (!_isSpecialActive)
+        {
+            return;
+        }
+
+        ApplySpecialFinishedLocal();
+        TryBroadcastSpecialFinished();
+    }
+
+    /// <summary>インスタンス無しでも張り付き解除できるようにする（EditMode / 保険）。</summary>
+    public static void ClearSpecialActiveFlag()
+    {
+        _isSpecialActive = false;
     }
 
     /// <summary>6-E: Photon RPC 受信側。ゲージをオーナーと揃える。</summary>

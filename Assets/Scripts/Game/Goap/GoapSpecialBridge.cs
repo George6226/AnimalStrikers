@@ -38,4 +38,22 @@ public static class GoapSpecialBridge
         special.Execute();
         return AnimalAction_Special.IsSpecialActive;
     }
+
+    /// <summary>
+    /// UseSpecial 完了・タイムアウト・Cancel 時に IsSpecialActive を確実に下ろす。
+    /// </summary>
+    public static void ForceFinishSpecial(PlayerBlackboard bb)
+    {
+        AnimalAction_Special special = ResolveSpecial(bb);
+        if (special != null)
+        {
+            special.ForceFinishSpecial();
+            return;
+        }
+
+        if (AnimalAction_Special.IsSpecialActive)
+        {
+            AnimalAction_Special.ClearSpecialActiveFlag();
+        }
+    }
 }

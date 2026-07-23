@@ -89,6 +89,31 @@ public sealed class TeammateNpcDefensePlanningEditModeTests
     }
 
     [Test]
+    public void IsForcedDefenseActionEligible_FalseForUseSpecial()
+    {
+        var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);
+        GoapMainNpcProductionEnvironment.Sync(true);
+        var useSpecial = ScriptableObject.CreateInstance<UseSpecialActionSO>();
+        var mark = ScriptableObject.CreateInstance<MarkOpponentActionSO>();
+        try
+        {
+            Assert.That(
+                TeammateNpcDefensePlanning.IsForcedDefenseActionEligible(humanBb, mark),
+                Is.True);
+            Assert.That(
+                TeammateNpcDefensePlanning.IsForcedDefenseActionEligible(humanBb, useSpecial),
+                Is.False,
+                "Forced 守備に UseSpecial を入れると IsSpecialActive 張り付きで全員停止しうる");
+        }
+        finally
+        {
+            Object.DestroyImmediate(useSpecial);
+            Object.DestroyImmediate(mark);
+            Object.DestroyImmediate(teamGo);
+        }
+    }
+
+    [Test]
     public void IsForcedDefenseActionEligible_FalseWhenActionCoolingDown()
     {
         var (teamGo, humanBb) = CreateEnemyBallDefenseScene(AnimalControlRole.Human);

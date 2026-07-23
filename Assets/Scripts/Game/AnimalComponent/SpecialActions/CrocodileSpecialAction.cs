@@ -73,12 +73,32 @@ public class CrocodileSpecialAction : AnimalSpecialActionBase
         var ballPos = getBallPosition();
         if (ballPos == null)
         {
+            // ActivateSpecial 済みの全体フラグを残すと全員 move が止まるため即終了する。
+            ForceFinishOwningSpecial();
             return;
         }
 
         _selfViewId = _avatar != null ? _avatar.ViewID : -1;
 
         startChargeTo(ballPos.Value, null);
+    }
+
+    private void ForceFinishOwningSpecial()
+    {
+        AnimalAction_Special special = GetComponentInParent<AnimalAction_Special>();
+        if (special == null)
+        {
+            special = GetComponent<AnimalAction_Special>();
+        }
+
+        if (special != null)
+        {
+            special.ForceFinishSpecial();
+        }
+        else
+        {
+            AnimalAction_Special.ClearSpecialActiveFlag();
+        }
     }
 
     private void startChargeTo(Vector3 targetWorldPos, Action onFinished)

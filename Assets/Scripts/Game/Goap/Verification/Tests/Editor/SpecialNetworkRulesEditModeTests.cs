@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Reflection;
 using NUnit.Framework;
 
 /// <summary>6-E 残: 必殺技 Photon 同期の純判定。</summary>
@@ -35,6 +36,26 @@ public sealed class SpecialNetworkRulesEditModeTests
     {
         Assert.That(SpecialNetworkRules.ShouldRunExecuteSpecialOnNetworkMirror(), Is.False);
         Assert.That(SpecialNetworkRules.ShouldResetGaugeOnNetworkMirror(), Is.True);
+    }
+
+    [Test]
+    public void ClearSpecialActiveFlag_ReleasesGlobalMoveLock()
+    {
+        FieldInfo flag = typeof(AnimalAction_Special).GetField(
+            "_isSpecialActive",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.That(flag, Is.Not.Null);
+        try
+        {
+            flag.SetValue(null, true);
+            Assert.That(AnimalAction_Special.IsSpecialActive, Is.True);
+            AnimalAction_Special.ClearSpecialActiveFlag();
+            Assert.That(AnimalAction_Special.IsSpecialActive, Is.False);
+        }
+        finally
+        {
+            AnimalAction_Special.ClearSpecialActiveFlag();
+        }
     }
 }
 #endif
