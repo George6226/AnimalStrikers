@@ -29,7 +29,7 @@
 |----------|------|------|
 | **P0** 難易度ノブ | **完了 (#63)** | Easy/Normal/Hard |
 | **P1** 守備戦術ミラー | **完了 (#63)** | `CalculateDefend(mirrored)` |
-| **P2** Sub 攻撃抑止 | **完了 (#64)** | Easy 時のみ敵 Sub から攻撃ゴール除外 |
+| **P2** Sub 攻撃抑止 | **完了 (#64+#91)** | Easy: Sub はパスのみ（攻撃ゴール除外は NoGoal 棒立ちのため撤回） |
 
 #### 6-A 目視確認（P1）— **Normal: 停止 OK · パスは停止受け △（2026-07-20）**
 
@@ -127,7 +127,26 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
   Assets/DebugLog/archives/GoapSummary_phase6_visual_6a_normal_shoot_defense_ok_20260717_20260717_154307.txt
 ```
 
-**P1 目視残り**: Easy / Hard 比較 → 6-B GK 配球 → 6-C スタミナ → 6-E 必殺（オンライン2人）→ 6-F 得点後リスタート
+**P1 目視残り**: ~~Easy / Hard 比較~~ → 6-B GK 配球 → 6-C スタミナ → 6-E 必殺（オンライン2人）→ 6-F 得点後リスタート
+
+##### Easy / Hard 比較目視 — OK（2026-07-23 · main @ f0e933d · #91 後）
+
+下準備: `DIFFICULTY=Easy|Hard ./scripts/playtest/prepare-6a-enemy-ai-difficulty-visual-check.sh`
+
+| 難易度 | 結果 | 補足 |
+|--------|------|------|
+| **Easy** | 停止なし（#91 後再目視） | 初回は Sub 保持で NoGoal 棒立ち → **#91** でパスのみ攻撃に修正 |
+| **Hard** | **停止なし**（目視 + フリーズ/Skip ゲート PASS） | AttackStart Pass 59 / Shoot 18 / Dribble 12 · `NoGoalSelected=0` · hold≥8s=0 |
+
+アーカイブ（Hard）: `Assets/DebugLog/archives/GoapSummary_6a_hard_visual_ok_*` / `GoapDiag_6a_hard_visual_ok_*`
+
+**関連 PR**
+
+| PR | 内容 |
+|----|------|
+| #89 | `IsSpecialActive` 張り付き解除（中盤全員停止） |
+| #90 | Phase D locomotion freeze / Forced→Skip 自動ゲート |
+| #91 | Easy Sub 保持時はパスのみ（NoGoal 棒立ち修正） |
 
 ### 6-B 進捗 — **完了 (#65+#66)**
 
@@ -182,16 +201,17 @@ MODE=full ./scripts/playtest/analyze-phase-d-pass-receive-log.sh \
 
 ---
 
-## 現在: フェーズ6 実装完了 — 6-A Normal 停止 OK（#87）· パスは停止受け △
+## 現在: フェーズ6 実装完了 — 6-A Easy/Hard 目視 OK（2026-07-23）
 
 ロードマップ上の **6-A〜6-H 実装はすべて完了**。  
-**6-A Normal**:
+**6-A**:
 
-- **全員停止**: P0（#81+#82）+ P0'/P0''（#87）→ **2026-07-20 目視 OK · main 取り込み済み**
+- **全員停止**: P0（#81+#82）+ P0'/P0''（#87）+ Special 張り付き（#89）+ Easy Sub NoGoal（#91）→ **目視 OK**
+- **難易度差**: Easy / Hard 比較目視 **OK**（2026-07-23）· freeze ゲート（#90）PASS
 - **パス**: #84+#85+#87（停止受け）→ 実用可 · **走り受けは未着手（P1c）**
-- **CI**: EditMode **342** 件 · `mode=all` = EditMode + **11** バッチ
+- **CI**: EditMode **345** 件 · `mode=all` = EditMode + **11** バッチ
 
-**次（優先候補）**: **Easy/Hard 比較目視** →（任意）P1c ラン受け → 6-B 以降の目視残り。  
+**次（優先候補）**: **6-B GK 配球目視** → 6-C スタミナ → 6-E 必殺（オンライン）→ 6-F 得点後 →（任意）P1c ラン受け。  
 フェーズ7 の新規着手はユーザーがスコープを指定してから。
 
 ### アーカイブ: GOAP 仕上げ（G0〜G6）— 完了
