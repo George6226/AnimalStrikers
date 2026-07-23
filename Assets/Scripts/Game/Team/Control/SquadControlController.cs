@@ -779,8 +779,15 @@ public class SquadControlController : MonoBehaviour
 
     private void SyncGoapVerboseLogging()
     {
-        GoapRuntimeDiagnostics.SetLevel(_goapDiagnosticLevel);
-        if (_goapDiagnosticLevel >= GoapDiagnosticLevel.Summary)
+        // Phase D 3 分 CLI は移動フリーズ検出（Diag 座標）のため Verbose を強制する。
+        GoapDiagnosticLevel level = _goapDiagnosticLevel;
+        if (GoapPhaseDPlaytestEnvironment.IsActive && level < GoapDiagnosticLevel.Verbose)
+        {
+            level = GoapDiagnosticLevel.Verbose;
+        }
+
+        GoapRuntimeDiagnostics.SetLevel(level);
+        if (level >= GoapDiagnosticLevel.Summary)
         {
             GoapAgent.MarkSummaryLogSessionActive();
         }

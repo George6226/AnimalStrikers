@@ -23,6 +23,19 @@ resolve_unity() {
   exit 127
 }
 
+# Unity Hub の起動引数にも "AnimalStrikers" が含まれるため、Editor 本体だけを見る。
+animalstrikers_editor_pids() {
+  local pid args
+  while read -r pid; do
+    [[ -z "${pid}" ]] && continue
+    args="$(ps -p "${pid}" -o args= 2>/dev/null || true)"
+    if echo "${args}" | grep -q "Unity.app/Contents/MacOS/Unity" \
+      && echo "${args}" | grep -q "AnimalStrikers"; then
+      echo "${pid}"
+    fi
+  done < <(pgrep -f "Unity.app/Contents/MacOS/Unity" || true)
+}
+
 mkdir -p "${LOG_DIR}"
 rm -f \
   "${LOG_DIR}/goap-phase-d-pending-exit.txt" \
@@ -32,14 +45,14 @@ rm -f \
 echo "[phase-d] preparing logs (duration=${DURATION}s)"
 MODE=full "${SCRIPT_DIR}/prepare-phase-d-pass-receive-check.sh" "phaseD_3min_cli"
 
-if pgrep -f "Unity.*AnimalStrikers" >/dev/null 2>&1; then
+if [[ -n "$(animalstrikers_editor_pids)" ]]; then
   echo "[phase-d] closing open Unity Editor for this project..."
   osascript -e 'tell application "Unity" to quit' 2>/dev/null || true
   for _ in $(seq 1 30); do
-    pgrep -f "Unity.*AnimalStrikers" >/dev/null 2>&1 || break
+    [[ -z "$(animalstrikers_editor_pids)" ]] && break
     sleep 2
   done
-  if pgrep -f "Unity.*AnimalStrikers" >/dev/null 2>&1; then
+  if [[ -n "$(animalstrikers_editor_pids)" ]]; then
     echo "[phase-d] Unity did not quit cleanly; aborting to avoid project lock" >&2
     exit 1
   fi
@@ -72,7 +85,26 @@ fi
 lines=$(wc -l < "${SUMMARY}" | tr -d ' ')
 echo "[phase-d] updated ${SUMMARY} (${lines} lines, exit=${exit_code})"
 echo ""
+
+DIAG="${PROJECT_ROOT}/Assets/DebugLog/GoapDiag_latest.txt"
+if [[ -f "${DIAG}" ]]; then
+  diag_lines=$(wc -l < "${DIAG}" | tr -d ' ')
+  echo "[phase-d] GoapDiag_latest.txt (${diag_lines} lines)"
+else
+  echo "[phase-d] WARN: GoapDiag_latest.txt missing — freeze gate may SKIP"
+fi
+echo ""
+
+analyze_rc=0
+set +e
+# CLI では Diag 必須（Verbose 強制済み）。無いとフリーズゲートが無意味になる。
+GOAP_FREEZE_REQUIRE_DIAG=1 \
 MODE=full ALLY_OWNER="${ALLY_OWNER:-Lion}" ENEMY_OWNER="${ENEMY_OWNER:-Crocodile}" \
   "${SCRIPT_DIR}/analyze-phase-d-pass-receive-log.sh" "${SUMMARY}"
+analyze_rc=$?
+set -e
 
-exit "${exit_code}"
+if [[ "${exit_code}" -ne 0 ]]; then
+  exit "${exit_code}"
+fi
+exit "${analyze_rc}"

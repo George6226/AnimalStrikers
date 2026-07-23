@@ -14,6 +14,8 @@ MODE="${MODE:-full}"
 ALLY_OWNER="${ALLY_OWNER:-Lion}"
 ENEMY_OWNER="${ENEMY_OWNER:-Elephant}"
 ARCHIVE_LABEL="${1:-phaseD_${MODE}}"
+# 移動フリーズ検出のため Diag（MoveToward）が必要
+GOAP_LOG_LEVEL="${GOAP_LOG_LEVEL:-2}"
 
 echo "=== Phase D パス受け安定化 — 下準備 (MODE=${MODE}) ==="
 echo ""
@@ -77,6 +79,39 @@ else
 fi
 
 check_scene_flag "Debug Overlay" "_debugOverlayEnabled:" "1"
+
+ensure_goap_diagnostic_level() {
+  local level="$1"
+  case "${level}" in
+    0|1|2) ;;
+    *)
+      echo "❌ GOAP_LOG_LEVEL は 0/1/2 です: ${level}" >&2
+      exit 1
+      ;;
+  esac
+
+  if grep -q "_goapDiagnosticLevel:" "${SCENE}"; then
+    local value
+    value="$(grep "_goapDiagnosticLevel:" "${SCENE}" | head -1 | awk '{print $2}')"
+    if [[ "${value}" != "${level}" ]]; then
+      sed -i '' "s/_goapDiagnosticLevel: ${value}/_goapDiagnosticLevel: ${level}/" "${SCENE}"
+    fi
+    echo "✅ Goap Diagnostic Level = ${level}"
+    return
+  fi
+
+  if ! grep -q "_debugOverlayEnabled:" "${SCENE}"; then
+    echo "⚠️  _goapDiagnosticLevel を書き込めません（SquadControlController 未検出）"
+    return
+  fi
+
+  sed -i '' "/_debugOverlayEnabled:/a\\
+  _goapDiagnosticLevel: ${level}
+" "${SCENE}"
+  echo "✅ Goap Diagnostic Level = ${level}（新規追加）"
+}
+
+ensure_goap_diagnostic_level "${GOAP_LOG_LEVEL}"
 
 if grep -q "GoapCombinedSupportRegressionDebugSetup" "${SCENE}"; then
   if grep -A20 "GoapCombinedSupportRegressionDebugSetup" "${SCENE}" | grep -q "m_Enabled: 0"; then
@@ -145,6 +180,10 @@ echo ""
 echo "  Play 終了後:"
 echo "    ./scripts/playtest/extract-goap-logs-from-editor.sh <HH:MM>"
 echo "    MODE=${MODE} ./scripts/playtest/analyze-phase-d-pass-receive-log.sh Assets/DebugLog/GoapSummary_latest.txt"
+echo "    （移動停止ゲート: analyze-locomotion-freeze-log.sh / analyze-forced-skip-burst-log.sh も含む）"
+echo ""
+echo "  自動 3 分:"
+echo "    ./scripts/playtest/run-phase-d-3min-playtest.sh"
 echo ""
 echo "  owner 指定:"
 echo "    ALLY_OWNER=${ALLY_OWNER} ENEMY_OWNER=${ENEMY_OWNER} \\"
