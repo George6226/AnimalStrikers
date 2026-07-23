@@ -11,7 +11,7 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）も完了済み。新規に戻さ
 ## 正本
 
 - ロードマップ: `scripts/playtest/GOAP_AND_GAME_ROADMAP.md`
-- CI: EditMode **342** 件、`mode=all` = EditMode + **11** バッチ
+- CI: EditMode **344** 件、`mode=all` = EditMode + **11** バッチ
 
 ## フェーズ6 完了一覧
 
@@ -29,7 +29,7 @@ F1〜F5・G0〜G6・GK follow-up（#60〜#62）も完了済み。新規に戻さ
 ## 作業ルール
 
 - **フェーズ6・後続は完了済み**。新規着手はユーザーが次フェーズを指定してから
-- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コア / CI 342 + 11 バッチ
+- 回帰: `missed+nogal` / `NoGoalIdle` / Phase D コア / CI 344 + 11 バッチ
 - 小さく PR 可能単位、EditMode →（必要なら）playtest
 
 ## いまのデフォルト
